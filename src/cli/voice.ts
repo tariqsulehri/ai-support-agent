@@ -1,6 +1,6 @@
 import "dotenv/config";
 import OpenAI from "openai";
-import { spawn } from "child_process";
+import { spawn, execSync } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -107,7 +107,7 @@ function recordUntilSilence(outputPath: string): Promise<void> {
 
 function checkSox(): void {
   try {
-    require("child_process").execSync("which rec", { stdio: "ignore" });
+    execSync("which rec", { stdio: "ignore" });
   } catch {
     console.error("\n[ERROR] sox is not installed. Run: brew install sox\n");
     process.exit(1);

@@ -23,7 +23,7 @@ export function VoiceAgent({ tenantId, token }: VoiceAgentProps) {
 
   const {
     phase, transcript, partialReply, error,
-    isRecording, hasSpeech, isPlaying,
+    isRecording,
     language, voice, leadData, callSummary,
     agentName, companyName,
     setVoice, pressMic, releaseMic, sendText,
