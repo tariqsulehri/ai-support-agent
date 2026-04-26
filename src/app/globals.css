@@ -3,22 +3,32 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-html,
-body {
-  @apply bg-surface text-gray-100;
+html, body {
+  background-color: #F0F2F5;
+  color: #323130;
   min-height: 100dvh;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont,
+    'Inter', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+.scrollbar-thin::-webkit-scrollbar        { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track  { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb  {
+  background: #EDEBE9;
+  border-radius: 999px;
 }
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  @apply bg-surface-border rounded-full;
-}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #C8C6C4; }
+
+/* ── Typing dots animation stagger ──────────────────────────────────────── */
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Message fade-in ─────────────────────────────────────────────────────── */
+.msg-enter { animation: fade-up 0.2s ease-out forwards; }

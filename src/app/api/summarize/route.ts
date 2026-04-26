@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOpenAIClient } from '@/lib/ai/client'
-import { requireEmbedApiAuth } from '@/lib/security/embed-auth'
+import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import type { ChatHistory } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
@@ -17,6 +17,8 @@ export async function POST(req: NextRequest) {
   const authError = requireEmbedApiAuth(req)
   if (authError) return authError
 
+  const tenant = getTenantFromRequest(req)
+
   let messages: ChatHistory
   try {
     const body = await req.json()
@@ -26,7 +28,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  // Filter out the system bootstrap message and greet triggers
   const conversation = messages.filter((m) => m.content !== '__GREET__')
 
   if (conversation.length < 2) {
@@ -36,35 +37,36 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  const agentLabel = tenant.agentName
   const transcript = conversation
-    .map((m) => `${m.role === 'user' ? 'Visitor' : 'Tariq'}: ${m.content}`)
+    .map((m) => `${m.role === 'user' ? 'Visitor' : agentLabel}: ${m.content}`)
     .join('\n')
 
   const openai = getOpenAIClient()
 
   try {
     const completion = await openai.chat.completions.create({
-      model:       'gpt-4o',
-      max_tokens:  500,
-      temperature: 0.3,
+      model:           'gpt-4o',
+      max_tokens:      500,
+      temperature:     0.3,
       response_format: { type: 'json_object' },
       messages: [
         {
-          role: 'system',
-          content: `You are a call summarizer. Given a conversation transcript between a visitor and Tariq (a Support Agent sales agent), return a JSON object with:
+          role:    'system',
+          content: `You are a call summarizer. Given a conversation transcript between a visitor and ${agentLabel} (an AI support agent for ${tenant.companyName}), return a JSON object with:
 - "summary": a 2-3 sentence narrative recap of the discussion
 - "keyPoints": an array of 3-5 concise bullet-point strings capturing the most important topics, decisions, or interests expressed
 
 Return only valid JSON matching this shape: { "summary": "...", "keyPoints": ["...", "..."] }`,
         },
         {
-          role: 'user',
+          role:    'user',
           content: transcript,
         },
       ],
     })
 
-    const raw = completion.choices[0].message.content ?? '{}'
+    const raw    = completion.choices[0].message.content ?? '{}'
     const parsed = JSON.parse(raw)
 
     return NextResponse.json({

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { synthesizeSpeech } from '@/lib/ai/tts'
-import { requireEmbedApiAuth } from '@/lib/security/embed-auth'
+import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import type { SpeakRequest } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
@@ -24,7 +24,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const audioBuffer = await synthesizeSpeech(text, voice)
+    const tenant      = getTenantFromRequest(req)
+    const resolvedVoice    = voice ?? tenant.ttsVoice
+    const resolvedProvider = tenant.ttsProvider
+
+    const audioBuffer = await synthesizeSpeech(text, resolvedVoice, resolvedProvider)
 
     return new Response(new Uint8Array(audioBuffer), {
       headers: {

@@ -1,0 +1,30 @@
+export interface KBEntry {
+  topic: string
+  content: string
+}
+
+export interface TenantConfig {
+  // ── Identity & Auth ──────────────────────────────────────────────────────────
+  id: string
+  token?: string           // paired with x-embed-tenant header
+  apiKeys?: string[]       // standalone x-api-key auth
+  allowedDomains?: string[] // domain-based implicit auth (no token needed)
+
+  // ── Persona ──────────────────────────────────────────────────────────────────
+  agentName: string
+  companyName: string
+  language: string         // "english", "urdu", "arabic", etc.
+  tone: string             // e.g. "friendly, expert"
+
+  // ── TTS ──────────────────────────────────────────────────────────────────────
+  ttsProvider: 'openai' | 'elevenlabs'
+  ttsVoice: string
+
+  // ── Knowledge ────────────────────────────────────────────────────────────────
+  services: string[]
+  customInstructions?: string
+  knowledgeBase?: KBEntry[]
+
+  // ── Conversation ─────────────────────────────────────────────────────────────
+  greeting?: string  // exact first message — bypasses LLM, guaranteed verbatim
+}

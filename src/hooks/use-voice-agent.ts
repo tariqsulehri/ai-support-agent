@@ -80,6 +80,11 @@ const initialState: VoiceAgentState = {
 }
 
 // ── Public interface ───────────────────────────────────────────────────────────
+export interface UseVoiceAgentOptions {
+  tenantId?: string
+  token?:    string
+}
+
 export interface UseVoiceAgentReturn {
   phase:        Phase
   transcript:   Message[]
@@ -92,16 +97,22 @@ export interface UseVoiceAgentReturn {
   voice:        OpenAIVoice
   leadData:     LeadData
   callSummary:  CallSummary | null
+  agentName:    string
+  companyName:  string
   setVoice:     (v: OpenAIVoice) => void
   toggleMic:    () => void
+  pressMic:     () => void   // push-to-talk: call on pointer down
+  releaseMic:   () => void   // push-to-talk: call on pointer up/leave
   sendText:     (text: string) => void
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────────
-export function useVoiceAgent(): UseVoiceAgentReturn {
-  const [state, dispatch]   = useReducer(reducer, initialState)
-  const [voice, setVoice]   = useState<OpenAIVoice>('nova')
-  const [language, setLang] = useState('English')
+export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): UseVoiceAgentReturn {
+  const [state, dispatch]       = useReducer(reducer, initialState)
+  const [voice, setVoice]       = useState<OpenAIVoice>('nova')
+  const [language, setLang]     = useState('English')
+  const [agentName, setAgent]   = useState('Agent')
+  const [companyName, setCompany] = useState('')
   const [embedHeaders, setEmbedHeaders] = useState<Record<string, string>>({})
 
   // Keep voice in a ref so async callbacks always read the latest value
@@ -138,15 +149,15 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
 
   // ── Boot: load config + generate opening greeting ─────────────────────────────
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const tenant = params.get('tenant')
-    const token = params.get('token')
     const parent = document.referrer || ''
 
     const headers: Record<string, string> = {}
-    if (tenant) headers['x-embed-tenant'] = tenant
-    if (token) headers['x-embed-token'] = token
-    if (parent) headers['x-embed-parent'] = parent
+    // Prefer props (SSR-forwarded) then fall back to URL params
+    const resolvedTenant = tenantId ?? new URLSearchParams(window.location.search).get('tenant') ?? ''
+    const resolvedToken  = token    ?? new URLSearchParams(window.location.search).get('token')  ?? ''
+    if (resolvedTenant) headers['x-embed-tenant'] = resolvedTenant
+    if (resolvedToken)  headers['x-embed-token']  = resolvedToken
+    if (parent)         headers['x-embed-parent']  = parent
     setEmbedHeaders(headers)
 
     let cancelled = false
@@ -156,10 +167,20 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
         const cfg = await fetch('/api/config', {
           headers,
         }).then((r) => r.json())
-        if (!cancelled && cfg.voice)    handleSetVoice(cfg.voice as OpenAIVoice)
-        if (!cancelled && cfg.language) setLang(cfg.language)
+        if (!cancelled && cfg.voice)       handleSetVoice(cfg.voice as OpenAIVoice)
+        if (!cancelled && cfg.language)    setLang(cfg.language)
+        if (!cancelled && cfg.agentName)   setAgent(cfg.agentName)
+        if (!cancelled && cfg.companyName) setCompany(cfg.companyName)
 
-        await streamChat([{ role: 'user', content: '__GREET__' }], cancelled ? null : dispatch)
+        if (cfg.greeting && !cancelled) {
+          // Use the exact hardcoded greeting — guaranteed verbatim, no LLM
+          const greetingText = cfg.greeting as string
+          dispatch({ type: 'REPLY_COMPLETE', fullText: greetingText, endCall: false })
+          enqueue(greetingText)
+          historyRef.current.push({ role: 'assistant', content: greetingText })
+        } else {
+          await streamChat([{ role: 'user', content: '__GREET__' }], cancelled ? null : dispatch)
+        }
 
         if (!cancelled) dispatch({ type: 'CONNECTED' })
       } catch (err) {
@@ -291,7 +312,7 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── Mic toggle ────────────────────────────────────────────────────────────────
+  // ── Mic toggle (click mode) ───────────────────────────────────────────────────
   const toggleMic = useCallback(() => {
     const phase = stateRef.current.phase
     if (phase === 'speaking' || phase === 'thinking') {
@@ -309,6 +330,19 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     }
   }, [isRecording, startRec, stopRec, stopAll])
 
+  // ── Push-to-talk ──────────────────────────────────────────────────────────────
+  const pressMic = useCallback(() => {
+    const phase = stateRef.current.phase
+    if (phase !== 'idle' && phase !== 'error') return
+    dispatch({ type: 'START_LISTENING' })
+    startRec().catch((err) => dispatch({ type: 'ERROR', message: String(err) }))
+  }, [startRec])
+
+  const releaseMic = useCallback(() => {
+    if (!isRecording) return
+    stopRec()   // fires onAudioReady → transcribe → send
+  }, [isRecording, stopRec])
+
   return {
     phase:        state.phase,
     transcript:   state.transcript,
@@ -321,8 +355,12 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     voice,
     leadData:     state.leadData,
     callSummary:  state.callSummary,
-    setVoice:     handleSetVoice,
+    agentName,
+    companyName,
+    setVoice:   handleSetVoice,
     toggleMic,
+    pressMic,
+    releaseMic,
     sendText,
   }
 }

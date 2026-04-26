@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { transcribeAudio } from '@/lib/ai/transcribe'
 import { getLangConfig } from '@/lib/config/language'
-import { requireEmbedApiAuth } from '@/lib/security/embed-auth'
+import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import { normalizeSpeechTranscript } from '@/lib/utils/normalize-speech'
 export { OPTIONS } from '@/lib/utils/cors'
 
@@ -23,15 +23,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No audio file received' }, { status: 400 })
   }
 
-  // Reject suspiciously short clips (< 4 KB = likely silence or noise)
   if (audio.size < 4000) {
     return NextResponse.json({ text: '' })
   }
 
   try {
-    const lang = getLangConfig()
-    const raw  = await transcribeAudio(audio, lang.whisperCode)
-    const text = normalizeSpeechTranscript(raw)
+    const tenant = getTenantFromRequest(req)
+    const lang   = getLangConfig(tenant.language)
+    const raw    = await transcribeAudio(audio, lang.whisperCode)
+    const text   = normalizeSpeechTranscript(raw)
     return NextResponse.json({ text })
   } catch (err) {
     console.error('[transcribe]', err)

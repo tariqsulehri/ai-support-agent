@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
 import { streamChatReply, extractSentences } from '@/lib/ai/chat'
-import { getLangConfig } from '@/lib/config/language'
-import { requireEmbedApiAuth } from '@/lib/security/embed-auth'
+import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import type { ChatMessage } from '@/lib/ai/chat'
 export { OPTIONS } from '@/lib/utils/cors'
 
@@ -11,14 +10,17 @@ export const dynamic = 'force-dynamic'
  * Streaming chat endpoint — emits Server-Sent Events.
  *
  * Event shapes:
- *   { token: string }                          — incremental token for live display
- *   { sentence: string }                       — complete sentence ready for TTS
- *   { done: true, fullText: string, endCall: boolean }  — stream finished
- *   { error: string }                          — something went wrong
+ *   { token: string }                                    — incremental token for live display
+ *   { sentence: string }                                 — complete sentence ready for TTS
+ *   { done: true, fullText: string, endCall: boolean }   — stream finished
+ *   { lead: LeadData }                                   — lead capture update
+ *   { error: string }                                    — something went wrong
  */
 export async function POST(req: NextRequest) {
   const authError = requireEmbedApiAuth(req)
   if (authError) return authError
+
+  const tenant = getTenantFromRequest(req)
 
   let messages: ChatMessage[]
   try {
@@ -29,14 +31,12 @@ export async function POST(req: NextRequest) {
     return new Response('Invalid request body', { status: 400 })
   }
 
-  const lang = getLangConfig()
   const encoder = new TextEncoder()
 
   function send(payload: object): Uint8Array {
     return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
   }
 
-  // Strip [LEAD:{...}] tokens from text destined for TTS / display
   const LEAD_RE = /\[LEAD:\{[^}]*(?:\{[^}]*\}[^}]*)?\}\]/g
   function stripLead(text: string): string {
     return text.replace(LEAD_RE, '').trim()
@@ -50,22 +50,20 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const completion = await streamChatReply(messages, lang.name)
+        const completion = await streamChatReply(messages, tenant)
 
-        let accumulated = ''   // full reply being built
-        let sentenceBuffer = '' // partial text awaiting sentence boundary
+        let accumulated    = ''
+        let sentenceBuffer = ''
 
         for await (const chunk of completion) {
-          const token = chunk.choices[0]?.delta?.content ?? ''
+          const token       = chunk.choices[0]?.delta?.content ?? ''
           const finishReason = chunk.choices[0]?.finish_reason
 
           if (token) {
             accumulated    += token
             sentenceBuffer += token
-            // Stream token to client for live text display
             controller.enqueue(send({ token }))
 
-            // Extract complete sentences and emit each for TTS (strip lead token)
             const { sentences, remainder } = extractSentences(sentenceBuffer)
             sentenceBuffer = remainder
             for (const sentence of sentences) {
@@ -75,16 +73,12 @@ export async function POST(req: NextRequest) {
           }
 
           if (finishReason === 'stop') {
-            // Flush any remaining partial sentence (strip lead token)
             const tail = stripLead(sentenceBuffer.trim())
-            if (tail.length > 0) {
-              controller.enqueue(send({ sentence: tail }))
-            }
+            if (tail.length > 0) controller.enqueue(send({ sentence: tail }))
 
-            // Extract lead data before cleaning the text
-            const lead    = extractLead(accumulated)
-            const cleaned = stripLead(accumulated)
-            const endCall = cleaned.trimStart().startsWith('[END_CALL]')
+            const lead     = extractLead(accumulated)
+            const cleaned  = stripLead(accumulated)
+            const endCall  = cleaned.trimStart().startsWith('[END_CALL]')
             const fullText = cleaned.replace('[END_CALL]', '').trim()
 
             if (lead) controller.enqueue(send({ lead }))
@@ -102,9 +96,9 @@ export async function POST(req: NextRequest) {
 
   return new Response(stream, {
     headers: {
-      'Content-Type':  'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'X-Accel-Buffering': 'no',   // disable nginx buffering in production
+      'Content-Type':      'text/event-stream',
+      'Cache-Control':     'no-cache, no-transform',
+      'X-Accel-Buffering': 'no',
     },
   })
 }
