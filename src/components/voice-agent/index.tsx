@@ -8,11 +8,17 @@ import { SettingsBar }      from './settings-bar'
 import { TextInput }        from './text-input'
 import { LeadPanel }        from './lead-panel'
 
+interface VoiceAgentProps {
+  tenantId?: string
+  token?: string
+}
+
 /**
  * Top-level voice agent UI.
- * Orchestrated entirely by useVoiceAgent — this component is pure presentation.
+ * tenantId + token come from the iframe URL params and are forwarded to
+ * every API request so the server resolves the correct tenant persona.
  */
-export function VoiceAgent() {
+export function VoiceAgent({ tenantId, token }: VoiceAgentProps) {
   const {
     phase,
     transcript,
@@ -24,20 +30,22 @@ export function VoiceAgent() {
     voice,
     leadData,
     callSummary,
+    agentName,
+    companyName,
     setVoice,
     toggleMic,
     sendText,
-  } = useVoiceAgent()
+  } = useVoiceAgent({ tenantId, token })
 
   return (
     <div className="flex flex-col items-center w-full max-w-xl gap-5 px-4 py-6">
-      {/* Header */}
+      {/* Header — driven by tenant config, not hardcoded */}
       <header className="text-center">
         <h1 className="text-xl font-semibold tracking-tight text-gray-100">
-          Tariq &mdash; Support Agent Voice Assistant
+          {agentName}
         </h1>
         <p className="text-xs text-gray-500 mt-1">
-          AI-powered sales &amp; support agent
+          {companyName} &mdash; AI Support Agent
         </p>
       </header>
 

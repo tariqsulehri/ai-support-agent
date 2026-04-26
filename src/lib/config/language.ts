@@ -1,5 +1,3 @@
-import { env } from './env'
-
 // Maps human-readable language names → ISO 639-1 codes used by Whisper
 const WHISPER_CODES: Record<string, string> = {
   english:    'en',
@@ -22,12 +20,16 @@ const WHISPER_CODES: Record<string, string> = {
 }
 
 export interface LangConfig {
-  name: string         // e.g. "Urdu"
+  name:        string  // e.g. "Urdu"
   whisperCode: string  // e.g. "ur"
 }
 
-export function getLangConfig(): LangConfig {
-  const raw = env.LANGUAGE.trim().toLowerCase()
+/**
+ * Converts a tenant language string to a LangConfig.
+ * @param language - value from TenantConfig.language (e.g. "english")
+ */
+export function getLangConfig(language: string): LangConfig {
+  const raw  = language.trim().toLowerCase()
   const code = WHISPER_CODES[raw]
 
   if (!code) {

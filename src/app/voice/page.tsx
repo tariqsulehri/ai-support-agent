@@ -8,7 +8,8 @@ interface VoicePageProps {
 export default async function VoicePage({ searchParams }: VoicePageProps) {
   const params = (await searchParams) ?? {}
   const tenant = typeof params.tenant === 'string' ? params.tenant : undefined
-  const token = typeof params.token === 'string' ? params.token : undefined
+  const token  = typeof params.token  === 'string' ? params.token  : undefined
+
   const auth = validateEmbedQuery(tenant, token)
 
   if (isEmbedAuthEnabled() && !auth.ok) {
@@ -26,7 +27,9 @@ export default async function VoicePage({ searchParams }: VoicePageProps) {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-start py-8">
-      <VoiceAgent />
+      {/* tenant + token are forwarded as data attrs so the client hook can
+          include them in every API request header automatically */}
+      <VoiceAgent tenantId={tenant} token={token} />
     </main>
   )
 }
