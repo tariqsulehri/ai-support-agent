@@ -1,9 +1,11 @@
 'use client'
 
+import type { OpenAIVoice } from '@/types'
+
 interface Props {
   language: string
-  voice:    string
-  onVoice:  (v: string) => void  // kept for API compatibility, voice selection hidden
+  voice:    OpenAIVoice
+  onVoice:  (v: OpenAIVoice) => void
 }
 
 export function SettingsBar({ language }: Props) {
