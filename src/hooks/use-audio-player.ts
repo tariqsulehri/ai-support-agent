@@ -67,7 +67,7 @@ export function useAudioPlayer({
     let prefetched: Promise<Blob | null> = fetchBlob(queueRef.current[0])
 
     while (queueRef.current.length > 0 && !abortRef.current) {
-      const text = queueRef.current.shift()!
+      queueRef.current.shift()  // advance queue; blob already prefetched above
 
       // Wait for the already-in-flight fetch (started either above or at end of last iteration)
       const blob = await prefetched
@@ -103,7 +103,7 @@ export function useAudioPlayer({
     playingRef.current = false
     setIsPlaying(false)
     onPlaybackEnd?.()
-  }, [voice, fetchBlob, onPlaybackStart, onPlaybackEnd])
+  }, [fetchBlob, onPlaybackStart, onPlaybackEnd])
 
   const enqueue = useCallback(
     (text: string) => {

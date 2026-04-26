@@ -46,19 +46,19 @@ async function synthesizeElevenLabs(text: string): Promise<Buffer> {
     throw new Error('ELEVENLABS_API_KEY is missing. Add it to .env.local or set ttsProvider to "openai".')
   }
 
-  const { ElevenLabsClient } = await import('elevenlabs')
+  const { ElevenLabsClient } = await import('@elevenlabs/elevenlabs-js')
   const { Readable } = await import('stream')
 
   const client = new ElevenLabsClient({ apiKey: env.ELEVENLABS_API_KEY })
 
   const audioStream = await client.textToSpeech.convert(env.ELEVENLABS_VOICE_ID, {
     text,
-    model_id: 'eleven_multilingual_v2',
-    voice_settings: {
-      stability:         0.45,
-      similarity_boost:  0.80,
-      style:             0.35,
-      use_speaker_boost: true,
+    modelId: 'eleven_multilingual_v2',
+    voiceSettings: {
+      stability:        0.45,
+      similarityBoost:  0.80,
+      style:            0.35,
+      useSpeakerBoost:  true,
     },
   })
 

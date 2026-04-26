@@ -43,7 +43,6 @@ export function TranscriptPanel({ messages, partialReply, agentName, agentInitia
             key={msg.id}
             role={msg.role}
             content={msg.content}
-            agentName={agentName}
             agentInitials={agentInitials}
             showMeta={showMeta}
           />
@@ -55,7 +54,6 @@ export function TranscriptPanel({ messages, partialReply, agentName, agentInitia
         <MessageBubble
           role="assistant"
           content={partialReply}
-          agentName={agentName}
           agentInitials={agentInitials}
           showMeta={messages.length === 0 || messages[messages.length - 1]?.role !== 'assistant'}
           streaming
@@ -106,13 +104,12 @@ function TypingDots() {
 interface BubbleProps {
   role:          'user' | 'assistant'
   content:       string
-  agentName:     string
   agentInitials: string
   showMeta:      boolean
   streaming?:    boolean
 }
 
-function MessageBubble({ role, content, agentName, agentInitials, showMeta, streaming }: BubbleProps) {
+function MessageBubble({ role, content, agentInitials, showMeta, streaming }: BubbleProps) {
   const isAgent = role === 'assistant'
 
   if (isAgent) {
