@@ -14,13 +14,14 @@
     "language": "english",
     "tone": "friendly, expert, and solution-oriented",
     "ttsProvider": "openai",
-    "ttsVoice": "nova",
+    "ttsVoice": "onyx",
     "services": [
       "Custom Software Development",
       "AI Solutions",
       "Web and Mobile App Development",
       "DevOps and Cloud Services"
     ],
+    "greeting": "Hello! I'm Muhammad from AI-Scripto Automations. How can I help you today?",
     "customInstructions": "Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
     "knowledgeBase": [
       {

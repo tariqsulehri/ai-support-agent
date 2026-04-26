@@ -1,26 +1,32 @@
 import type { Phase } from '@/types'
 
-interface Props {
-  phase: Phase
-}
+interface Props { phase: Phase }
 
-const STATUS: Record<Phase, { dot: string; label: string }> = {
-  connecting:   { dot: 'bg-gray-500',                         label: 'Connecting...' },
-  idle:         { dot: 'bg-gray-500',                         label: 'Ready — click mic to speak' },
-  listening:    { dot: 'bg-green-400 shadow-green animate-pulse_dot', label: 'Listening...' },
-  transcribing: { dot: 'bg-blue-400',                         label: 'Transcribing...' },
-  thinking:     { dot: 'bg-blue-400 animate-pulse_dot',       label: 'Thinking...' },
-  speaking:     { dot: 'bg-purple-400 animate-pulse_dot',     label: 'Speaking...' },
-  ended:        { dot: 'bg-gray-600',                         label: 'Call ended' },
-  error:        { dot: 'bg-red-500',                          label: 'Error' },
+const STATUS: Record<Phase, { show: boolean; color: string; label: string }> = {
+  connecting:   { show: false, color: '',                               label: '' },
+  idle:         { show: false, color: '',                               label: '' },
+  listening:    { show: true,  color: 'bg-green-50 text-green-700 border-green-100',  label: '🎙 Listening…' },
+  transcribing: { show: true,  color: 'bg-blue-50 text-ms-blue border-ms-blue-md',   label: '✦ Transcribing…' },
+  thinking:     { show: true,  color: 'bg-blue-50 text-ms-blue border-ms-blue-md',   label: '✦ Thinking…' },
+  speaking:     { show: true,  color: 'bg-purple-50 text-purple-700 border-purple-100', label: '🔊 Speaking…' },
+  ended:        { show: true,  color: 'bg-gray-50 text-ms-sub border-surface-border', label: 'Conversation ended' },
+  error:        { show: false, color: '',                               label: '' },
 }
 
 export function StatusIndicator({ phase }: Props) {
-  const { dot, label } = STATUS[phase]
+  const { show, color, label } = STATUS[phase]
+  if (!show) return null
 
   return (
-    <div className="flex items-center gap-2 bg-surface-card border border-surface-border rounded-full px-4 py-1.5 text-xs text-gray-400 select-none">
-      <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+    <div className={`mx-4 mt-2 px-3 py-1.5 rounded-lg border text-xs font-medium
+                     flex items-center gap-1.5 shrink-0 ${color}`}>
+      {(phase === 'thinking' || phase === 'transcribing') && (
+        <span className="inline-flex gap-0.5">
+          {[0,1,2].map(i => (
+            <span key={i} className={`typing-dot w-1 h-1 rounded-full bg-ms-blue animate-typing`} />
+          ))}
+        </span>
+      )}
       <span>{label}</span>
     </div>
   )

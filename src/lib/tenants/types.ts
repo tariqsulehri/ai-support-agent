@@ -24,4 +24,7 @@ export interface TenantConfig {
   services: string[]
   customInstructions?: string
   knowledgeBase?: KBEntry[]
+
+  // ── Conversation ─────────────────────────────────────────────────────────────
+  greeting?: string  // exact first message — bypasses LLM, guaranteed verbatim
 }

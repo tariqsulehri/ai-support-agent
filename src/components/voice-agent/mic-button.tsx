@@ -1,60 +1,83 @@
 import type { Phase } from '@/types'
 
 interface Props {
-  phase:       Phase
-  isRecording: boolean
-  onClick:     () => void
+  phase:        Phase
+  isRecording:  boolean
+  onPressDown:  () => void
+  onPressUp:    () => void
 }
 
-/** Returns mic button appearance based on the current agent phase. */
-function getMicState(phase: Phase, isRecording: boolean) {
-  if (isRecording) {
-    return { bg: 'bg-red-500 animate-ring', icon: 'recording', title: 'Click to stop', disabled: false }
-  }
-  if (phase === 'thinking' || phase === 'transcribing') {
-    return { bg: 'bg-surface-card cursor-not-allowed', icon: 'idle', title: 'Processing...', disabled: true }
-  }
-  if (phase === 'speaking') {
-    return { bg: 'bg-purple-600 hover:bg-purple-500', icon: 'stop', title: 'Click to interrupt', disabled: false }
-  }
-  if (phase === 'ended' || phase === 'error' || phase === 'connecting') {
-    return { bg: 'bg-surface-card cursor-not-allowed', icon: 'idle', title: '', disabled: true }
-  }
-  return { bg: 'bg-green-500 hover:bg-green-400', icon: 'idle', title: 'Click to speak', disabled: false }
-}
+export function MicButton({ phase, isRecording, onPressDown, onPressUp }: Props) {
+  const state = getState(phase, isRecording)
 
-export function MicButton({ phase, isRecording, onClick }: Props) {
-  const { bg, icon, title, disabled } = getMicState(phase, isRecording)
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (state.disabled) return
+    e.preventDefault()          // prevents text-selection drag on desktop
+    onPressDown()
+  }
+
+  const handlePointerUp = () => {
+    if (state.disabled) return
+    onPressUp()
+  }
 
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-label={title}
+      type="button"
+      disabled={state.disabled}
+      title={state.title}
+      aria-label={state.title}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}   // release if pointer leaves while held
       className={`
-        w-[72px] h-[72px] rounded-full flex items-center justify-center
-        transition-all duration-150 focus:outline-none focus-visible:ring-2
-        focus-visible:ring-white/50 ${bg}
+        w-9 h-9 rounded-xl flex items-center justify-center shrink-0
+        select-none touch-none
+        transition-all duration-150 focus:outline-none
+        focus-visible:ring-2 focus-visible:ring-ms-blue focus-visible:ring-offset-1
+        ${state.cls}
       `}
     >
-      {icon === 'stop' ? <StopIcon /> : <MicIcon />}
+      {isRecording ? <RecordingIcon /> : <MicIcon active={!state.disabled} />}
     </button>
   )
 }
 
-function MicIcon() {
+function getState(phase: Phase, isRecording: boolean) {
+  if (isRecording) return {
+    cls:      'bg-ms-red scale-110',
+    title:    'Release to send',
+    disabled: false,
+  }
+  if (phase === 'thinking' || phase === 'transcribing' || phase === 'speaking') return {
+    cls:      'bg-surface text-ms-muted cursor-not-allowed opacity-50',
+    title:    'Processing…',
+    disabled: true,
+  }
+  if (phase === 'ended' || phase === 'connecting') return {
+    cls:      'bg-surface text-ms-muted cursor-not-allowed opacity-50',
+    title:    '',
+    disabled: true,
+  }
+  return {
+    cls:      'bg-ms-blue-lt hover:bg-ms-blue-md active:scale-95',
+    title:    'Hold to speak, release to send',
+    disabled: false,
+  }
+}
+
+function MicIcon({ active }: { active: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className="w-7 h-7 fill-white" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm6.5 9a1 1 0 0 1 1 1 7.5 7.5 0 0 1-15 0 1 1 0 1 1 2 0 5.5 5.5 0 0 0 11 0 1 1 0 0 1 1-1zM11 20.9V23h2v-2.1A9 9 0 0 0 12 3v0z" />
+    <svg viewBox="0 0 24 24" className={`w-5 h-5 ${active ? 'fill-ms-blue' : 'fill-ms-muted'}`}>
+      <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zm5 9a1 1 0 0 1 2 0 7 7 0 0 1-14 0 1 1 0 0 1 2 0 5 5 0 0 0 10 0zM11 19.93V22h2v-2.07A9 9 0 0 0 12 4v0" />
     </svg>
   )
 }
 
-function StopIcon() {
+function RecordingIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="w-7 h-7 fill-white" xmlns="http://www.w3.org/2000/svg">
-      <rect x="6" y="6" width="12" height="12" rx="2" />
+    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white animate-pulse_dot">
+      <circle cx="12" cy="12" r="5" />
     </svg>
   )
 }

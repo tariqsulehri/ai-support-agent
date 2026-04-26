@@ -2,66 +2,153 @@
 
 import { useEffect, useRef } from 'react'
 import type { Message } from '@/types'
+import type { Phase } from '@/types'
 
 interface Props {
-  messages:     Message[]
-  partialReply: string   // live-streaming text before sentence is committed
+  messages:      Message[]
+  partialReply:  string
+  agentName:     string
+  agentInitials: string
+  phase:         Phase
 }
 
-export function TranscriptPanel({ messages, partialReply }: Props) {
+export function TranscriptPanel({ messages, partialReply, agentName, agentInitials, phase }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to latest message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, partialReply])
 
+  const isEmpty = messages.length === 0 && !partialReply
+
   return (
-    <div className="w-full max-w-xl flex-1 overflow-y-auto flex flex-col gap-3 pr-1 min-h-[260px] max-h-[50vh] scrollbar-thin scrollbar-thumb-surface-border">
-      {messages.map((msg) => (
-        <Bubble key={msg.id} role={msg.role} content={msg.content} />
-      ))}
+    <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-4
+                    flex flex-col gap-1 min-h-0 bg-surface-hover">
+
+      {/* Empty state */}
+      {isEmpty && phase === 'connecting' && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 py-8">
+          <div className="w-12 h-12 rounded-full bg-ms-blue-lt flex items-center justify-center">
+            <TypingDots />
+          </div>
+          <p className="text-sm text-ms-muted">Connecting to your agent…</p>
+        </div>
+      )}
+
+      {messages.map((msg, i) => {
+        const prev = messages[i - 1]
+        const showMeta = !prev || prev.role !== msg.role
+        return (
+          <MessageBubble
+            key={msg.id}
+            role={msg.role}
+            content={msg.content}
+            agentName={agentName}
+            agentInitials={agentInitials}
+            showMeta={showMeta}
+          />
+        )
+      })}
 
       {/* Live streaming reply */}
       {partialReply && (
-        <Bubble role="assistant" content={partialReply} streaming />
+        <MessageBubble
+          role="assistant"
+          content={partialReply}
+          agentName={agentName}
+          agentInitials={agentInitials}
+          showMeta={messages.length === 0 || messages[messages.length - 1]?.role !== 'assistant'}
+          streaming
+        />
       )}
 
-      <div ref={bottomRef} />
+      {/* Thinking indicator — show when thinking but no partial reply yet */}
+      {phase === 'thinking' && !partialReply && (
+        <div className="flex items-end gap-2 mt-1">
+          <Avatar initials={agentInitials} />
+          <div className="bg-white border border-surface-border rounded-2xl rounded-bl-sm
+                          px-4 py-3 shadow-bubble flex items-center gap-1">
+            <TypingDots />
+          </div>
+        </div>
+      )}
+
+      <div ref={bottomRef} className="h-1" />
     </div>
   )
 }
 
-// ── Bubble ─────────────────────────────────────────────────────────────────────
-interface BubbleProps {
-  role:      'user' | 'assistant'
-  content:   string
-  streaming?: boolean
+// ── Avatar ─────────────────────────────────────────────────────────────────────
+function Avatar({ initials }: { initials: string }) {
+  return (
+    <div className="w-7 h-7 rounded-full bg-ms-blue flex items-center justify-center
+                    text-white text-[10px] font-semibold shrink-0 mb-0.5">
+      {initials}
+    </div>
+  )
 }
 
-function Bubble({ role, content, streaming }: BubbleProps) {
+// ── Typing dots ────────────────────────────────────────────────────────────────
+function TypingDots() {
+  return (
+    <span className="flex items-center gap-1">
+      {[0, 1, 2].map(i => (
+        <span
+          key={i}
+          className="typing-dot w-1.5 h-1.5 rounded-full bg-ms-muted animate-typing"
+        />
+      ))}
+    </span>
+  )
+}
+
+// ── Message bubble ─────────────────────────────────────────────────────────────
+interface BubbleProps {
+  role:          'user' | 'assistant'
+  content:       string
+  agentName:     string
+  agentInitials: string
+  showMeta:      boolean
+  streaming?:    boolean
+}
+
+function MessageBubble({ role, content, agentName, agentInitials, showMeta, streaming }: BubbleProps) {
   const isAgent = role === 'assistant'
 
+  if (isAgent) {
+    return (
+      <div className={`flex items-end gap-2 msg-enter ${showMeta ? 'mt-3' : 'mt-0.5'}`}>
+        {/* Avatar — only on first in a group */}
+        {showMeta ? <Avatar initials={agentInitials} /> : <div className="w-7 shrink-0" />}
+
+        <div className="flex flex-col gap-0.5 max-w-[80%]">
+          {showMeta && (
+            <span className="text-[11px] text-ms-muted font-medium ml-0.5">Client Support</span>
+          )}
+          <div className="bg-white border border-surface-border rounded-2xl rounded-bl-sm
+                          px-4 py-2.5 shadow-bubble text-sm text-ms-text leading-relaxed">
+            {content}
+            {streaming && (
+              <span className="inline-block w-0.5 h-3.5 bg-ms-blue ml-0.5
+                               animate-pulse_dot align-middle rounded-sm" />
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // User bubble
   return (
-    <div className={`flex flex-col max-w-[85%] ${isAgent ? 'self-start' : 'self-end'}`}>
-      <span
-        className={`text-[10px] font-semibold uppercase tracking-wide mb-1 ${
-          isAgent ? 'text-blue-400' : 'text-sky-400'
-        }`}
-      >
-        {isAgent ? 'Tariq' : 'You'}
-      </span>
-      <div
-        className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-          isAgent
-            ? 'bg-surface-raised rounded-bl-sm text-gray-200'
-            : 'bg-[#1a3a5c] rounded-br-sm text-gray-100'
-        }`}
-      >
-        {content}
-        {streaming && (
-          <span className="inline-block w-1.5 h-3.5 bg-blue-400 ml-0.5 animate-pulse rounded-sm align-middle" />
+    <div className={`flex justify-end msg-enter ${showMeta ? 'mt-3' : 'mt-0.5'}`}>
+      <div className="max-w-[80%] flex flex-col items-end gap-0.5">
+        {showMeta && (
+          <span className="text-[11px] text-ms-muted font-medium mr-0.5">You</span>
         )}
+        <div className="bg-ms-blue rounded-2xl rounded-br-sm px-4 py-2.5
+                        text-sm text-white leading-relaxed shadow-bubble">
+          {content}
+        </div>
       </div>
     </div>
   )

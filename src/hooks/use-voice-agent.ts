@@ -101,6 +101,8 @@ export interface UseVoiceAgentReturn {
   companyName:  string
   setVoice:     (v: OpenAIVoice) => void
   toggleMic:    () => void
+  pressMic:     () => void   // push-to-talk: call on pointer down
+  releaseMic:   () => void   // push-to-talk: call on pointer up/leave
   sendText:     (text: string) => void
 }
 
@@ -170,7 +172,15 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
         if (!cancelled && cfg.agentName)   setAgent(cfg.agentName)
         if (!cancelled && cfg.companyName) setCompany(cfg.companyName)
 
-        await streamChat([{ role: 'user', content: '__GREET__' }], cancelled ? null : dispatch)
+        if (cfg.greeting && !cancelled) {
+          // Use the exact hardcoded greeting — guaranteed verbatim, no LLM
+          const greetingText = cfg.greeting as string
+          dispatch({ type: 'REPLY_COMPLETE', fullText: greetingText, endCall: false })
+          enqueue(greetingText)
+          historyRef.current.push({ role: 'assistant', content: greetingText })
+        } else {
+          await streamChat([{ role: 'user', content: '__GREET__' }], cancelled ? null : dispatch)
+        }
 
         if (!cancelled) dispatch({ type: 'CONNECTED' })
       } catch (err) {
@@ -302,7 +312,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── Mic toggle ────────────────────────────────────────────────────────────────
+  // ── Mic toggle (click mode) ───────────────────────────────────────────────────
   const toggleMic = useCallback(() => {
     const phase = stateRef.current.phase
     if (phase === 'speaking' || phase === 'thinking') {
@@ -320,6 +330,19 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     }
   }, [isRecording, startRec, stopRec, stopAll])
 
+  // ── Push-to-talk ──────────────────────────────────────────────────────────────
+  const pressMic = useCallback(() => {
+    const phase = stateRef.current.phase
+    if (phase !== 'idle' && phase !== 'error') return
+    dispatch({ type: 'START_LISTENING' })
+    startRec().catch((err) => dispatch({ type: 'ERROR', message: String(err) }))
+  }, [startRec])
+
+  const releaseMic = useCallback(() => {
+    if (!isRecording) return
+    stopRec()   // fires onAudioReady → transcribe → send
+  }, [isRecording, stopRec])
+
   return {
     phase:        state.phase,
     transcript:   state.transcript,
@@ -334,8 +357,10 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     callSummary:  state.callSummary,
     agentName,
     companyName,
-    setVoice:     handleSetVoice,
+    setVoice:   handleSetVoice,
     toggleMic,
+    pressMic,
+    releaseMic,
     sendText,
   }
 }

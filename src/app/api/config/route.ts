@@ -18,5 +18,6 @@ export async function GET(req: NextRequest) {
     voice:       tenant.ttsVoice,
     agentName:   tenant.agentName,
     companyName: tenant.companyName,
+    greeting:    tenant.greeting ?? null,
   })
 }
