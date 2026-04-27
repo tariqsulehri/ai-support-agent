@@ -1,5 +1,5 @@
-import { VoiceAgent } from '@/components/voice-agent'
 import { isEmbedAuthEnabled, validateEmbedQuery } from '@/lib/security/embed-auth'
+import { VoiceAgentWidget } from '@/components/voice-agent/widget'
 
 interface VoicePageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
@@ -32,8 +32,8 @@ export default async function VoicePage({ searchParams }: VoicePageProps) {
   }
 
   return (
-    <main className="min-h-dvh flex flex-col items-center justify-center bg-surface p-4 sm:p-6">
-      <VoiceAgent tenantId={tenantId} token={token} />
+    <main className="min-h-dvh bg-surface">
+      <VoiceAgentWidget tenantId={tenantId} token={token} />
     </main>
   )
 }
