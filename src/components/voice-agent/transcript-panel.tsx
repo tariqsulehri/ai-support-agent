@@ -28,7 +28,7 @@ export function TranscriptPanel({ messages, partialReply, agentName, agentInitia
       {/* Empty state */}
       {isEmpty && phase === 'connecting' && (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 py-8">
-          <div className="w-12 h-12 rounded-full bg-ms-blue-lt flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-ms-teal-lt flex items-center justify-center">
             <TypingDots />
           </div>
           <p className="text-sm text-ms-muted">Connecting to your agent…</p>
@@ -79,7 +79,7 @@ export function TranscriptPanel({ messages, partialReply, agentName, agentInitia
 // ── Avatar ─────────────────────────────────────────────────────────────────────
 function Avatar({ initials }: { initials: string }) {
   return (
-    <div className="w-7 h-7 rounded-full bg-ms-blue flex items-center justify-center
+    <div className="w-7 h-7 rounded-full bg-ms-teal flex items-center justify-center
                     text-white text-[10px] font-semibold shrink-0 mb-0.5">
       {initials}
     </div>
@@ -93,7 +93,7 @@ function TypingDots() {
       {[0, 1, 2].map(i => (
         <span
           key={i}
-          className="typing-dot w-1.5 h-1.5 rounded-full bg-ms-muted animate-typing"
+          className="typing-dot w-1.5 h-1.5 rounded-full bg-ms-teal animate-typing"
         />
       ))}
     </span>

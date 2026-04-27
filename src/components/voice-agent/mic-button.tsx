@@ -34,7 +34,7 @@ export function MicButton({ phase, isRecording, onPressDown, onPressUp }: Props)
         w-9 h-9 rounded-xl flex items-center justify-center shrink-0
         select-none touch-none
         transition-all duration-150 focus:outline-none
-        focus-visible:ring-2 focus-visible:ring-ms-blue focus-visible:ring-offset-1
+        focus-visible:ring-2 focus-visible:ring-ms-teal focus-visible:ring-offset-1
         ${state.cls}
       `}
     >

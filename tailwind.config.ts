@@ -23,12 +23,18 @@ const config: Config = {
           border:  '#EDEBE9',
           hover:   '#F5F5F5',
         },
-        // Microsoft blue palette
         ms: {
-          blue:      '#0078D4',
-          'blue-dk': '#106EBE',
-          'blue-lt': '#EFF6FC',
-          'blue-md': '#DEECF9',
+          // Primary — amber
+          blue:      '#F9B01E',
+          'blue-dk': '#DFA01A',
+          'blue-lt': '#FEF9EC',
+          'blue-md': '#FDF0C8',
+          // Secondary — teal
+          teal:      '#4CBAAB',
+          'teal-dk': '#3DA898',
+          'teal-lt': '#EBF8F6',
+          'teal-md': '#C8EDE9',
+          // Neutrals
           text:      '#323130',
           sub:       '#605E5C',
           muted:     '#8A8886',

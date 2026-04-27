@@ -28,7 +28,7 @@ export function LeadPanel({ lead, callSummary }: LeadPanelProps) {
       {hasAny(lead) && (
         <div className="bg-white rounded-2xl shadow-card overflow-hidden">
           <div className="px-5 py-3 border-b border-surface-border flex items-center gap-2">
-            <div className="w-1.5 h-4 rounded-full bg-ms-blue" />
+            <div className="w-1.5 h-4 rounded-full bg-ms-teal" />
             <h3 className="text-xs font-semibold text-ms-text uppercase tracking-wider">
               Contact Details
             </h3>
@@ -59,7 +59,7 @@ export function LeadPanel({ lead, callSummary }: LeadPanelProps) {
       {callSummary && (
         <div className="bg-white rounded-2xl shadow-card overflow-hidden">
           <div className="px-5 py-3 border-b border-surface-border flex items-center gap-2">
-            <div className="w-1.5 h-4 rounded-full bg-ms-blue" />
+            <div className="w-1.5 h-4 rounded-full bg-ms-teal" />
             <h3 className="text-xs font-semibold text-ms-text uppercase tracking-wider">
               Conversation Summary
             </h3>
@@ -75,7 +75,7 @@ export function LeadPanel({ lead, callSummary }: LeadPanelProps) {
                 <ul className="flex flex-col gap-1.5">
                   {callSummary.keyPoints.map((point, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-ms-sub">
-                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-ms-blue shrink-0" />
+                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-ms-teal shrink-0" />
                       {point}
                     </li>
                   ))}
