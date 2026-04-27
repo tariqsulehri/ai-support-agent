@@ -56,9 +56,9 @@
   },
   {
     "id": "tkxel",
-    "token": "testToken123Abcd",
+    "token": "tkxelToken123Abcd",
     "apiKeys": [
-      "testApiKey123Abcd"
+      "tkxelApiKey123Abcd"
     ],
     "allowedDomains": [
       "http://localhost:3000",
