@@ -71,9 +71,9 @@
     "language": "english",
     "tone": "friendly, expert, and solution-oriented",
     "ttsProvider": "openai",
-    "ttsVoice": "onyx",
+    "ttsVoice": "nova",
     "voiceProfile": {
-      "gender": "male",
+      "gender": "female",
       "style": "confident, calm, professional"
     },
     "services": [
