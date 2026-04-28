@@ -12,7 +12,7 @@ export default async function VoicePage({ searchParams }: VoicePageProps) {
   const modeParam = typeof params.mode === 'string' ? params.mode : undefined
   const launcherParam = typeof params.launcher === 'string' ? params.launcher : undefined
   const marginParam = typeof params.margin === 'string' ? params.margin : undefined
-  const mode = modeParam === 'inline' || launcherParam === 'false' ? 'inline' : 'floating'
+  const mode = modeParam === 'floating' || launcherParam === 'true' ? 'floating' : 'inline'
   const margin = marginParam === 'none' || marginParam === 'sm' || marginParam === 'md'
     ? marginParam
     : undefined

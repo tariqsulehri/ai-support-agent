@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
 interface UseAudioPlayerOptions {
   voice: string
@@ -40,21 +40,23 @@ export function useAudioPlayer({
   const currentAudio  = useRef<HTMLAudioElement | null>(null)
   const abortRef      = useRef(false)
   const requestHeadersRef = useRef<Record<string, string>>(requestHeaders ?? {})
+  const voiceRef = useRef(voice)
   requestHeadersRef.current = requestHeaders ?? {}
+  voiceRef.current = voice
 
   const fetchBlob = useCallback(async (text: string): Promise<Blob | null> => {
     try {
       const res = await fetch('/api/speak', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', ...requestHeadersRef.current },
-        body:    JSON.stringify({ text, voice }),
+        body:    JSON.stringify({ text, voice: voiceRef.current }),
       })
       if (!res.ok) return null
       return await res.blob()
     } catch {
       return null
     }
-  }, [voice])
+  }, [])
 
   const processQueue = useCallback(async () => {
     if (playingRef.current) return
@@ -128,6 +130,8 @@ export function useAudioPlayer({
     playingRef.current = false
     setIsPlaying(false)
   }, [])
+
+  useEffect(() => stopAll, [stopAll])
 
   return { isPlaying, enqueue, stopAll }
 }

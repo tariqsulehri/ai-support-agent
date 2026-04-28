@@ -19,6 +19,7 @@ export async function synthesizeSpeech(
 // ── Pronunciation normalization ────────────────────────────────────────────────
 const PRONUNCIATION_MAP: [RegExp, string][] = [
   [/support agent/gi, 'Support Agent'],
+  [/\btkxel\b/gi, 'Teksel'],
 ]
 
 function normalizeForSpeech(text: string): string {

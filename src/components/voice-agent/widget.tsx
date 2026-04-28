@@ -17,6 +17,7 @@ export function VoiceAgentWidget({
   margin = mode === 'inline' ? 'sm' : 'md',
 }: VoiceAgentWidgetProps) {
   const [open, setOpen] = useState(false)
+  const [inlineOpen, setInlineOpen] = useState(true)
   const inlinePadding = {
     none: 'p-0',
     sm:   'p-2',
@@ -25,9 +26,16 @@ export function VoiceAgentWidget({
   const floatingOffset = margin === 'none' ? 'bottom-0 right-0' : margin === 'sm' ? 'bottom-2 right-2' : 'bottom-6 right-6'
 
   if (mode === 'inline') {
+    if (!inlineOpen) return null
+
+    const closeInline = () => {
+      setInlineOpen(false)
+      window.parent?.postMessage({ type: 'voice-agent:close' }, '*')
+    }
+
     return (
       <div className={`min-h-dvh w-full flex items-end justify-end ${inlinePadding}`}>
-        <VoiceAgent tenantId={tenantId} token={token} />
+        <VoiceAgent tenantId={tenantId} token={token} onClose={closeInline} />
       </div>
     )
   }
@@ -35,20 +43,19 @@ export function VoiceAgentWidget({
   return (
     <>
       {/* ── Floating Agent Panel ──────────────────────────────────────────── */}
-      <div
-        aria-hidden={!open}
-        className={`
-          fixed ${floatingOffset} z-40
-          w-[min(calc(100vw-3rem),440px)]
-          max-h-[calc(100dvh-3rem)] overflow-y-auto
-          transition-all duration-300 ease-in-out origin-bottom-right
-          ${open
-            ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto'
-            : 'opacity-0 scale-95 translate-y-4 pointer-events-none'}
-        `}
-      >
-        <VoiceAgent tenantId={tenantId} token={token} onClose={() => setOpen(false)} />
-      </div>
+      {open && (
+        <div
+          className={`
+            fixed ${floatingOffset} z-40
+            w-[min(calc(100vw-3rem),440px)]
+            max-h-[calc(100dvh-3rem)] overflow-y-auto
+            transition-all duration-300 ease-in-out origin-bottom-right
+            opacity-100 scale-100 translate-y-0 pointer-events-auto
+          `}
+        >
+          <VoiceAgent tenantId={tenantId} token={token} onClose={() => setOpen(false)} />
+        </div>
+      )}
 
       {!open && (
         <button

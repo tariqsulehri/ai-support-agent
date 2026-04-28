@@ -27,11 +27,15 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
     isRecording,
     language, voice, leadData, callSummary,
     agentName, companyName,
-    setVoice, pressMic, releaseMic, sendText,
+    setVoice, stopPlayback, pressMic, releaseMic, sendText,
   } = useVoiceAgent({ tenantId, token })
 
   const initials = getInitials(agentName || 'CS')
   const isOnline = phase !== 'connecting' && phase !== 'error' && phase !== 'ended'
+  const handleClose = () => {
+    stopPlayback()
+    onClose?.()
+  }
 
   return (
     <div className="w-full max-w-[440px] flex flex-col gap-4">
@@ -62,7 +66,7 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
             {onClose && (
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 aria-label="Close chat"
                 className="
                   ml-1 w-8 h-8 rounded-full flex items-center justify-center

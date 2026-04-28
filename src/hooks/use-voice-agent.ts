@@ -100,6 +100,7 @@ export interface UseVoiceAgentReturn {
   agentName:    string
   companyName:  string
   setVoice:     (v: OpenAIVoice) => void
+  stopPlayback: () => void
   toggleMic:    () => void
   pressMic:     () => void   // push-to-talk: call on pointer down
   releaseMic:   () => void   // push-to-talk: call on pointer up/leave
@@ -360,6 +361,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     agentName,
     companyName,
     setVoice:   handleSetVoice,
+    stopPlayback: stopAll,
     toggleMic,
     pressMic,
     releaseMic,
