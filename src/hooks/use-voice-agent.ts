@@ -114,6 +114,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   const [agentName, setAgent]   = useState('Agent')
   const [companyName, setCompany] = useState('')
   const [embedHeaders, setEmbedHeaders] = useState<Record<string, string>>({})
+  const embedHeadersRef = useRef<Record<string, string>>({})
 
   // Keep voice in a ref so async callbacks always read the latest value
   const voiceRef = useRef<OpenAIVoice>('nova')
@@ -158,6 +159,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     if (resolvedTenant) headers['x-embed-tenant'] = resolvedTenant
     if (resolvedToken)  headers['x-embed-token']  = resolvedToken
     if (parent)         headers['x-embed-parent']  = parent
+    embedHeadersRef.current = headers
     setEmbedHeaders(headers)
 
     let cancelled = false
@@ -202,7 +204,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     try {
       const res  = await fetch('/api/transcribe', {
         method: 'POST',
-        headers: embedHeaders,
+        headers: embedHeadersRef.current,
         body: form,
       })
       const data = await res.json()
@@ -232,7 +234,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
       method:  'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...embedHeaders,
+        ...embedHeadersRef.current,
       },
       body:    JSON.stringify({ messages }),
     })
@@ -281,7 +283,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
               method:  'POST',
               headers: {
                 'Content-Type': 'application/json',
-                ...embedHeaders,
+                ...embedHeadersRef.current,
               },
               body:    JSON.stringify({ messages: historyRef.current }),
             })

@@ -19,6 +19,10 @@ export interface TenantConfig {
   // ── TTS ──────────────────────────────────────────────────────────────────────
   ttsProvider: 'openai' | 'elevenlabs'
   ttsVoice: string
+  voiceProfile?: {
+    gender: 'female' | 'male' | 'neutral'
+    style?: string
+  }
 
   // ── Knowledge ────────────────────────────────────────────────────────────────
   services: string[]

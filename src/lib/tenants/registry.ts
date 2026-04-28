@@ -50,18 +50,27 @@ export interface ResolutionHeaders {
   parentUrl?: string // Referer or x-embed-parent
 }
 
+export interface ResolutionOptions {
+  enforceToken?: boolean
+}
+
 /**
  * Resolves a tenant from request-level credentials.
  * Priority: id+token  →  apiKey  →  domain
  * Returns null if no match — caller decides 401 vs. default fallback.
  */
-export function resolveTenantFromHeaders(h: ResolutionHeaders): TenantConfig | null {
+export function resolveTenantFromHeaders(
+  h: ResolutionHeaders,
+  options: ResolutionOptions = {}
+): TenantConfig | null {
+  const enforceToken = options.enforceToken ?? true
+
   // 1. Explicit tenant id + optional token
   if (h.tenantId) {
     const tenant = getTenantById(h.tenantId)
     if (!tenant) return null
     // Only enforce token if the tenant has one configured
-    if (tenant.token && tenant.token !== h.token) return null
+    if (enforceToken && tenant.token && tenant.token !== h.token) return null
     return tenant
   }
 

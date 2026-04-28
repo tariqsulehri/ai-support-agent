@@ -1,6 +1,7 @@
 'use client'
 
 import type { OpenAIVoice } from '@/types'
+import { VOICE_OPTIONS } from '@/types'
 
 interface Props {
   language: string
@@ -8,7 +9,9 @@ interface Props {
   onVoice:  (v: OpenAIVoice) => void
 }
 
-export function SettingsBar({ language }: Props) {
+export function SettingsBar({ language, voice }: Props) {
+  const voiceLabel = VOICE_OPTIONS.find((option) => option.value === voice)?.label ?? `${voice} voice`
+
   return (
     <div className="flex items-center gap-2 text-[11px] text-ms-muted">
       <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24"
@@ -23,7 +26,7 @@ export function SettingsBar({ language }: Props) {
         <path strokeLinecap="round" strokeLinejoin="round"
           d="M15.536 8.464a5 5 0 010 7.072M12 6a7 7 0 010 14m0-14a7 7 0 000 14" />
       </svg>
-      <span>Male voice</span>
+      <span>{voiceLabel}</span>
     </div>
   )
 }

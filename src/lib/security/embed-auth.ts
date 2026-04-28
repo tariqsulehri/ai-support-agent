@@ -21,8 +21,16 @@ function headersFromRequest(req: NextRequest) {
  * Returns a 401 response on failure, null on success.
  */
 export function requireEmbedApiAuth(req: NextRequest): NextResponse | null {
-  if (!isEmbedAuthEnabled()) return null
-  const tenant = resolveTenantFromHeaders(headersFromRequest(req))
+  const headers = headersFromRequest(req)
+
+  if (!isEmbedAuthEnabled()) {
+    if (headers.tenantId && !resolveTenantFromHeaders(headers, { enforceToken: false })) {
+      return NextResponse.json({ error: 'Unknown tenant' }, { status: 400 })
+    }
+    return null
+  }
+
+  const tenant = resolveTenantFromHeaders(headers)
   if (!tenant) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -50,8 +58,10 @@ export function validateEmbedQuery(
  * Throws if no tenant can be resolved at all (misconfigured deployment).
  */
 export function getTenantFromRequest(req: NextRequest): TenantConfig {
+  const headers = headersFromRequest(req)
   const tenant =
-    resolveTenantFromHeaders(headersFromRequest(req)) ?? getDefaultTenant()
+    resolveTenantFromHeaders(headers, { enforceToken: isEmbedAuthEnabled() }) ??
+    getDefaultTenant()
 
   if (!tenant) {
     throw new Error('[embed-auth] No tenant resolved and tenants.json is empty.')
