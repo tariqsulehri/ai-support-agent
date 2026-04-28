@@ -19,12 +19,30 @@ export async function GET() {
 
   let isLoaded = false;
 
-  function getTheme() {
-    const style = getComputedStyle(document.body);
-    return {
-      bg: style.backgroundColor || "#ffffff",
-      fg: style.color || "#000000"
-    };
+  function rgbToHex(rgb) {
+    const m = rgb.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
+    if (!m) return null;
+    const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+    if ((r + g + b < 30) || (r + g + b > 720)) return null;
+    return "#" + r.toString(16).padStart(2,"0") + g.toString(16).padStart(2,"0") + b.toString(16).padStart(2,"0");
+  }
+
+  function detectPrimaryColor() {
+    const CSS_VARS = ["--primary","--primary-color","--brand-color","--color-primary","--theme-primary","--accent-color","--accent","--brand"];
+    const root = getComputedStyle(document.documentElement);
+    for (const v of CSS_VARS) {
+      const val = root.getPropertyValue(v).trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(val)) return val;
+      if (/^#[0-9a-fA-F]{3}$/.test(val)) return "#"+val[1]+val[1]+val[2]+val[2]+val[3]+val[3];
+    }
+    const BTNS = ['button[class*="primary"]','a[class*="primary"]','.btn-primary','.button-primary','[data-brand]'];
+    for (const sel of BTNS) {
+      const el = document.querySelector(sel);
+      if (el) { const c = rgbToHex(getComputedStyle(el).backgroundColor); if (c) return c; }
+    }
+    const header = document.querySelector("header") || document.querySelector("nav");
+    if (header) { const c = rgbToHex(getComputedStyle(header).backgroundColor); if (c) return c; }
+    return null;
   }
 
   function createUI() {
@@ -68,14 +86,13 @@ export async function GET() {
 
     button.onclick = function () {
       if (!isLoaded) {
-        const { bg, fg } = getTheme();
-
         const url = new URL("${baseUrl}/voice");
 
         url.searchParams.set("tenant", tenant);
         url.searchParams.set("token", token);
-        url.searchParams.set("bg", bg);
-        url.searchParams.set("fg", fg);
+
+        const primaryColor = detectPrimaryColor();
+        if (primaryColor) url.searchParams.set("primaryColor", primaryColor);
 
         const iframe = document.createElement("iframe");
         iframe.src = url.toString();

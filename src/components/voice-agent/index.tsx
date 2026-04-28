@@ -45,7 +45,7 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
            style={{ minHeight: 560, maxHeight: '82vh' }}>
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
-        <header className="bg-ms-blue px-5 py-4 flex items-center gap-3 shadow-header shrink-0">
+        <header className="bg-ms-teal px-5 py-4 flex items-center gap-3 shadow-header shrink-0">
           <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center
                           text-white font-semibold text-sm shrink-0 ring-2 ring-white/30">
             {initials}
@@ -139,7 +139,7 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
               aria-label="Send message"
               className="
                 shrink-0 w-9 h-9 rounded-xl flex items-center justify-center
-                bg-ms-blue hover:bg-ms-blue-dk
+                bg-ms-teal hover:bg-ms-teal-dk
                 disabled:bg-surface disabled:cursor-not-allowed
                 transition-colors
               "

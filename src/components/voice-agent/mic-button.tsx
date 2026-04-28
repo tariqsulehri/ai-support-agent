@@ -60,7 +60,7 @@ function getState(phase: Phase, isRecording: boolean) {
     disabled: true,
   }
   return {
-    cls:      'bg-ms-blue-lt hover:bg-ms-blue-md active:scale-95',
+    cls:      'bg-ms-teal-lt hover:bg-ms-teal-md active:scale-95',
     title:    'Hold to speak, release to send',
     disabled: false,
   }
@@ -68,7 +68,7 @@ function getState(phase: Phase, isRecording: boolean) {
 
 function MicIcon({ active }: { active: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className={`w-5 h-5 ${active ? 'fill-ms-blue' : 'fill-ms-muted'}`}>
+    <svg viewBox="0 0 24 24" className={`w-5 h-5 ${active ? 'fill-ms-teal' : 'fill-ms-muted'}`}>
       <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zm5 9a1 1 0 0 1 2 0 7 7 0 0 1-14 0 1 1 0 0 1 2 0 5 5 0 0 0 10 0zM11 19.93V22h2v-2.07A9 9 0 0 0 12 4v0" />
     </svg>
   )
