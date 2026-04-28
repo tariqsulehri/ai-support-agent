@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const { text, voice } = body
+  const { text } = body
 
   if (!text?.trim()) {
     return NextResponse.json({ error: 'text is required' }, { status: 400 })
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const tenant      = getTenantFromRequest(req)
-    const resolvedVoice    = voice ?? resolveTenantTtsVoice(tenant)
+    const resolvedVoice    = resolveTenantTtsVoice(tenant)
     const resolvedProvider = tenant.ttsProvider
 
     const audioBuffer = await synthesizeSpeech(text, resolvedVoice, resolvedProvider)
@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
         'Content-Type':   'audio/mpeg',
         'Content-Length': String(audioBuffer.length),
         'Cache-Control':  'no-store',
+        'X-TTS-Provider': resolvedProvider,
+        'X-TTS-Voice':    resolvedVoice,
       },
     })
   } catch (err) {

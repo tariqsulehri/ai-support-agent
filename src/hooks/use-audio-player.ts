@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 interface UseAudioPlayerOptions {
-  voice: string
   requestHeaders?: Record<string, string>
   onPlaybackStart?: () => void
   onPlaybackEnd?:   () => void
@@ -28,7 +27,6 @@ interface UseAudioPlayerReturn {
  * subsequent sentences are still being fetched.
  */
 export function useAudioPlayer({
-  voice,
   requestHeaders,
   onPlaybackStart,
   onPlaybackEnd,
@@ -40,16 +38,14 @@ export function useAudioPlayer({
   const currentAudio  = useRef<HTMLAudioElement | null>(null)
   const abortRef      = useRef(false)
   const requestHeadersRef = useRef<Record<string, string>>(requestHeaders ?? {})
-  const voiceRef = useRef(voice)
   requestHeadersRef.current = requestHeaders ?? {}
-  voiceRef.current = voice
 
   const fetchBlob = useCallback(async (text: string): Promise<Blob | null> => {
     try {
       const res = await fetch('/api/speak', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', ...requestHeadersRef.current },
-        body:    JSON.stringify({ text, voice: voiceRef.current }),
+        body:    JSON.stringify({ text }),
       })
       if (!res.ok) return null
       return await res.blob()

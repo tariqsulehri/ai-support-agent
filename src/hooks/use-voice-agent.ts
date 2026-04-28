@@ -132,7 +132,6 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   stateRef.current = state
 
   const { isPlaying, enqueue, stopAll } = useAudioPlayer({
-    voice: voiceRef.current,
     requestHeaders: embedHeaders,
     onPlaybackEnd: () => {
       if (stateRef.current.phase === 'speaking') {

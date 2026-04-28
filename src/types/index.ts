@@ -74,7 +74,6 @@ export interface ChatStreamEvent {
 
 export interface SpeakRequest {
   text: string
-  voice?: string
 }
 
 // ── TTS Voices ─────────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@
     "language": "english",
     "tone": "friendly, expert, and solution-oriented",
     "ttsProvider": "openai",
-    "ttsVoice": "echo",
+    "ttsVoice": "onyx",
     "voiceProfile": {
       "gender": "male",
       "style": "confident, calm, professional"
@@ -71,7 +71,7 @@
     "language": "english",
     "tone": "friendly, expert, and solution-oriented",
     "ttsProvider": "openai",
-    "ttsVoice": "echo",
+    "ttsVoice": "onyx",
     "voiceProfile": {
       "gender": "male",
       "style": "confident, calm, professional"

@@ -12,7 +12,7 @@ const OPENAI_VOICE_GENDER: Record<OpenAIVoice, 'female' | 'male' | 'neutral'> = 
 
 const DEFAULT_VOICE_BY_GENDER: Record<'female' | 'male' | 'neutral', OpenAIVoice> = {
   female:  'nova',
-  male:    'echo',
+  male:    'onyx',
   neutral: 'alloy',
 }
 
