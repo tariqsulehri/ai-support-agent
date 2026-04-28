@@ -4,6 +4,15 @@
 
 :root {
   color-scheme: light;
+
+  /* ── Primary brand color (RGB channels, no rgb() wrapper)
+     Override via ?primaryColor=#hex on the /voice embed URL,
+     or via postMessage { type: 'voice-agent:theme', colors: { primary: '#hex' } }
+     Defaults: amber #F9B01E */
+  --va-primary:    249 176 30;   /* #F9B01E */
+  --va-primary-dk: 223 160 26;   /* #DFA01A */
+  --va-primary-lt: 254 249 236;  /* #FEF9EC */
+  --va-primary-md: 253 240 200;  /* #FDF0C8 */
 }
 
 html, body {

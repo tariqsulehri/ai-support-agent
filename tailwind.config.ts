@@ -24,11 +24,11 @@ const config: Config = {
           hover:   '#F5F5F5',
         },
         ms: {
-          // Primary — amber
-          blue:      '#F9B01E',
-          'blue-dk': '#DFA01A',
-          'blue-lt': '#FEF9EC',
-          'blue-md': '#FDF0C8',
+          // Primary — driven by CSS vars so parent-page theme is inherited
+          blue:      'rgb(var(--va-primary)    / <alpha-value>)',
+          'blue-dk': 'rgb(var(--va-primary-dk) / <alpha-value>)',
+          'blue-lt': 'rgb(var(--va-primary-lt) / <alpha-value>)',
+          'blue-md': 'rgb(var(--va-primary-md) / <alpha-value>)',
           // Secondary — teal
           teal:      '#4CBAAB',
           'teal-dk': '#3DA898',
