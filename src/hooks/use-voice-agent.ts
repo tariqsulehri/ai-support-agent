@@ -130,6 +130,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   // ── Audio player ─────────────────────────────────────────────────────────────
   const stateRef = useRef(state)
   stateRef.current = state
+  const leadRef = useRef<LeadData>(EMPTY_LEAD)
 
   const { isPlaying, enqueue, stopAll } = useAudioPlayer({
     requestHeaders: embedHeaders,
@@ -269,6 +270,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
           enqueue(String(event.sentence))
         }
         if (event.lead) {
+          leadRef.current = { ...leadRef.current, ...(event.lead as LeadData) }
           dispatchFn?.({ type: 'LEAD_UPDATE', lead: event.lead as LeadData })
         }
         if (event.done) {
@@ -277,7 +279,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
           dispatchFn?.({ type: 'REPLY_COMPLETE', fullText, endCall })
           historyRef.current.push({ role: 'assistant', content: fullText })
           if (endCall) {
-            const lead = stateRef.current.leadData
+            const lead = leadRef.current
             // Generate summary in background — don't block the farewell
             fetch('/api/summarize', {
               method:  'POST',
@@ -285,7 +287,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
                 'Content-Type': 'application/json',
                 ...embedHeadersRef.current,
               },
-              body:    JSON.stringify({ messages: historyRef.current }),
+              body:    JSON.stringify({ messages: historyRef.current, lead }),
             })
               .then((r) => r.json())
               .then((data: CallSummary) => {

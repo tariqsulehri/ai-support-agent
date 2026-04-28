@@ -10,6 +10,11 @@ export interface LeadData {
 export interface CallSummary {
   summary:   string     // 2-3 sentence narrative of the discussion
   keyPoints: string[]   // 3-5 bullet points
+  email?: {
+    sent: boolean
+    recipients?: string[]
+    error?: string
+  }
 }
 
 // ── Conversation ───────────────────────────────────────────────────────────────

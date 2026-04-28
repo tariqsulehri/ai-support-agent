@@ -88,3 +88,39 @@ the built-in launcher button.
 - Start a voice call and verify browser mic prompt appears.
 - Confirm transcript, TTS playback, and call-end summary work.
 - Verify the same flow in Chrome + Safari (desktop and mobile if needed).
+
+## 7) Gmail SMTP call-summary emails
+
+Each tenant can send a call-summary email after the conversation ends. Configure
+`emailNotifications` in `src/data/tenants.json`.
+
+```json
+"emailNotifications": {
+  "enabled": true,
+  "smtp": {
+    "host": "smtp.gmail.com",
+    "port": 465,
+    "secure": true,
+    "userEnv": "GMAIL_SMTP_USER",
+    "passEnv": "GMAIL_SMTP_APP_PASSWORD"
+  },
+  "fromName": "tkxel Voice Agent",
+  "fromEmail": "your-gmail-address@gmail.com",
+  "recipients": ["sales@yourdomain.com"],
+  "sendToLeadEmail": true
+}
+```
+
+`sendToLeadEmail: true` sends the summary to the visitor email captured during
+the conversation. `recipients` sends a copy to fixed addresses such as your sales
+or support inbox.
+
+Set the referenced environment variables in `.env.local` or your hosting
+platform:
+
+```bash
+GMAIL_SMTP_USER=your-gmail-address@gmail.com
+GMAIL_SMTP_APP_PASSWORD=your-google-app-password
+```
+
+For Gmail, use a Google App Password, not your normal Gmail password.

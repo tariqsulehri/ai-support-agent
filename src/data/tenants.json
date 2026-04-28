@@ -31,6 +31,20 @@
     ],
     "greeting": "Hello! I'm your support agent from AI-Scripto Automations. How can I help you today?",
     "customInstructions": "You are a male assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
+    "emailNotifications": {
+      "enabled": false,
+      "smtp": {
+        "host": "smtp.gmail.com",
+        "port": 465,
+        "secure": true,
+        "userEnv": "GMAIL_SMTP_USER",
+        "passEnv": "GMAIL_SMTP_APP_PASSWORD"
+      },
+      "fromName": "AI-Scripto Voice Agent",
+      "fromEmail": "your-gmail-address@gmail.com",
+      "recipients": [],
+      "sendToLeadEmail": true
+    },
     "knowledgeBase": [
       {
         "topic": "Pricing",
@@ -84,6 +98,20 @@
     ],
     "greeting": "Hello! I'm your support agent from tkxel. How can I help you today?",
     "customInstructions": "You are a male assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
+    "emailNotifications": {
+      "enabled": false,
+      "smtp": {
+        "host": "smtp.gmail.com",
+        "port": 465,
+        "secure": true,
+        "userEnv": "GMAIL_SMTP_USER",
+        "passEnv": "GMAIL_SMTP_APP_PASSWORD"
+      },
+      "fromName": "tkxel Support",
+      "fromEmail": "tariq.sulehri@gmail.com",
+      "recipients": [],
+      "sendToLeadEmail": true
+    },
     "knowledgeBase": [
       {
         "topic": "Pricing",

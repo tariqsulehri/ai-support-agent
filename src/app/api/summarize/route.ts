@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOpenAIClient } from '@/lib/ai/client'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
-import type { ChatHistory } from '@/types'
+import { sendCallSummaryEmail } from '@/lib/email/call-summary'
+import type { CallSummary, ChatHistory, LeadData } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
@@ -20,9 +21,11 @@ export async function POST(req: NextRequest) {
   const tenant = getTenantFromRequest(req)
 
   let messages: ChatHistory
+  let lead: LeadData = { name: null, email: null, phone: null, company: null, purpose: null }
   try {
     const body = await req.json()
     messages = body.messages
+    if (body.lead && typeof body.lead === 'object') lead = body.lead
     if (!Array.isArray(messages)) throw new Error()
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
@@ -31,10 +34,12 @@ export async function POST(req: NextRequest) {
   const conversation = messages.filter((m) => m.content !== '__GREET__')
 
   if (conversation.length < 2) {
-    return NextResponse.json({
+    const briefSummary: CallSummary = {
       summary:   'The call was too brief to summarize.',
       keyPoints: [],
-    })
+    }
+    const email = await sendCallSummaryEmail({ tenant, lead, summary: briefSummary, messages })
+    return NextResponse.json({ ...briefSummary, email })
   }
 
   const agentLabel = tenant.agentName
@@ -69,10 +74,13 @@ Return only valid JSON matching this shape: { "summary": "...", "keyPoints": [".
     const raw    = completion.choices[0].message.content ?? '{}'
     const parsed = JSON.parse(raw)
 
-    return NextResponse.json({
+    const summary: CallSummary = {
       summary:   parsed.summary   ?? '',
       keyPoints: parsed.keyPoints ?? [],
-    })
+    }
+    const email = await sendCallSummaryEmail({ tenant, lead, summary, messages })
+
+    return NextResponse.json({ ...summary, email })
   } catch (err) {
     console.error('[summarize]', err)
     return NextResponse.json({ error: 'Summarization failed' }, { status: 500 })

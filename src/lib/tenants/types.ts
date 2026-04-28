@@ -3,6 +3,21 @@ export interface KBEntry {
   content: string
 }
 
+export interface EmailNotificationConfig {
+  enabled: boolean
+  smtp: {
+    host: string
+    port: number
+    secure: boolean
+    userEnv: string
+    passEnv: string
+  }
+  fromName: string
+  fromEmail: string
+  recipients?: string[]
+  sendToLeadEmail?: boolean
+}
+
 export interface TenantConfig {
   // ── Identity & Auth ──────────────────────────────────────────────────────────
   id: string
@@ -31,4 +46,7 @@ export interface TenantConfig {
 
   // ── Conversation ─────────────────────────────────────────────────────────────
   greeting?: string  // exact first message — bypasses LLM, guaranteed verbatim
+
+  // ── Notifications ────────────────────────────────────────────────────────────
+  emailNotifications?: EmailNotificationConfig
 }
