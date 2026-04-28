@@ -12,13 +12,14 @@ import { StatusIndicator }              from './status-indicator'
 interface VoiceAgentProps {
   tenantId?: string
   token?:    string
+  onClose?:  () => void
 }
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
-export function VoiceAgent({ tenantId, token }: VoiceAgentProps) {
+export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
   const textRef = useRef<TextInputHandle>(null)
 
   const {
@@ -53,11 +54,29 @@ export function VoiceAgent({ tenantId, token }: VoiceAgentProps) {
               {companyName || 'AI Support'}
             </p>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : 'bg-white/40'}`} />
             <span className="text-white/80 text-xs font-medium">
               {isOnline ? 'Online' : 'Offline'}
             </span>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close chat"
+                className="
+                  ml-1 w-8 h-8 rounded-full flex items-center justify-center
+                  text-white/80 hover:text-white hover:bg-white/15
+                  transition-colors focus:outline-none focus-visible:ring-2
+                  focus-visible:ring-white/70
+                "
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none"
+                     stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
         </header>
 
