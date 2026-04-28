@@ -41,6 +41,27 @@ If `EMBED_AUTH_ENABLED=false` (default), the app works without tenant auth.
 
 ## 4) Give customer iframe snippet
 
+If the customer website already has its own floating chat button, use inline mode.
+This avoids showing a second launcher button inside the iframe.
+
+```html
+<iframe
+  src="https://agent.yourdomain.com/voice?tenant=customer-a&token=replace-with-long-random-secret&mode=inline&margin=sm"
+  title="Support Agent Voice Agent"
+  width="100%"
+  height="680"
+  style="border:0;border-radius:12px;"
+  loading="lazy"
+  allow="microphone; autoplay"
+  referrerpolicy="strict-origin-when-cross-origin"
+></iframe>
+```
+
+Use `margin=none` when the host page already provides spacing around the iframe.
+
+If the iframe is the only chat control on the page, use floating mode. This shows
+the built-in launcher button.
+
 ```html
 <iframe
   src="https://agent.yourdomain.com/voice?tenant=customer-a&token=replace-with-long-random-secret"

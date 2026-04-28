@@ -6,10 +6,31 @@ import { VoiceAgent } from './index'
 interface VoiceAgentWidgetProps {
   tenantId?: string
   token?:    string
+  mode?:     'floating' | 'inline'
+  margin?:   'none' | 'sm' | 'md'
 }
 
-export function VoiceAgentWidget({ tenantId, token }: VoiceAgentWidgetProps) {
+export function VoiceAgentWidget({
+  tenantId,
+  token,
+  mode = 'floating',
+  margin = mode === 'inline' ? 'sm' : 'md',
+}: VoiceAgentWidgetProps) {
   const [open, setOpen] = useState(false)
+  const inlinePadding = {
+    none: 'p-0',
+    sm:   'p-2',
+    md:   'p-4 sm:p-6',
+  }[margin]
+  const floatingOffset = margin === 'none' ? 'bottom-0 right-0' : margin === 'sm' ? 'bottom-2 right-2' : 'bottom-6 right-6'
+
+  if (mode === 'inline') {
+    return (
+      <div className={`min-h-dvh w-full flex items-end justify-end ${inlinePadding}`}>
+        <VoiceAgent tenantId={tenantId} token={token} />
+      </div>
+    )
+  }
 
   return (
     <>
@@ -17,7 +38,7 @@ export function VoiceAgentWidget({ tenantId, token }: VoiceAgentWidgetProps) {
       <div
         aria-hidden={!open}
         className={`
-          fixed bottom-6 right-6 z-40
+          fixed ${floatingOffset} z-40
           w-[min(calc(100vw-3rem),440px)]
           max-h-[calc(100dvh-3rem)] overflow-y-auto
           transition-all duration-300 ease-in-out origin-bottom-right
@@ -36,7 +57,7 @@ export function VoiceAgentWidget({ tenantId, token }: VoiceAgentWidgetProps) {
           aria-label="Open chat"
           aria-expanded={open}
           className="
-            fixed bottom-6 right-6 z-50
+            fixed z-50
             h-14 max-w-[calc(100vw-3rem)] rounded-full shadow-lg
             bg-ms-blue hover:bg-ms-blue-dk text-white
             flex items-center gap-3 px-4
@@ -44,6 +65,10 @@ export function VoiceAgentWidget({ tenantId, token }: VoiceAgentWidgetProps) {
             ring-4 ring-ms-blue/20 hover:ring-ms-blue/30
             focus:outline-none focus-visible:ring-4
           "
+          style={{
+            right: margin === 'none' ? 0 : margin === 'sm' ? 8 : 24,
+            bottom: margin === 'none' ? 0 : margin === 'sm' ? 8 : 24,
+          }}
         >
           <span className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none"

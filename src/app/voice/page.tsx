@@ -9,6 +9,13 @@ export default async function VoicePage({ searchParams }: VoicePageProps) {
   const params   = (await searchParams) ?? {}
   const tenantId = typeof params.tenant === 'string' ? params.tenant : undefined
   const token    = typeof params.token  === 'string' ? params.token  : undefined
+  const modeParam = typeof params.mode === 'string' ? params.mode : undefined
+  const launcherParam = typeof params.launcher === 'string' ? params.launcher : undefined
+  const marginParam = typeof params.margin === 'string' ? params.margin : undefined
+  const mode = modeParam === 'inline' || launcherParam === 'false' ? 'inline' : 'floating'
+  const margin = marginParam === 'none' || marginParam === 'sm' || marginParam === 'md'
+    ? marginParam
+    : undefined
 
   const auth = validateEmbedQuery(tenantId, token)
 
@@ -33,7 +40,7 @@ export default async function VoicePage({ searchParams }: VoicePageProps) {
 
   return (
     <main className="min-h-dvh bg-surface">
-      <VoiceAgentWidget tenantId={tenantId} token={token} />
+      <VoiceAgentWidget tenantId={tenantId} token={token} mode={mode} margin={margin} />
     </main>
   )
 }
