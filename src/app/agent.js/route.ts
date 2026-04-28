@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    const baseUrl = "https://ai-support-agent-navy.vercel.app";
 
     const js = `
 (function () {
