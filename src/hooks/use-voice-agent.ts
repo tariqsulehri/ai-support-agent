@@ -95,15 +95,17 @@ export interface UseVoiceAgentReturn {
   isPlaying:    boolean
   language:     string
   voice:        OpenAIVoice
+  outputMode:   'voice' | 'text'
   leadData:     LeadData
   callSummary:  CallSummary | null
   agentName:    string
   companyName:  string
-  setVoice:     (v: OpenAIVoice) => void
+  setVoice:        (v: OpenAIVoice) => void
+  setOutputMode:   (m: 'voice' | 'text') => void
   stopPlayback: () => void
   toggleMic:    () => void
-  pressMic:     () => void   // push-to-talk: call on pointer down
-  releaseMic:   () => void   // push-to-talk: call on pointer up/leave
+  pressMic:     () => void
+  releaseMic:   () => void
   sendText:     (text: string) => void
 }
 
@@ -114,14 +116,21 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   const [language, setLang]     = useState('English')
   const [agentName, setAgent]   = useState('Agent')
   const [companyName, setCompany] = useState('')
+  const [outputMode, setOutputModeState] = useState<'voice' | 'text'>('voice')
   const [embedHeaders, setEmbedHeaders] = useState<Record<string, string>>({})
   const embedHeadersRef = useRef<Record<string, string>>({})
 
-  // Keep voice in a ref so async callbacks always read the latest value
+  // Keep voice + outputMode in refs so async callbacks always read the latest value
   const voiceRef = useRef<OpenAIVoice>('nova')
   const handleSetVoice = useCallback((v: OpenAIVoice) => {
     voiceRef.current = v
     setVoice(v)
+  }, [])
+
+  const outputModeRef = useRef<'voice' | 'text'>('voice')
+  const setOutputMode = useCallback((m: 'voice' | 'text') => {
+    outputModeRef.current = m
+    setOutputModeState(m)
   }, [])
 
   // Conversation history sent to /api/chat
@@ -179,7 +188,8 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
           // Use the exact hardcoded greeting — guaranteed verbatim, no LLM
           const greetingText = cfg.greeting as string
           dispatch({ type: 'REPLY_COMPLETE', fullText: greetingText, endCall: false })
-          enqueue(greetingText)
+          if (outputModeRef.current === 'voice') enqueue(greetingText)
+          else dispatch({ type: 'SPEAKING_DONE' })
           historyRef.current.push({ role: 'assistant', content: greetingText })
         } else {
           await streamChat([{ role: 'user', content: '__GREET__' }], cancelled ? null : dispatch)
@@ -267,7 +277,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
           dispatchFn?.({ type: 'STREAM_TOKEN', token: String(event.token) })
         }
         if (event.sentence) {
-          enqueue(String(event.sentence))
+          if (outputModeRef.current === 'voice') enqueue(String(event.sentence))
         }
         if (event.lead) {
           leadRef.current = { ...leadRef.current, ...(event.lead as LeadData) }
@@ -277,6 +287,10 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
           const fullText = String(event.fullText ?? '')
           const endCall  = Boolean(event.endCall)
           dispatchFn?.({ type: 'REPLY_COMPLETE', fullText, endCall })
+          // In text mode no audio plays, so manually release the speaking phase
+          if (outputModeRef.current === 'text' && !endCall) {
+            dispatchFn?.({ type: 'SPEAKING_DONE' })
+          }
           historyRef.current.push({ role: 'assistant', content: fullText })
           if (endCall) {
             const lead = leadRef.current
@@ -357,12 +371,14 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     isPlaying,
     language,
     voice,
+    outputMode,
     leadData:     state.leadData,
     callSummary:  state.callSummary,
     agentName,
     companyName,
-    setVoice:   handleSetVoice,
-    stopPlayback: stopAll,
+    setVoice:      handleSetVoice,
+    setOutputMode,
+    stopPlayback:  stopAll,
     toggleMic,
     pressMic,
     releaseMic,

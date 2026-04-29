@@ -25,9 +25,9 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
   const {
     phase, transcript, partialReply, error,
     isRecording,
-    language, voice, leadData, callSummary,
+    language, voice, outputMode, leadData, callSummary,
     agentName, companyName,
-    setVoice, stopPlayback, pressMic, releaseMic, sendText,
+    setVoice, setOutputMode, stopPlayback, pressMic, releaseMic, sendText,
   } = useVoiceAgent({ tenantId, token })
 
   const initials = getInitials(agentName || 'CS')
@@ -117,11 +117,41 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
             </p>
           )}
 
-          {/* Row: [TextInput] [Mic] [Send] */}
+          {/* Row: [TextInput] [OutputToggle] [Mic] [Send] */}
           <div className="flex items-end gap-2">
 
             {/* Text input — no send button inside */}
             <TextInput ref={textRef} phase={phase} onSend={sendText} />
+
+            {/* Voice / text output toggle */}
+            <button
+              type="button"
+              onClick={() => setOutputMode(outputMode === 'voice' ? 'text' : 'voice')}
+              aria-label={outputMode === 'voice' ? 'Switch to text output' : 'Switch to voice output'}
+              title={outputMode === 'voice' ? 'Voice output on' : 'Voice output off'}
+              className={`
+                shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors
+                ${outputMode === 'voice'
+                  ? 'bg-ms-teal/10 text-ms-teal hover:bg-ms-teal/20'
+                  : 'bg-surface text-ms-muted hover:bg-surface-border'}
+              `}
+            >
+              {outputMode === 'voice' ? (
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none"
+                     stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none"
+                     stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <line x1="23" y1="9" x2="17" y2="15" />
+                  <line x1="17" y1="9" x2="23" y2="15" />
+                </svg>
+              )}
+            </button>
 
             {/* Mic — push-to-talk: hold → record, release → send */}
             <MicButton
