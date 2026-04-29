@@ -7,7 +7,8 @@ import * as fs from "fs";
 // ── Tenant loader (CLI-side, relative imports only) ───────────────────────────
 interface TenantConfig {
   id: string; agentName: string; companyName: string;
-  language: string; tone: string; ttsProvider: string; ttsVoice: string;
+  languageMode: string; supportedLanguages?: string[];
+  tone: string; ttsProvider: string; ttsVoice: string;
   services: string[]; customInstructions?: string;
   knowledgeBase?: { topic: string; content: string }[];
 }
@@ -32,7 +33,7 @@ function buildSystemPrompt(c: TenantConfig): string {
 
   return `
 You are ${c.agentName}, a representative of ${c.companyName}.
-Respond ONLY in ${c.language}. Tone: ${c.tone}.
+Detect the user's language and respond in the same language. Tone: ${c.tone}.
 
 ${c.companyName} provides: ${c.services.map(s => `\n- ${s}`).join("")}
 
@@ -62,7 +63,7 @@ async function runTextAgent(): Promise<void> {
   const question = (prompt: string): Promise<string> =>
     new Promise((resolve) => rl.question(prompt, resolve));
 
-  console.log(`\n${tenant.agentName} @ ${tenant.companyName}  (lang: ${tenant.language})`);
+  console.log(`\n${tenant.agentName} @ ${tenant.companyName}  (lang: ${tenant.languageMode})`);
   console.log('Type your message and press Enter. Type "exit" to quit.\n');
 
   while (true) {

@@ -20,16 +20,19 @@ const WHISPER_CODES: Record<string, string> = {
 }
 
 export interface LangConfig {
-  name:        string  // e.g. "Urdu"
-  whisperCode: string  // e.g. "ur"
+  name:        string        // e.g. "Urdu" or "Auto"
+  whisperCode: string | null // null = let Whisper auto-detect
 }
 
 /**
- * Converts a tenant language string to a LangConfig.
- * @param language - value from TenantConfig.language (e.g. "english")
+ * Converts a tenant languageMode to a LangConfig.
+ * Pass "auto" to let Whisper detect the language automatically.
  */
-export function getLangConfig(language: string): LangConfig {
-  const raw  = language.trim().toLowerCase()
+export function getLangConfig(languageMode: string): LangConfig {
+  const raw = languageMode.trim().toLowerCase()
+
+  if (raw === 'auto') return { name: 'Auto', whisperCode: null }
+
   const code = WHISPER_CODES[raw]
 
   if (!code) {

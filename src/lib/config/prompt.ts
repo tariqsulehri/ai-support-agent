@@ -1,6 +1,6 @@
 import type { TenantConfig } from '@/lib/tenants/types'
 
-export function buildSystemPrompt(config: TenantConfig): string {
+export function buildSystemPrompt(config: TenantConfig, detectedLanguage?: string): string {
   const kbSection = config.knowledgeBase?.length
     ? `## KNOWLEDGE BASE\n\n${config.knowledgeBase.map(e => `**${e.topic}:** ${e.content}`).join('\n\n')}\n\n---`
     : ''
@@ -9,6 +9,23 @@ export function buildSystemPrompt(config: TenantConfig): string {
     ? `## CUSTOM INSTRUCTIONS\n\n${config.customInstructions.trim()}\n\n---`
     : ''
 
+  const languageRule = detectedLanguage
+    ? `## LANGUAGE RULE — CRITICAL
+
+The user is writing in: ${detectedLanguage}
+You MUST respond in ${detectedLanguage}.
+Never mix languages unless the user does.
+If the user mixes languages, mirror their style naturally.`
+    : `## LANGUAGE RULE — CRITICAL
+
+- Detect the language of the user's message.
+- ALWAYS respond in the SAME language as the user.
+- If the user writes in Urdu → respond in Urdu.
+- If the user writes in Hindi → respond in Hindi.
+- If the user writes in English → respond in English.
+- Never mix languages unless the user does.
+- If the user mixes languages, mirror their style naturally.`
+
   return `
 You are ${config.agentName}, a friendly, knowledgeable, and professional representative of ${config.companyName}.
 
@@ -16,9 +33,7 @@ You are a real human-like assistant — not a bot. You communicate naturally, co
 
 ---
 
-## LANGUAGE RULE — STRICT
-You MUST respond ONLY in ${config.language}.
-Do not switch languages. Do not mix languages.
+${languageRule}
 
 ---
 

@@ -8,7 +8,8 @@ import * as path from "path";
 // ── Tenant loader (CLI-side, relative imports only) ───────────────────────────
 interface TenantConfig {
   id: string; agentName: string; companyName: string;
-  language: string; tone: string; ttsProvider: string; ttsVoice: string;
+  languageMode: string; supportedLanguages?: string[];
+  tone: string; ttsProvider: string; ttsVoice: string;
   services: string[]; customInstructions?: string;
   knowledgeBase?: { topic: string; content: string }[];
 }
@@ -33,7 +34,7 @@ function buildSystemPrompt(c: TenantConfig): string {
 
   return `
 You are ${c.agentName}, a representative of ${c.companyName}.
-Respond ONLY in ${c.language}. Tone: ${c.tone}.
+Detect the user's language and respond in the same language. Tone: ${c.tone}.
 
 ${c.companyName} provides: ${c.services.map(s => `\n- ${s}`).join("")}
 
@@ -115,12 +116,12 @@ function checkSox(): void {
 }
 
 // ── Transcribe ────────────────────────────────────────────────────────────────
-async function transcribe(audioPath: string, whisperCode: string): Promise<string> {
+async function transcribe(audioPath: string, whisperCode?: string): Promise<string> {
   const openai = new OpenAI();
   const result = await openai.audio.transcriptions.create({
-    file:     fs.createReadStream(audioPath),
-    model:    "whisper-1",
-    language: whisperCode,
+    file:  fs.createReadStream(audioPath),
+    model: "whisper-1",
+    ...(whisperCode ? { language: whisperCode } : {}),
   });
   return result.text.trim();
 }
@@ -128,7 +129,7 @@ async function transcribe(audioPath: string, whisperCode: string): Promise<strin
 // ── Main ──────────────────────────────────────────────────────────────────────
 const tenantId   = process.argv[2] ?? process.env.TENANT_ID;
 const tenant     = loadTenant(tenantId);
-const whisperCode = getWhisperCode(tenant.language);
+const whisperCode = tenant.languageMode === 'auto' ? undefined : getWhisperCode(tenant.languageMode);
 
 type Message = { role: "system" | "user" | "assistant"; content: string };
 
@@ -142,7 +143,7 @@ async function runVoiceAgent(): Promise<void> {
   console.log(`║  ${tenant.agentName} @ ${tenant.companyName.padEnd(28)}║`);
   console.log("║  Voice Agent  |  Hands-Free                ║");
   console.log("╚════════════════════════════════════════════╝");
-  console.log(`\n  Language : ${tenant.language}`);
+  console.log(`\n  Language : ${tenant.languageMode}`);
   console.log(`  Voice    : ${tenant.ttsProvider} / ${tenant.ttsVoice}`);
   console.log("  Say goodbye to end the call. Ctrl+C to force quit.\n");
 

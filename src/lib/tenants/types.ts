@@ -28,8 +28,10 @@ export interface TenantConfig {
   // ── Persona ──────────────────────────────────────────────────────────────────
   agentName: string
   companyName: string
-  language: string         // "english", "urdu", "arabic", etc.
-  tone: string             // e.g. "friendly, expert"
+  languageMode: 'auto' | string        // "auto" or a specific language e.g. "english"
+  supportedLanguages?: string[]        // e.g. ["english", "urdu", "hindi"]
+  languageVoices?: Record<string, string> // e.g. { "urdu": "echo", "hindi": "echo" }
+  tone: string                         // e.g. "friendly, expert"
 
   // ── TTS ──────────────────────────────────────────────────────────────────────
   ttsProvider: 'openai' | 'elevenlabs'

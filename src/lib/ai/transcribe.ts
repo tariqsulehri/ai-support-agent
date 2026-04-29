@@ -7,7 +7,7 @@ import { getOpenAIClient } from './client'
  */
 export async function transcribeAudio(
   audio: File | Blob,
-  languageCode: string
+  languageCode: string | null
 ): Promise<string> {
   const client = getOpenAIClient()
 
@@ -16,7 +16,7 @@ export async function transcribeAudio(
   const transcription = await client.audio.transcriptions.create({
     file,
     model: 'whisper-1',
-    language: languageCode,
+    ...(languageCode ? { language: languageCode } : {}),
   })
 
   return transcription.text.trim()

@@ -1,5 +1,6 @@
 import { getOpenAIClient } from './client'
 import { buildSystemPrompt } from '@/lib/config/prompt'
+import { detectLanguage } from '@/lib/utils/detect-language'
 import type { TenantConfig } from '@/lib/tenants/types'
 
 export type ChatMessage = { role: 'user' | 'assistant'; content: string }
@@ -12,8 +13,14 @@ export async function streamChatReply(
   messages: ChatMessage[],
   tenant: TenantConfig
 ) {
-  const client       = getOpenAIClient()
-  const systemPrompt = buildSystemPrompt(tenant)
+  const client = getOpenAIClient()
+
+  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+  const detectedLanguage = lastUserMsg
+    ? detectLanguage(lastUserMsg.content, tenant.supportedLanguages) ?? undefined
+    : undefined
+
+  const systemPrompt = buildSystemPrompt(tenant, detectedLanguage)
 
   return client.chat.completions.create({
     model:       'gpt-4o',

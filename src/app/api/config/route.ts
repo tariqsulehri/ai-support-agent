@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   if (authError) return authError
 
   const tenant = getTenantFromRequest(req)
-  const lang   = getLangConfig(tenant.language)
+  const lang   = getLangConfig(tenant.languageMode)
 
   return NextResponse.json({
     language:    lang.name,
