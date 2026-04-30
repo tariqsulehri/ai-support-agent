@@ -1,5 +1,6 @@
 import { isEmbedAuthEnabled, validateEmbedQuery } from '@/lib/security/embed-auth'
 import { VoiceAgentWidget } from '@/components/voice-agent/widget'
+import { FullscreenAgent } from '@/components/voice-agent/fullscreen-agent'
 import { ThemeProvider, type ThemeColors } from '@/components/voice-agent/theme-provider'
 
 interface VoicePageProps {
@@ -51,7 +52,10 @@ export default async function VoicePage({ searchParams }: VoicePageProps) {
   const modeParam = typeof params.mode === 'string' ? params.mode : undefined
   const launcherParam = typeof params.launcher === 'string' ? params.launcher : undefined
   const marginParam = typeof params.margin === 'string' ? params.margin : undefined
-  const mode = modeParam === 'floating' || launcherParam === 'true' ? 'floating' : 'inline'
+  const mode = modeParam === 'fullscreen' ? 'fullscreen'
+             : modeParam === 'floating' || launcherParam === 'true' ? 'floating'
+             : modeParam === 'inline' ? 'inline'
+             : 'fullscreen' // default
   const margin = marginParam === 'none' || marginParam === 'sm' || marginParam === 'md' ? marginParam : undefined
 
   // ── Theme params (validated hex strings only) ──────────────────────────────
@@ -100,7 +104,12 @@ export default async function VoicePage({ searchParams }: VoicePageProps) {
       <ThemeProvider initial={initialTheme} />
 
       <main className="min-h-dvh bg-surface">
-        <VoiceAgentWidget tenantId={tenantId} token={token} mode={mode} margin={margin} />
+        {mode === 'fullscreen' ? (
+          <FullscreenAgent tenantId={tenantId} token={token} />
+        ) : (
+          <VoiceAgentWidget tenantId={tenantId} token={token}
+                            mode={mode as 'floating' | 'inline'} margin={margin} />
+        )}
       </main>
     </>
   )

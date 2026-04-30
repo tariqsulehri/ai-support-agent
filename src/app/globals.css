@@ -43,109 +43,653 @@ html, body {
 .msg-enter { animation: fade-up 0.2s ease-out forwards; }
 
 /* ════════════════════════════════════════════════════════════════════════════
-   ROBOT AVATAR
+   FULLSCREEN — MARS SCI-FI
    ════════════════════════════════════════════════════════════════════════════ */
 
-/* ── Body motion ─────────────────────────────────────────────────────────── */
-@keyframes robot-float {
-  0%, 100% { transform: translateY(0px);            }
-  50%       { transform: translateY(-7px);           }
-}
-@keyframes robot-bob-speak {
-  0%, 100% { transform: translateY(0px) scale(1);   }
-  25%       { transform: translateY(-3px) scale(1.015); }
-  75%       { transform: translateY(2px)  scale(0.985); }
-}
-@keyframes robot-bob-listen {
-  0%, 100% { transform: translateY(0) rotate(0deg);    }
-  30%       { transform: translateY(-5px) rotate(-2deg); }
-  70%       { transform: translateY(3px)  rotate(2deg);  }
-}
-@keyframes robot-bob-think {
-  0%, 100% { transform: translateY(0) rotate(0deg);   }
-  50%       { transform: translateY(-4px) rotate(1deg); }
+/* ── Root ─────────────────────────────────────────────────────────────────── */
+.fs-root {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  background: #05010D;
+  overflow: hidden;
 }
 
-.robot-float       { animation: robot-float      3.6s ease-in-out infinite; }
-.robot-bob-speak   { animation: robot-bob-speak  0.45s ease-in-out infinite; }
-.robot-bob-listen  { animation: robot-bob-listen 0.7s  ease-in-out infinite; }
-.robot-bob-think   { animation: robot-bob-think  2.2s  ease-in-out infinite; }
+/* ── Background layer ────────────────────────────────────────────────────── */
+.fs-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 
-/* ── Orbital rings ───────────────────────────────────────────────────────── */
-@keyframes orbit-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes orbit-fast { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* Stars */
+.fs-stars { position: absolute; inset: 0; width: 100%; height: 100%; }
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; } 50% { opacity: 1; }
+}
+.fs-star-twinkle { animation: twinkle linear infinite; }
 
-.robot-orbit-slow { animation: orbit-slow 8s  linear infinite; }
-.robot-orbit-fast { animation: orbit-fast 2.5s linear infinite; }
+/* Mars planet */
+.fs-mars-wrap {
+  position: absolute;
+  bottom: -18vw; right: -12vw;
+  width: clamp(320px, 55vw, 680px);
+  height: clamp(320px, 55vw, 680px);
+  opacity: 0.88;
+  animation: mars-breathe 18s ease-in-out infinite alternate;
+}
+@keyframes mars-breathe {
+  0%   { filter: drop-shadow(0 0 60px rgba(180,60,15,0.35)); }
+  100% { filter: drop-shadow(0 0 100px rgba(200,80,20,0.55)); }
+}
+.fs-mars-svg { width: 100%; height: 100%; }
 
-/* ── Pulse rings (speaking) ──────────────────────────────────────────────── */
-@keyframes robot-pulse {
-  0%   { transform: scale(1);   opacity: 0.7; }
-  100% { transform: scale(1.9); opacity: 0;   }
-}
-.robot-pulse-ring { border: 1.5px solid rgba(0,212,255,0.55); }
-.robot-pulse-ring { animation: robot-pulse 1.8s ease-out infinite; }
-.robot-pulse-1    { animation-delay: 0s;   }
-.robot-pulse-2    { animation-delay: 0.6s; }
-.robot-pulse-3    { animation-delay: 1.2s; }
-
-/* ── Listen ring (amber) ─────────────────────────────────────────────────── */
-@keyframes robot-listen {
-  0%   { transform: scale(1);   opacity: 0.6; }
-  100% { transform: scale(1.6); opacity: 0;   }
-}
-.robot-listen-ring {
-  border: 2px solid rgba(245,158,11,0.6);
-  animation: robot-listen 1.1s ease-out infinite;
+/* Mars atmospheric haze */
+.fs-mars-haze {
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 70vw; height: 50vh;
+  background: radial-gradient(ellipse at 80% 100%,
+    rgba(180,60,15,0.18) 0%,
+    rgba(120,35,8,0.08) 45%,
+    transparent 70%);
+  pointer-events: none;
 }
 
-/* ── Eye scan animation ──────────────────────────────────────────────────── */
-@keyframes eye-scan {
-  0%   { transform: translateX(0px);  opacity: 1;   }
-  45%  { transform: translateX(12px); opacity: 0.9; }
-  50%  { transform: translateX(12px); opacity: 0;   }
-  55%  { transform: translateX(0px);  opacity: 0;   }
-  60%  { transform: translateX(0px);  opacity: 1;   }
-  100% { transform: translateX(0px);  opacity: 1;   }
+/* Nebula clouds */
+.fs-nebula {
+  position: absolute; border-radius: 50%;
+  filter: blur(90px);
+  animation: nebula-drift 20s ease-in-out infinite alternate;
 }
-.robot-eye-scan { animation: eye-scan 2.4s ease-in-out infinite; }
+.fs-nebula-1 {
+  width: 500px; height: 300px;
+  top: -60px; left: -80px;
+  background: radial-gradient(ellipse, rgba(0,140,220,0.09) 0%, transparent 70%);
+  animation-delay: 0s;
+}
+.fs-nebula-2 {
+  width: 400px; height: 250px;
+  top: 20%; left: 15%;
+  background: radial-gradient(ellipse, rgba(140,40,200,0.07) 0%, transparent 70%);
+  animation-delay: -7s;
+}
+.fs-nebula-3 {
+  width: 350px; height: 350px;
+  top: 5%; right: 25%;
+  background: radial-gradient(ellipse, rgba(200,80,20,0.06) 0%, transparent 70%);
+  animation-delay: -13s;
+}
+@keyframes nebula-drift {
+  0%   { transform: translate(0,0) scale(1);        }
+  50%  { transform: translate(25px,15px) scale(1.08); }
+  100% { transform: translate(-15px,30px) scale(0.94);}
+}
 
-/* ── Eye loading bar (thinking) ──────────────────────────────────────────── */
-@keyframes eye-load {
-  0%   { transform: translateX(0px);  }
-  100% { transform: translateX(12px); }
+/* Circuit traces */
+.fs-circuit {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0.9;
 }
-.robot-eye-load { animation: eye-load 0.9s ease-in-out infinite alternate; }
 
-/* ── Equalizer bars (speaking) ───────────────────────────────────────────── */
-@keyframes eq-bar {
-  0%, 100% { transform: scaleY(0.15); }
-  50%       { transform: scaleY(1);   }
+/* ── Content shell ───────────────────────────────────────────────────────── */
+.fs-content {
+  position: relative; z-index: 10;
+  display: flex; flex-direction: column;
+  height: 100%; width: 100%;
+  max-width: 720px; margin: 0 auto;
+  padding: 0 1.25rem;
 }
-.robot-eq-bar { animation: eq-bar 0.35s ease-in-out infinite alternate; }
 
-/* ── Listen scan (mouth) ─────────────────────────────────────────────────── */
-@keyframes listen-scan {
-  0%   { transform: translateX(0px);  }
-  100% { transform: translateX(32px); }
+/* ════ SPACE ZONE — hero / non-work area ════════════════════════════════════ */
+.fs-hero {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 0.6rem;
+  padding: 1.5rem 0 1.25rem;
+  flex-shrink: 0;
 }
-.robot-listen-scan { animation: listen-scan 0.9s ease-in-out infinite alternate; }
 
-/* ── Thinking dots ───────────────────────────────────────────────────────── */
-@keyframes think-dot {
-  0%, 100% { opacity: 0.2; transform: scale(0.7); }
-  50%       { opacity: 1;   transform: scale(1);   }
+/* HUD bar */
+.fs-hud-bar {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,107,53,0.12);
 }
-.robot-think-dot { animation: think-dot 0.9s ease-in-out infinite; }
+.fs-hud-left, .fs-hud-right {
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.fs-hud-label {
+  font-size: 0.6rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(200,160,120,0.55);
+}
+.fs-hud-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+}
+.fs-hud-dot-green {
+  background: #00FF88;
+  box-shadow: 0 0 6px #00FF88;
+  animation: pulse_dot 2s ease-in-out infinite;
+}
+.fs-hud-dot-blue {
+  background: #00D4FF;
+  box-shadow: 0 0 6px #00D4FF;
+  animation: pulse_dot 2.4s ease-in-out infinite;
+}
 
-/* ── Antenna light ───────────────────────────────────────────────────────── */
-@keyframes antenna-idle {
-  0%, 80%, 100% { opacity: 0.6; r: 3; }
-  85%           { opacity: 1;   r: 4; }
+/* ── Company name — always visible, prominent ────────────────────────────── */
+.fs-company-block {
+  display: flex; align-items: center; gap: 0.6rem;
+  margin-top: 0.25rem;
 }
-@keyframes antenna-think {
-  0%, 100% { opacity: 0.3; }
-  50%       { opacity: 1;   }
+.fs-company-name {
+  font-size: 1.6rem; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: none;
+  background: linear-gradient(135deg, #00F5FF 0%, #60EFFF 45%, #0099CC 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 0 22px rgba(0,212,255,0.8)) drop-shadow(0 0 8px rgba(0,245,255,0.6));
 }
-.robot-antenna-idle  { animation: antenna-idle  2.5s ease-in-out infinite; }
-.robot-antenna-think { animation: antenna-think 0.5s ease-in-out infinite; }
+.fs-company-live {
+  display: flex; align-items: center; gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(0,255,136,0.08);
+  border: 1px solid rgba(0,255,136,0.25);
+  font-size: 0.55rem; font-weight: 800;
+  letter-spacing: 0.15em;
+  color: rgba(0,255,136,0.85);
+  align-self: center;
+}
+
+/* Badge */
+.fs-badge {
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.2rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255,107,53,0.08);
+  border: 1px solid rgba(255,107,53,0.2);
+  font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(255,160,100,0.9);
+}
+.fs-badge-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #FF6B35;
+  box-shadow: 0 0 6px #FF6B35;
+  animation: pulse_dot 1.6s ease-in-out infinite;
+}
+
+/* Avatar */
+.fs-avatar-wrap {
+  transform: scale(1.65);
+  margin: 1.6rem 0 0.8rem;
+  padding-top: 18px;
+  overflow: visible;
+  filter:
+    drop-shadow(0 0 28px rgba(0,212,255,0.3))
+    drop-shadow(0 0 60px rgba(200,80,20,0.2));
+}
+
+/* Agent name */
+.fs-agent-name {
+  font-size: 1.3rem; font-weight: 700;
+  color: #EDD5B8;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 1.75rem;
+  text-shadow: 0 0 20px rgba(255,107,53,0.3);
+}
+
+/* Status row */
+.fs-status-row {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.fs-status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.fs-dot-green  { background:#00FF88; box-shadow:0 0 8px #00FF88; animation:pulse_dot 2s infinite; }
+.fs-dot-cyan   { background:#00F5FF; box-shadow:0 0 8px #00F5FF; animation:pulse_dot 0.4s infinite; }
+.fs-dot-amber  { background:#F59E0B; box-shadow:0 0 8px #F59E0B; animation:pulse_dot 0.6s infinite; }
+.fs-dot-purple { background:#A855F7; box-shadow:0 0 8px #A855F7; animation:pulse_dot 0.9s infinite; }
+.fs-dot-red    { background:#F87171; box-shadow:0 0 8px #F87171; animation:pulse_dot 0.5s infinite; }
+
+.fs-status-text {
+  font-size: 0.72rem; font-weight: 500;
+  letter-spacing: 0.06em;
+  transition: color 0.4s ease;
+}
+
+/* Waveform */
+.fs-waveform {
+  display: flex; align-items: center; gap: 2.5px;
+  height: 26px; margin-top: 0.2rem;
+}
+.fs-wave-bar {
+  width: 3px; border-radius: 99px;
+  background: linear-gradient(to top, #FF6B35, #00F5FF);
+  animation: fs-wave 0.5s ease-in-out infinite alternate;
+  box-shadow: 0 0 5px rgba(0,245,255,0.4);
+}
+@keyframes fs-wave {
+  0%   { height: 3px;  opacity: 0.3; }
+  100% { height: 22px; opacity: 1;   }
+}
+
+/* ════ CONSOLE ZONE — work area (distinct from space) ══════════════════════ */
+.fs-console {
+  position: relative;
+  flex: 1; display: flex; flex-direction: column;
+  min-height: 0;
+  background: rgba(6,2,14,0.92);
+  border-radius: 1.25rem 1.25rem 0 0;
+  border: 1px solid rgba(255,107,53,0.14);
+  border-bottom: none;
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+/* Top glowing edge — the boundary between space and console */
+.fs-console-edge {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right,
+    transparent 0%,
+    rgba(255,107,53,0.5) 25%,
+    rgba(0,212,255,0.6) 50%,
+    rgba(255,107,53,0.5) 75%,
+    transparent 100%);
+  box-shadow: 0 0 16px rgba(0,212,255,0.25);
+}
+
+/* Corner HUD brackets */
+.fs-corner {
+  position: absolute;
+  width: 16px; height: 16px;
+  border-color: rgba(255,107,53,0.35);
+  border-style: solid;
+}
+.fs-corner-tl { top: 8px; left: 8px; border-width: 1.5px 0 0 1.5px; border-radius: 3px 0 0 0; }
+.fs-corner-tr { top: 8px; right: 8px; border-width: 1.5px 1.5px 0 0; border-radius: 0 3px 0 0; }
+
+/* Transcript */
+.fs-transcript {
+  flex: 1; overflow-y: auto;
+  display: flex; flex-direction: column;
+  padding: 1rem 1.25rem 0.5rem;
+  min-height: 0;
+}
+
+/* Empty state */
+.fs-empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0.5rem; padding: 2rem;
+  opacity: 0.45;
+}
+.fs-empty-icon {
+  width: 2.5rem; height: 2.5rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255,107,53,0.3);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,107,53,0.7);
+}
+.fs-empty-text {
+  font-size: 0.8rem; font-weight: 600;
+  color: rgba(220,180,140,0.8);
+  letter-spacing: 0.04em;
+}
+.fs-empty-sub {
+  font-size: 0.7rem;
+  color: rgba(148,130,110,0.6);
+}
+
+/* Bubbles */
+.fs-bubble-row  { display: flex; }
+.fs-bubble-left  { justify-content: flex-start; }
+.fs-bubble-right { justify-content: flex-end;   }
+
+.fs-bubble {
+  max-width: 74%;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.85rem; line-height: 1.65;
+  border-radius: 1.1rem;
+}
+.fs-bubble-agent {
+  background: rgba(12,6,24,0.95);
+  border: 1px solid rgba(255,107,53,0.12);
+  color: #D4C4B0;
+  border-bottom-left-radius: 3px;
+}
+.fs-bubble-user {
+  background: linear-gradient(135deg, rgba(30,15,55,0.98), rgba(15,8,32,0.98));
+  border: 1px solid rgba(0,212,255,0.18);
+  color: #C8DCF0;
+  border-bottom-right-radius: 3px;
+}
+
+/* Input bar */
+.fs-input-bar {
+  padding: 0.75rem 1.25rem 1.25rem;
+  flex-shrink: 0;
+}
+.fs-input-divider {
+  height: 1px; margin-bottom: 0.75rem;
+  background: linear-gradient(to right,
+    transparent, rgba(255,107,53,0.2), rgba(0,212,255,0.15), transparent);
+}
+.fs-rec-hint {
+  text-align: center;
+  font-size: 0.65rem; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: #F87171; margin-bottom: 0.5rem;
+  animation: pulse_dot 1s ease-in-out infinite;
+}
+.fs-input-row {
+  display: flex; align-items: flex-end; gap: 0.5rem;
+}
+
+/* Icon buttons */
+.fs-icon-btn {
+  flex-shrink: 0;
+  width: 2.5rem; height: 2.5rem; border-radius: 0.6rem;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,107,53,0.05);
+  border: 1px solid rgba(255,107,53,0.15);
+  color: rgba(200,160,120,0.6);
+  transition: all 0.2s;
+}
+.fs-icon-btn:hover { background: rgba(255,107,53,0.1); color: #FF8C5A; }
+.fs-icon-active {
+  background: rgba(0,212,255,0.08);
+  border-color: rgba(0,212,255,0.3);
+  color: #00D4FF;
+  box-shadow: 0 0 10px rgba(0,212,255,0.15);
+}
+
+/* Send button */
+.fs-send-btn {
+  flex-shrink: 0;
+  width: 2.5rem; height: 2.5rem; border-radius: 0.6rem;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #8B2500, #CC4400);
+  border: 1px solid rgba(255,107,53,0.4);
+  box-shadow: 0 0 14px rgba(200,70,10,0.35);
+  transition: all 0.2s;
+}
+.fs-send-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #AA3300, #FF5500);
+  box-shadow: 0 0 22px rgba(255,85,0,0.45);
+}
+.fs-send-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+/* ── Glowing text box wrapper ────────────────────────────────────────────── */
+.fs-textbox-wrap {
+  flex: 1; position: relative;
+  border-radius: 0.75rem;
+  padding: 1.5px;
+  background: linear-gradient(135deg,
+    rgba(0,212,255,0.25) 0%,
+    rgba(124,58,237,0.2) 50%,
+    rgba(255,107,53,0.2) 100%);
+  box-shadow:
+    0 0 12px rgba(0,212,255,0.1),
+    inset 0 0 8px rgba(0,0,0,0.5);
+  transition: box-shadow 0.3s ease;
+}
+.fs-textbox-wrap:focus-within {
+  background: linear-gradient(135deg,
+    rgba(0,245,255,0.6) 0%,
+    rgba(124,58,237,0.5) 50%,
+    rgba(255,107,53,0.4) 100%);
+  box-shadow:
+    0 0 20px rgba(0,212,255,0.25),
+    0 0 40px rgba(0,212,255,0.1);
+}
+.fs-textbox-wrap.fs-textbox-listening {
+  background: linear-gradient(135deg,
+    rgba(245,158,11,0.5) 0%,
+    rgba(245,158,11,0.2) 100%);
+  box-shadow: 0 0 18px rgba(245,158,11,0.2);
+}
+.fs-textbox-wrap.fs-textbox-speaking {
+  background: linear-gradient(135deg,
+    rgba(0,245,255,0.5) 0%,
+    rgba(0,245,255,0.2) 100%);
+  box-shadow: 0 0 18px rgba(0,245,255,0.2);
+}
+
+/* TextInput inner styles */
+.fs-textbox-wrap textarea,
+.fs-textbox-wrap input {
+  background: rgba(4,1,12,0.97) !important;
+  border: none !important;
+  border-radius: 0.65rem !important;
+  color: #E2F4FF !important;
+  font-size: 0.875rem !important;
+  padding: 0.6rem 0.9rem !important;
+}
+.fs-textbox-wrap textarea::placeholder,
+.fs-textbox-wrap input::placeholder {
+  color: rgba(0,212,255,0.25) !important;
+  font-style: italic;
+}
+
+/* ── Controls cluster ────────────────────────────────────────────────────── */
+.fs-controls {
+  display: flex; align-items: center; gap: 0.35rem;
+  background: rgba(4,1,12,0.8);
+  border: 1px solid rgba(0,212,255,0.12);
+  border-radius: 0.75rem;
+  padding: 0.3rem;
+}
+
+.fs-ctrl-btn {
+  width: 2.2rem; height: 2.2rem; border-radius: 0.5rem;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(0,212,255,0.4);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.fs-ctrl-btn:hover {
+  background: rgba(0,212,255,0.08);
+  border-color: rgba(0,212,255,0.2);
+  color: #00D4FF;
+}
+.fs-ctrl-active-cyan {
+  background: rgba(0,212,255,0.1);
+  border-color: rgba(0,212,255,0.35) !important;
+  color: #00F5FF !important;
+  box-shadow: 0 0 10px rgba(0,212,255,0.2);
+}
+
+/* Send button */
+.fs-send-btn {
+  width: 2.2rem; height: 2.2rem; border-radius: 0.5rem;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #0D4F8C, #0A6EBD);
+  border: 1px solid rgba(0,212,255,0.35);
+  box-shadow: 0 0 12px rgba(0,180,255,0.25);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.fs-send-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1060A8, #0D8FE0);
+  box-shadow: 0 0 22px rgba(0,200,255,0.45);
+}
+.fs-send-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   2026 ROBOT AVATAR
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Float / bob ─────────────────────────────────────────────────────────── */
+@keyframes r26-float {
+  0%,100% { transform: translateY(0);    }
+  50%     { transform: translateY(-5px); }
+}
+@keyframes r26-speak {
+  0%,100% { transform: translateY(0) scale(1);     }
+  30%     { transform: translateY(-3px) scale(1.02); }
+  70%     { transform: translateY(2px)  scale(0.98); }
+}
+@keyframes r26-listen {
+  0%,100% { transform: translateY(0) rotate(0deg);    }
+  30%     { transform: translateY(-3px) rotate(-2deg); }
+  70%     { transform: translateY(2px)  rotate(2deg);  }
+}
+@keyframes r26-think {
+  0%,100% { transform: translateY(0) rotate(0deg);   }
+  50%     { transform: translateY(-3px) rotate(1deg); }
+}
+.robot26-float       { animation: r26-float  3.8s ease-in-out infinite; }
+.robot26-bob-speak   { animation: r26-speak  0.42s ease-in-out infinite; }
+.robot26-bob-listen  { animation: r26-listen 0.65s ease-in-out infinite; }
+.robot26-bob-think   { animation: r26-think  2.4s  ease-in-out infinite; }
+
+/* ── Hexagonal orbital rings ─────────────────────────────────────────────── */
+@keyframes r26-spin-slow { to { transform: rotate(360deg); } }
+@keyframes r26-spin-fast { to { transform: rotate(360deg); } }
+.robot26-hex-ring {
+  position: absolute; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+}
+.robot26-ring-1 {
+  border: 1px solid rgba(0,212,255,0.55);
+  box-shadow:
+    0 0 12px rgba(0,212,255,0.35),
+    0 0 28px rgba(0,212,255,0.15),
+    inset 0 0 12px rgba(0,212,255,0.08);
+}
+.robot26-ring-2 {
+  border: 1px dashed rgba(0,180,255,0.3);
+  box-shadow:
+    0 0 16px rgba(0,180,255,0.25),
+    0 0 40px rgba(0,140,255,0.1);
+}
+.robot26-spin-slow { animation: r26-spin-slow 10s linear infinite; }
+.robot26-spin-fast { animation: r26-spin-fast 2.8s linear infinite; }
+
+/* ── Pulse rings ─────────────────────────────────────────────────────────── */
+@keyframes r26-pulse {
+  0%   { transform: scale(1);   opacity: 0.65; }
+  100% { transform: scale(2.0); opacity: 0;    }
+}
+.robot26-pulse { border: 1.5px solid rgba(0,245,255,0.5); }
+.robot26-pulse { animation: r26-pulse 2s ease-out infinite; }
+.robot26-pulse-1 { animation-delay: 0s;    }
+.robot26-pulse-2 { animation-delay: 0.65s; }
+.robot26-pulse-3 { animation-delay: 1.3s;  }
+
+/* ── Listen ring ─────────────────────────────────────────────────────────── */
+@keyframes r26-listen-ring {
+  0%   { transform: scale(1);    opacity: 0.6; }
+  100% { transform: scale(1.65); opacity: 0;   }
+}
+.robot26-listen-ring {
+  border: 2px solid rgba(245,158,11,0.55);
+  animation: r26-listen-ring 1.1s ease-out infinite;
+}
+
+/* ── Corner nodes ────────────────────────────────────────────────────────── */
+.robot26-corner-node {
+  position: absolute;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(0,212,255,0.3);
+  transition: all 0.3s ease;
+}
+.robot26-corner-tl { top: 4px;    left: 4px;  }
+.robot26-corner-tr { top: 4px;    right: 4px; }
+.robot26-corner-bl { bottom: 4px; left: 4px;  }
+.robot26-corner-br { bottom: 4px; right: 4px; }
+.robot26-node-active {
+  background: #00F5FF;
+  box-shadow: 0 0 8px #00F5FF;
+  animation: pulse_dot 0.5s ease-in-out infinite;
+}
+
+/* ── Edge glow pulse ─────────────────────────────────────────────────────── */
+@keyframes r26-edge-pulse {
+  0%,100% { opacity: 0.6; filter: drop-shadow(0 0 2px rgba(0,245,255,0.4)); }
+  50%     { opacity: 1;   filter: drop-shadow(0 0 6px rgba(0,245,255,0.9)); }
+}
+.robot26-edge-pulse { animation: r26-edge-pulse 0.45s ease-in-out infinite; }
+
+/* ── Glow background pulse ───────────────────────────────────────────────── */
+@keyframes r26-glow-pulse {
+  0%,100% { opacity: 0.6; }
+  50%     { opacity: 1.0; }
+}
+.robot26-glow-pulse { animation: r26-glow-pulse 0.45s ease-in-out infinite; }
+
+/* ── Visor scan line (idle) ──────────────────────────────────────────────── */
+@keyframes r26-scan {
+  0%   { transform: translateX(0);   opacity: 0.8; }
+  40%  { transform: translateX(70px); opacity: 0.9; }
+  41%  { opacity: 0; }
+  42%  { transform: translateX(0); opacity: 0; }
+  45%  { opacity: 0.8; }
+  100% { opacity: 0.8; }
+}
+.robot26-scan-line { animation: r26-scan 3s ease-in-out infinite; }
+
+/* ── Oscilloscope wave (speaking) ────────────────────────────────────────── */
+@keyframes r26-wave {
+  0%,100% { transform: scaleY(1);    }
+  50%     { transform: scaleY(-0.7); }
+}
+.robot26-wave-line  {
+  animation: r26-wave 0.3s ease-in-out infinite alternate;
+  transform-origin: center 67px;
+}
+.robot26-wave-2 { animation-duration: 0.22s; animation-delay: 0.1s; }
+
+/* ── Spectrum bars (listening) ───────────────────────────────────────────── */
+@keyframes r26-specbar {
+  0%,100% { transform: scaleY(0.1); }
+  50%     { transform: scaleY(1);   }
+}
+.robot26-listen-bar { animation: r26-specbar 0.4s ease-in-out infinite alternate; }
+
+/* ── Thinking load bar ───────────────────────────────────────────────────── */
+@keyframes r26-load {
+  0%   { transform: translateX(0);   width: 0px;  }
+  100% { transform: translateX(0);   width: 72px; }
+}
+.robot26-think-load { animation: r26-load 1.4s ease-in-out infinite alternate; }
+
+@keyframes r26-seg {
+  0%,100% { opacity: 0.2; }
+  50%     { opacity: 0.8; }
+}
+.robot26-think-seg { animation: r26-seg 1.2s ease-in-out infinite; }
+
+/* ── Eq bars (speaking mouth) ────────────────────────────────────────────── */
+@keyframes r26-eq {
+  0%,100% { transform: scaleY(0.1); }
+  50%     { transform: scaleY(1);   }
+}
+.robot26-eq-bar { animation: r26-eq 0.3s ease-in-out infinite alternate; }
+
+/* ── Think dots ──────────────────────────────────────────────────────────── */
+@keyframes r26-tdot {
+  0%,100% { opacity: 0.15; transform: scale(0.6); }
+  50%     { opacity: 1;    transform: scale(1);   }
+}
+.robot26-think-dot { animation: r26-tdot 0.85s ease-in-out infinite; }
+
+/* ── Mouth scan (listening) ──────────────────────────────────────────────── */
+@keyframes r26-mscan {
+  0%   { transform: translateX(0);   }
+  100% { transform: translateX(40px); }
+}
+.robot26-mouth-scan { animation: r26-mscan 0.85s ease-in-out infinite alternate; }
+
+/* ── Antenna ─────────────────────────────────────────────────────────────── */
+@keyframes r26-ant {
+  0%,85%,100% { opacity:0.6; }
+  90%         { opacity:1;   }
+}
+.robot26-antenna { animation: r26-ant 2.2s ease-in-out infinite; }
