@@ -15,6 +15,7 @@ const envSchema = z.object({
 
   // Embed security
   EMBED_AUTH_ENABLED: z.enum(['true', 'false']).default('false'),
+
 })
 
 export type Env = z.infer<typeof envSchema>

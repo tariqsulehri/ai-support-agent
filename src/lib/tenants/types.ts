@@ -51,4 +51,5 @@ export interface TenantConfig {
 
   // ── Notifications ────────────────────────────────────────────────────────────
   emailNotifications?: EmailNotificationConfig
+
 }

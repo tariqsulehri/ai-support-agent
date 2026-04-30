@@ -116,7 +116,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   const [language, setLang]     = useState('English')
   const [agentName, setAgent]   = useState('Agent')
   const [companyName, setCompany] = useState('')
-  const [outputMode, setOutputModeState] = useState<'voice' | 'text'>('voice')
+  const [outputMode, setOutputModeState] = useState<'voice' | 'text'>('text')
   const [embedHeaders, setEmbedHeaders] = useState<Record<string, string>>({})
   const embedHeadersRef = useRef<Record<string, string>>({})
 
@@ -127,7 +127,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     setVoice(v)
   }, [])
 
-  const outputModeRef = useRef<'voice' | 'text'>('voice')
+  const outputModeRef = useRef<'voice' | 'text'>('text')
   const setOutputMode = useCallback((m: 'voice' | 'text') => {
     outputModeRef.current = m
     setOutputModeState(m)
