@@ -70,6 +70,114 @@
     ]
   },
   {
+    "id": "outlet-reviews",
+    "token": "reviewsToken123Abcd",
+    "apiKeys": [
+      "reviewsApiKey123Abcd"
+    ],
+    "openaiApiKey": "",
+    "allowedDomains": [
+      "http://localhost:3000",
+      "http://127.0.0.1:5500",
+      "http://localhost:5173"
+    ],
+    "agentType": "reviews",
+    "agentName": "Feedback Agent",
+    "companyName": "Our Outlet",
+    "languageMode": "auto",
+    "supportedLanguages": ["english", "urdu", "hindi"],
+    "tone": "warm, genuine, and appreciative",
+    "ttsProvider": "openai",
+    "ttsVoice": "nova",
+    "voiceProfile": {
+      "gender": "female",
+      "style": "friendly, calm, approachable"
+    },
+    "services": [],
+    "greeting": "Hi there! Thank you for taking the time to share your feedback with us. Whether it's a compliment, a concern, or a suggestion — we're all ears. Please go ahead!",
+    "customInstructions": "If the customer gives positive feedback, be genuinely warm and grateful. If negative or a complaint, acknowledge empathetically and assure it will reach the right team. Always ask for the specific branch or location visited.",
+    "emailNotifications": {
+      "enabled": false,
+      "smtp": {
+        "host": "smtp.gmail.com",
+        "port": 465,
+        "secure": true,
+        "userEnv": "GMAIL_SMTP_USER",
+        "passEnv": "GMAIL_SMTP_APP_PASSWORD"
+      },
+      "fromName": "Outlet Feedback",
+      "fromEmail": "your-gmail-address@gmail.com",
+      "recipients": [],
+      "sendToLeadEmail": false
+    },
+    "knowledgeBase": [
+      {
+        "topic": "Follow-up",
+        "content": "All feedback is reviewed by the outlet manager within 24 hours. Complaints receive a personal follow-up call or email."
+      },
+      {
+        "topic": "Anonymity",
+        "content": "Customers may choose to leave feedback anonymously. Contact details are optional and used only for follow-up."
+      }
+    ]
+  },
+  {
+    "id": "outlet-complaints",
+    "token": "outletToken123Abcd",
+    "apiKeys": [
+      "outletApiKey123Abcd"
+    ],
+    "openaiApiKey": "",
+    "allowedDomains": [
+      "http://localhost:3000",
+      "http://127.0.0.1:5500",
+      "http://localhost:5173"
+    ],
+    "agentType": "complaints",
+    "agentName": "Complaints Agent",
+    "companyName": "Our Outlet",
+    "languageMode": "auto",
+    "supportedLanguages": ["english", "urdu", "hindi"],
+    "tone": "empathetic, calm, and professional",
+    "ttsProvider": "openai",
+    "ttsVoice": "nova",
+    "voiceProfile": {
+      "gender": "female",
+      "style": "warm, patient, reassuring"
+    },
+    "services": [],
+    "greeting": "Hello! Thank you for reaching out. I'm here to listen and help resolve your concern. Please go ahead and share what happened.",
+    "customInstructions": "Always validate the customer's feelings before asking follow-up questions. If the complaint involves food safety or injury, escalate urgency in your tone and assure immediate attention.",
+    "emailNotifications": {
+      "enabled": false,
+      "smtp": {
+        "host": "smtp.gmail.com",
+        "port": 465,
+        "secure": true,
+        "userEnv": "GMAIL_SMTP_USER",
+        "passEnv": "GMAIL_SMTP_APP_PASSWORD"
+      },
+      "fromName": "Outlet Complaints",
+      "fromEmail": "your-gmail-address@gmail.com",
+      "recipients": [],
+      "sendToLeadEmail": false
+    },
+    "knowledgeBase": [
+      {
+        "topic": "Resolution Timeline",
+        "content": "All complaints are reviewed within 24 hours. A team member will follow up via phone or email with an update."
+      },
+      {
+        "topic": "Escalation",
+        "content": "Complaints involving food safety, injury, or health concerns are escalated immediately to the outlet manager."
+      },
+      {
+        "topic": "Refund Policy",
+        "content": "Refund and replacement decisions are made by the outlet manager after reviewing the complaint. Do not promise refunds directly."
+      }
+    ]
+  },
+  {
     "id": "tkxel",
     "token": "tkxelToken123Abcd",
     "apiKeys": [

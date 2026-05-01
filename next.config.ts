@@ -13,6 +13,13 @@ function buildFrameAncestors(): string {
 const frameAncestors = buildFrameAncestors()
 
 const nextConfig: NextConfig = {
+  // Native Node addons must not be bundled by webpack
+  serverExternalPackages: [
+    'better-sqlite3',
+    'sqlite-vec',
+    '@prisma/adapter-better-sqlite3',
+  ],
+
   async headers() {
     return [
       {

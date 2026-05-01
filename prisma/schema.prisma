@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ── Outlet / Shop ──────────────────────────────────────────────────────────────
+model Shop {
+  id         String   @id @default(cuid())
+  tenantId   String   @unique  // matches id in tenants.json
+  name       String
+  city       String?
+  address    String?
+  branchCode String?
+  createdAt  DateTime @default(now())
+
+  reviews Review[]
+}
+
+// ── Review Session ─────────────────────────────────────────────────────────────
+model Review {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+
+  // Classification (from REVIEW hidden token)
+  sentiment   String?  // positive | negative | complaint
+  category    String?  // product | service | behavioral | facility | pricing | general
+  subcategory String?  // e.g. "cold food", "rude cashier"
+  rating      Int?     // 1–5
+  items       String?  // JSON: string[]
+
+  // Summary (from /api/summarize)
+  summary   String?
+  keyPoints String?  // JSON: string[]
+  transcript String? // JSON: ChatHistory
+
+  createdAt DateTime @default(now())
+
+  lead Lead?
+}
+
+// ── Customer Contact (optional) ────────────────────────────────────────────────
+model Lead {
+  id       String  @id @default(cuid())
+  reviewId String  @unique
+  review   Review  @relation(fields: [reviewId], references: [id])
+
+  name  String?
+  email String?
+  phone String?
+
+  createdAt DateTime @default(now())
+}

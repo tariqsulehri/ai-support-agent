@@ -11,6 +11,7 @@ import type {
   ChatHistory,
   OpenAIVoice,
   LeadData,
+  ReviewData,
   CallSummary,
 } from '@/types'
 
@@ -54,6 +55,9 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
     case 'LEAD_UPDATE':
       return { ...state, leadData: { ...state.leadData, ...action.lead } }
 
+    case 'REVIEW_UPDATE':
+      return { ...state, reviewData: { ...state.reviewData, ...action.review } }
+
     case 'CALL_SUMMARY':
       return { ...state, callSummary: action.summary }
 
@@ -68,7 +72,8 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
   }
 }
 
-const EMPTY_LEAD: LeadData = { name: null, email: null, phone: null, company: null, purpose: null }
+const EMPTY_LEAD: LeadData     = { name: null, email: null, phone: null, company: null, purpose: null }
+const EMPTY_REVIEW: ReviewData = { sentiment: null, category: null, subcategory: null, rating: null, items: null }
 
 const initialState: VoiceAgentState = {
   phase:        'connecting',
@@ -76,6 +81,7 @@ const initialState: VoiceAgentState = {
   partialReply: '',
   error:        null,
   leadData:     EMPTY_LEAD,
+  reviewData:   EMPTY_REVIEW,
   callSummary:  null,
 }
 
@@ -97,6 +103,7 @@ export interface UseVoiceAgentReturn {
   voice:        OpenAIVoice
   outputMode:   'voice' | 'text'
   leadData:     LeadData
+  reviewData:   ReviewData
   callSummary:  CallSummary | null
   agentName:    string
   companyName:  string
@@ -139,7 +146,8 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   // ── Audio player ─────────────────────────────────────────────────────────────
   const stateRef = useRef(state)
   stateRef.current = state
-  const leadRef = useRef<LeadData>(EMPTY_LEAD)
+  const leadRef   = useRef<LeadData>(EMPTY_LEAD)
+  const reviewRef = useRef<ReviewData>(EMPTY_REVIEW)
 
   const { isPlaying, enqueue, stopAll } = useAudioPlayer({
     requestHeaders: embedHeaders,
@@ -283,6 +291,10 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
           leadRef.current = { ...leadRef.current, ...(event.lead as LeadData) }
           dispatchFn?.({ type: 'LEAD_UPDATE', lead: event.lead as LeadData })
         }
+        if (event.review) {
+          reviewRef.current = { ...reviewRef.current, ...(event.review as ReviewData) }
+          dispatchFn?.({ type: 'REVIEW_UPDATE', review: event.review as ReviewData })
+        }
         if (event.done) {
           const fullText = String(event.fullText ?? '')
           const endCall  = Boolean(event.endCall)
@@ -293,7 +305,8 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
           }
           historyRef.current.push({ role: 'assistant', content: fullText })
           if (endCall) {
-            const lead = leadRef.current
+            const lead   = leadRef.current
+            const review = reviewRef.current
             // Generate summary in background — don't block the farewell
             fetch('/api/summarize', {
               method:  'POST',
@@ -301,14 +314,14 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
                 'Content-Type': 'application/json',
                 ...embedHeadersRef.current,
               },
-              body:    JSON.stringify({ messages: historyRef.current, lead }),
+              body:    JSON.stringify({ messages: historyRef.current, lead, review }),
             })
               .then((r) => r.json())
               .then((data: CallSummary) => {
                 dispatchFn?.({ type: 'CALL_SUMMARY', summary: data })
                 console.log(
                   '[Call Report]',
-                  JSON.stringify({ lead, ...data }, null, 2)
+                  JSON.stringify({ lead, review, ...data }, null, 2)
                 )
               })
               .catch((err) => console.error('[summarize]', err))
@@ -373,6 +386,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     voice,
     outputMode,
     leadData:     state.leadData,
+    reviewData:   state.reviewData,
     callSummary:  state.callSummary,
     agentName,
     companyName,

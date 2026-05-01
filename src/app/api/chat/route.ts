@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic'
  *   { sentence: string }                                 — complete sentence ready for TTS
  *   { done: true, fullText: string, endCall: boolean }   — stream finished
  *   { lead: LeadData }                                   — lead capture update
+ *   { review: ReviewData }                               — review classification update
  *   { error: string }                                    — something went wrong
  */
 export async function POST(req: NextRequest) {
@@ -37,14 +38,16 @@ export async function POST(req: NextRequest) {
     return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
   }
 
-  const LEAD_RE = /\[LEAD:\{[^}]*(?:\{[^}]*\}[^}]*)?\}\]/g
-  function stripLead(text: string): string {
-    return text.replace(LEAD_RE, '').trim()
+  // Strip both hidden tokens from visible text
+  const TOKEN_RE = /\[(LEAD|REVIEW):([\s\S]*?)\]/g
+  function stripTokens(text: string): string {
+    return text.replace(TOKEN_RE, '').replace(/\s{2,}/g, ' ').trim()
   }
-  function extractLead(text: string): Record<string, string | null> | null {
-    const m = text.match(/\[LEAD:(\{[\s\S]*?\})\]/)
+  function extractToken<T>(text: string, name: string): T | null {
+    const re = new RegExp(`\\[${name}:([\\s\\S]*?)\\]`)
+    const m  = text.match(re)
     if (!m) return null
-    try { return JSON.parse(m[1]) } catch { return null }
+    try { return JSON.parse(m[1]) as T } catch { return null }
   }
 
   const stream = new ReadableStream({
@@ -67,21 +70,23 @@ export async function POST(req: NextRequest) {
             const { sentences, remainder } = extractSentences(sentenceBuffer)
             sentenceBuffer = remainder
             for (const sentence of sentences) {
-              const clean = stripLead(sentence)
+              const clean = stripTokens(sentence)
               if (clean) controller.enqueue(send({ sentence: clean }))
             }
           }
 
           if (finishReason === 'stop') {
-            const tail = stripLead(sentenceBuffer.trim())
+            const tail = stripTokens(sentenceBuffer.trim())
             if (tail.length > 0) controller.enqueue(send({ sentence: tail }))
 
-            const lead     = extractLead(accumulated)
-            const cleaned  = stripLead(accumulated)
+            const lead     = extractToken<Record<string, string | null>>(accumulated, 'LEAD')
+            const review   = extractToken<Record<string, unknown>>(accumulated, 'REVIEW')
+            const cleaned  = stripTokens(accumulated)
             const endCall  = cleaned.trimStart().startsWith('[END_CALL]')
             const fullText = cleaned.replace('[END_CALL]', '').trim()
 
-            if (lead) controller.enqueue(send({ lead }))
+            if (lead)   controller.enqueue(send({ lead }))
+            if (review) controller.enqueue(send({ review }))
             controller.enqueue(send({ done: true, fullText, endCall }))
             controller.close()
           }
