@@ -81,7 +81,7 @@ async function runTextAgent(): Promise<void> {
 
     try {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         max_tokens: 512,
         messages,
       });

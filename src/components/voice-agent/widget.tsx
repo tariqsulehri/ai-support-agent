@@ -4,15 +4,17 @@ import { useState } from 'react'
 import { VoiceAgent } from './index'
 
 interface VoiceAgentWidgetProps {
-  tenantId?: string
-  token?:    string
-  mode?:     'floating' | 'inline'
-  margin?:   'none' | 'sm' | 'md'
+  tenantId?:    string
+  token?:       string
+  openaiApiKey?: string
+  mode?:        'floating' | 'inline'
+  margin?:      'none' | 'sm' | 'md'
 }
 
 export function VoiceAgentWidget({
   tenantId,
   token,
+  openaiApiKey,
   mode = 'floating',
   margin = mode === 'inline' ? 'sm' : 'md',
 }: VoiceAgentWidgetProps) {
@@ -35,7 +37,7 @@ export function VoiceAgentWidget({
 
     return (
       <div className={`min-h-dvh w-full flex items-end justify-end ${inlinePadding}`}>
-        <VoiceAgent tenantId={tenantId} token={token} onClose={closeInline} />
+        <VoiceAgent tenantId={tenantId} token={token} openaiApiKey={openaiApiKey} onClose={closeInline} />
       </div>
     )
   }
@@ -53,7 +55,7 @@ export function VoiceAgentWidget({
             opacity-100 scale-100 translate-y-0 pointer-events-auto
           `}
         >
-          <VoiceAgent tenantId={tenantId} token={token} onClose={() => setOpen(false)} />
+          <VoiceAgent tenantId={tenantId} token={token} openaiApiKey={openaiApiKey} onClose={() => setOpen(false)} />
         </div>
       )}
 

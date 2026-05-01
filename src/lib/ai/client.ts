@@ -1,15 +1,17 @@
 import OpenAI from 'openai'
 import { env } from '@/lib/config/env'
 
-/**
- * Singleton OpenAI client.
- * Server-side only — the API key must never reach the browser.
- */
-let _client: OpenAI | null = null
+// Singleton for the server-level fallback key
+let _defaultClient: OpenAI | null = null
 
-export function getOpenAIClient(): OpenAI {
-  if (!_client) {
-    _client = new OpenAI({ apiKey: env.OPENAI_API_KEY })
+/**
+ * Returns an OpenAI client using the given API key, or the server-level
+ * OPENAI_API_KEY as a fallback. Server-side only — keys must never reach the browser.
+ */
+export function getOpenAIClient(apiKey?: string): OpenAI {
+  if (apiKey) return new OpenAI({ apiKey })
+  if (!_defaultClient) {
+    _defaultClient = new OpenAI({ apiKey: env.OPENAI_API_KEY })
   }
-  return _client
+  return _defaultClient
 }

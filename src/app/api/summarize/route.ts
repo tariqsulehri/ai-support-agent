@@ -47,11 +47,11 @@ export async function POST(req: NextRequest) {
     .map((m) => `${m.role === 'user' ? 'Visitor' : agentLabel}: ${m.content}`)
     .join('\n')
 
-  const openai = getOpenAIClient()
+  const openai = getOpenAIClient(tenant.openaiApiKey)
 
   try {
     const completion = await openai.chat.completions.create({
-      model:           'gpt-4o',
+      model:           'gpt-4o-mini',
       max_tokens:      500,
       temperature:     0.3,
       response_format: { type: 'json_object' },

@@ -46,8 +46,9 @@ function buildThemeStyle(primary: string, dk: string, lt: string, md: string): s
 
 export default async function VoicePage({ searchParams }: VoicePageProps) {
   const params = (await searchParams) ?? {}
-  const tenantId = typeof params.tenant === 'string' ? params.tenant : undefined
-  const token = typeof params.token === 'string' ? params.token : undefined
+  const tenantId    = typeof params.tenant       === 'string' ? params.tenant       : undefined
+  const token       = typeof params.token        === 'string' ? params.token        : undefined
+  const openaiApiKey = typeof params.openaiApiKey === 'string' ? params.openaiApiKey : undefined
   const modeParam = typeof params.mode === 'string' ? params.mode : undefined
   const launcherParam = typeof params.launcher === 'string' ? params.launcher : undefined
   const marginParam = typeof params.margin === 'string' ? params.margin : undefined
@@ -100,7 +101,7 @@ export default async function VoicePage({ searchParams }: VoicePageProps) {
       <ThemeProvider initial={initialTheme} />
 
       <main className="min-h-dvh bg-surface">
-        <VoiceAgentWidget tenantId={tenantId} token={token} mode={mode} margin={margin} />
+        <VoiceAgentWidget tenantId={tenantId} token={token} openaiApiKey={openaiApiKey} mode={mode} margin={margin} />
       </main>
     </>
   )

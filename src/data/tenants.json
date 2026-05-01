@@ -5,6 +5,7 @@
     "apiKeys": [
       "testApiKey123Abcd"
     ],
+    "openaiApiKey": "",
     "allowedDomains": [
       "https://www.aiscripto.com",
       "http://localhost:3000",
@@ -75,6 +76,7 @@
     "apiKeys": [
       "tkxelApiKey123Abcd"
     ],
+    "openaiApiKey": "",
     "allowedDomains": [
       "http://localhost:3000",
       "http://127.0.0.1:5500",

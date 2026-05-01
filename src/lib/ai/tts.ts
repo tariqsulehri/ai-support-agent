@@ -9,11 +9,12 @@ import type { OpenAIVoice } from '@/types'
 export async function synthesizeSpeech(
   text: string,
   voice: string = 'nova',
-  provider: 'openai' | 'elevenlabs' = 'openai'
+  provider: 'openai' | 'elevenlabs' = 'openai',
+  openaiApiKey?: string
 ): Promise<Buffer> {
   const normalized = normalizeForSpeech(text)
   if (provider === 'elevenlabs') return synthesizeElevenLabs(normalized)
-  return synthesizeOpenAI(normalized, voice as OpenAIVoice)
+  return synthesizeOpenAI(normalized, voice as OpenAIVoice, openaiApiKey)
 }
 
 // ── Pronunciation normalization ────────────────────────────────────────────────
@@ -30,8 +31,8 @@ function normalizeForSpeech(text: string): string {
 }
 
 // ── OpenAI TTS ─────────────────────────────────────────────────────────────────
-async function synthesizeOpenAI(text: string, voice: OpenAIVoice): Promise<Buffer> {
-  const client = getOpenAIClient()
+async function synthesizeOpenAI(text: string, voice: OpenAIVoice, apiKey?: string): Promise<Buffer> {
+  const client = getOpenAIClient(apiKey)
   const response = await client.audio.speech.create({
     model: 'tts-1',
     voice,

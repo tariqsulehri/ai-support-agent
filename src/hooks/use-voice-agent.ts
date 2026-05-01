@@ -81,8 +81,9 @@ const initialState: VoiceAgentState = {
 
 // ── Public interface ───────────────────────────────────────────────────────────
 export interface UseVoiceAgentOptions {
-  tenantId?: string
-  token?:    string
+  tenantId?:    string
+  token?:       string
+  openaiApiKey?: string
 }
 
 export interface UseVoiceAgentReturn {
@@ -108,7 +109,7 @@ export interface UseVoiceAgentReturn {
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────────
-export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): UseVoiceAgentReturn {
+export function useVoiceAgent({ tenantId, token, openaiApiKey }: UseVoiceAgentOptions = {}): UseVoiceAgentReturn {
   const [state, dispatch]       = useReducer(reducer, initialState)
   const [voice, setVoice]       = useState<OpenAIVoice>('nova')
   const [language, setLang]     = useState('English')
@@ -154,12 +155,15 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     const parent = document.referrer || ''
 
     const headers: Record<string, string> = {}
+    const params = new URLSearchParams(window.location.search)
     // Prefer props (SSR-forwarded) then fall back to URL params
-    const resolvedTenant = tenantId ?? new URLSearchParams(window.location.search).get('tenant') ?? ''
-    const resolvedToken  = token    ?? new URLSearchParams(window.location.search).get('token')  ?? ''
-    if (resolvedTenant) headers['x-embed-tenant'] = resolvedTenant
-    if (resolvedToken)  headers['x-embed-token']  = resolvedToken
-    if (parent)         headers['x-embed-parent']  = parent
+    const resolvedTenant    = tenantId    ?? params.get('tenant')       ?? ''
+    const resolvedToken     = token       ?? params.get('token')        ?? ''
+    const resolvedOpenaiKey = openaiApiKey ?? params.get('openaiApiKey') ?? ''
+    if (resolvedTenant)    headers['x-embed-tenant'] = resolvedTenant
+    if (resolvedToken)     headers['x-embed-token']  = resolvedToken
+    if (parent)            headers['x-embed-parent']  = parent
+    if (resolvedOpenaiKey) headers['x-openai-key']   = resolvedOpenaiKey
     embedHeadersRef.current = headers
     setEmbedHeaders(headers)
 

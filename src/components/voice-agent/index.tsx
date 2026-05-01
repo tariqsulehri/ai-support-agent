@@ -10,16 +10,17 @@ import { LeadPanel }                    from './lead-panel'
 import { StatusIndicator }              from './status-indicator'
 
 interface VoiceAgentProps {
-  tenantId?: string
-  token?:    string
-  onClose?:  () => void
+  tenantId?:    string
+  token?:       string
+  openaiApiKey?: string
+  onClose?:     () => void
 }
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
-export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
+export function VoiceAgent({ tenantId, token, openaiApiKey, onClose }: VoiceAgentProps) {
   const textRef = useRef<TextInputHandle>(null)
 
   const {
@@ -28,7 +29,7 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
     language, voice, leadData, callSummary,
     agentName, companyName,
     setVoice, stopPlayback, pressMic, releaseMic, sendText,
-  } = useVoiceAgent({ tenantId, token })
+  } = useVoiceAgent({ tenantId, token, openaiApiKey })
 
   const initials = getInitials(agentName || 'CS')
   const isOnline = phase !== 'connecting' && phase !== 'error' && phase !== 'ended'

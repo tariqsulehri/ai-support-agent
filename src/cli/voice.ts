@@ -154,7 +154,7 @@ async function runVoiceAgent(): Promise<void> {
   let greeting = "";
   try {
     const res = await new OpenAI().chat.completions.create({
-      model: "gpt-4o", max_tokens: 80, temperature: 0.4,
+      model: "gpt-4o-mini", max_tokens: 80, temperature: 0.4,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user",   content: "__GREET__" },
@@ -209,7 +209,7 @@ async function runVoiceAgent(): Promise<void> {
     let replyText = "";
     try {
       const completion = await new OpenAI().chat.completions.create({
-        model: "gpt-4o", max_tokens: 200, temperature: 0.6, messages,
+        model: "gpt-4o-mini", max_tokens: 200, temperature: 0.6, messages,
       });
       replyText = completion.choices[0].message.content ?? "";
     } catch (err) {

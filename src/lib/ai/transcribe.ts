@@ -7,9 +7,10 @@ import { getOpenAIClient } from './client'
  */
 export async function transcribeAudio(
   audio: File | Blob,
-  languageCode: string | null
+  languageCode: string | null,
+  apiKey?: string
 ): Promise<string> {
-  const client = getOpenAIClient()
+  const client = getOpenAIClient(apiKey)
 
   const file = await toFile(audio, 'audio.webm', { type: 'audio/webm' })
 

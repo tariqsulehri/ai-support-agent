@@ -13,7 +13,7 @@ export async function streamChatReply(
   messages: ChatMessage[],
   tenant: TenantConfig
 ) {
-  const client = getOpenAIClient()
+  const client = getOpenAIClient(tenant.openaiApiKey)
 
   const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
   const detectedLanguage = lastUserMsg
@@ -23,7 +23,7 @@ export async function streamChatReply(
   const systemPrompt = buildSystemPrompt(tenant, detectedLanguage)
 
   return client.chat.completions.create({
-    model:       'gpt-4o',
+    model:       'gpt-4o-mini',
     max_tokens:  200,
     temperature: 0.6,
     stream:      true,
