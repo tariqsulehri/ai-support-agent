@@ -11,6 +11,7 @@ export async function GET() {
 
   const tenant = script.getAttribute("data-tenant");
   const token = script.getAttribute("data-token");
+  const openaiKey = script.getAttribute("data-openai-key") || "";
 
   if (!tenant || !token) {
     console.error("AI Agent: Missing tenant or token");
@@ -90,6 +91,7 @@ export async function GET() {
 
         url.searchParams.set("tenant", tenant);
         url.searchParams.set("token", token);
+        if (openaiKey) url.searchParams.set("openaiApiKey", openaiKey);
 
         const primaryColor = detectPrimaryColor();
         if (primaryColor) url.searchParams.set("primaryColor", primaryColor);
