@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm uninstall:*)",
-      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('/Users/tk-lpt-1088/development/node/VoiceAgent/src/data/tenants.json','utf8'\\)\\); console.log\\('valid JSON'\\)\")"
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('/Users/tk-lpt-1088/development/node/VoiceAgent/src/data/tenants.json','utf8'\\)\\); console.log\\('valid JSON'\\)\")",
+      "Bash(npx vercel *)"
     ]
   }
 }
