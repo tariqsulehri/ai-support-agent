@@ -153,12 +153,12 @@
     "apiKeys": [
       "postTestApiKey123Abcd"
     ],
+    "openaiApiKey": "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",
     "allowedDomains": [
       "https://pos-web-2026.vercel.app",
-      "https://pos.net.pk/",
+      "https://pos.net.pk",
       "http://localhost:3000",
       "http://127.0.0.1:5500",
-      "https://pos-web-2026.vercel.app",
       "http://localhost:5173"
     ],
     "agentName": "Support Agent",
