@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (err) {
-    console.error('[speak]', err)
-    return NextResponse.json({ error: 'TTS failed' }, { status: 500 })
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[speak]', message)
+    return NextResponse.json({ error: 'TTS failed', detail: message }, { status: 500 })
   }
 }

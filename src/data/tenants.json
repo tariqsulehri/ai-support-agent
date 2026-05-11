@@ -5,7 +5,6 @@
     "apiKeys": [
       "testApiKey123Abcd"
     ],
-    "openaiApiKey": "sk-dummy-aiscripto-key-replace-me",
     "allowedDomains": [
       "https://www.aiscripto.com",
       "http://localhost:3000",
