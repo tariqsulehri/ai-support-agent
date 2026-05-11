@@ -7,7 +7,7 @@ import { z } from 'zod'
  * Server-side only. Never import this in client components.
  */
 const envSchema = z.object({
-  OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
+  OPENAI_API_KEY: z.string().optional(),
 
   // ElevenLabs — only required when a tenant uses ttsProvider: "elevenlabs"
   ELEVENLABS_API_KEY:  z.string().optional(),

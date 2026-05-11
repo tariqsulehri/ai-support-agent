@@ -10,6 +10,9 @@ let _defaultClient: OpenAI | null = null
  */
 export function getOpenAIClient(apiKey?: string): OpenAI {
   if (apiKey) return new OpenAI({ apiKey })
+  if (!env.OPENAI_API_KEY) {
+    throw new Error('No OpenAI API key: set openaiApiKey on the tenant or OPENAI_API_KEY in env.')
+  }
   if (!_defaultClient) {
     _defaultClient = new OpenAI({ apiKey: env.OPENAI_API_KEY })
   }
