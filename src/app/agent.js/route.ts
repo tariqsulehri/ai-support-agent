@@ -11,10 +11,21 @@ export async function GET() {
 
   const tenant = script.getAttribute("data-tenant");
   const token = script.getAttribute("data-token");
+  const width = script.getAttribute("data-width") || "420px";
+  const height = script.getAttribute("data-height") || "680px";
 
   if (!tenant || !token) {
     console.error("AI Agent: Missing tenant or token");
     return;
+  }
+
+  function safeSize(value, fallback) {
+    if (/^\\d{2,4}px$/.test(value)) return value;
+    if (/^\\d{2,3}%$/.test(value)) return value;
+    if (/^min\\([\\dpxvwvh%,.\\s-]+\\)$/.test(value)) return value;
+    if (/^max\\([\\dpxvwvh%,.\\s-]+\\)$/.test(value)) return value;
+    if (/^clamp\\([\\dpxvwvh%,.\\s-]+\\)$/.test(value)) return value;
+    return fallback;
   }
 
   let isLoaded = false;
@@ -71,8 +82,10 @@ export async function GET() {
       position: "fixed",
       bottom: "90px",
       right: "20px",
-      width: "420px",
-      height: "680px",
+      width: safeSize(width, "420px"),
+      height: safeSize(height, "680px"),
+      maxWidth: "calc(100vw - 40px)",
+      maxHeight: "calc(100dvh - 120px)",
       display: "none",
       borderRadius: "12px",
       overflow: "hidden",
