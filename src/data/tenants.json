@@ -149,9 +149,9 @@
   },
   {
     "id": "ai-pos",
-    "token": "postTestToken123Abcd",
+    "token": "posTestToken123Abcd",
     "apiKeys": [
-      "postTestApiKey123Abcd"
+      "posTestToken123Abcd"
     ],
     "openaiApiKeyEnv": "OPENAI_API_KEY",
     "allowedDomains": [
