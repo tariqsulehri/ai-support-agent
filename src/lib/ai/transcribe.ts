@@ -1,5 +1,6 @@
 import { toFile } from 'openai'
 import { getOpenAIClient } from './client'
+import type { TenantConfig } from '@/lib/tenants/types'
 
 /**
  * Transcribe audio using OpenAI Whisper.
@@ -8,9 +9,9 @@ import { getOpenAIClient } from './client'
 export async function transcribeAudio(
   audio: File | Blob,
   languageCode: string | null,
-  apiKey?: string
+  tenant?: TenantConfig
 ): Promise<string> {
-  const client = getOpenAIClient(apiKey)
+  const client = getOpenAIClient(tenant)
 
   const file = await toFile(audio, 'audio.webm', { type: 'audio/webm' })
 

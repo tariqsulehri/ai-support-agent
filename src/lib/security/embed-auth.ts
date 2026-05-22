@@ -13,7 +13,6 @@ function headersFromRequest(req: NextRequest) {
     token:        req.headers.get('x-embed-token')   ?? undefined,
     apiKey:       req.headers.get('x-api-key')        ?? undefined,
     parentUrl:    (req.headers.get('x-embed-parent') ?? req.headers.get('referer')) ?? undefined,
-    openaiApiKey: req.headers.get('x-openai-key')    ?? undefined,
   }
 }
 
@@ -68,9 +67,5 @@ export function getTenantFromRequest(req: NextRequest): TenantConfig {
     throw new Error('[embed-auth] No tenant resolved and tenants.json is empty.')
   }
 
-  // Allow the client to supply their own OpenAI key via header (takes priority over tenants.json)
-  if (headers.openaiApiKey) {
-    return { ...tenant, openaiApiKey: headers.openaiApiKey }
-  }
   return tenant
 }

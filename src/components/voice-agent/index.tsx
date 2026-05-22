@@ -12,7 +12,6 @@ import { StatusIndicator }              from './status-indicator'
 interface VoiceAgentProps {
   tenantId?:    string
   token?:       string
-  openaiApiKey?: string
   onClose?:     () => void
 }
 
@@ -20,7 +19,7 @@ function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
-export function VoiceAgent({ tenantId, token, openaiApiKey, onClose }: VoiceAgentProps) {
+export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
   const textRef = useRef<TextInputHandle>(null)
 
   const {
@@ -29,7 +28,7 @@ export function VoiceAgent({ tenantId, token, openaiApiKey, onClose }: VoiceAgen
     language, voice, leadData, callSummary,
     agentName, companyName,
     setVoice, stopPlayback, pressMic, releaseMic, sendText,
-  } = useVoiceAgent({ tenantId, token, openaiApiKey })
+  } = useVoiceAgent({ tenantId, token })
 
   const initials = getInitials(agentName || 'CS')
   const isOnline = phase !== 'connecting' && phase !== 'error' && phase !== 'ended'

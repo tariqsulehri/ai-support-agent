@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   try {
     const tenant = getTenantFromRequest(req)
     const lang   = getLangConfig(tenant.languageMode)
-    const raw    = await transcribeAudio(audio, lang.whisperCode, tenant.openaiApiKey)
+    const raw    = await transcribeAudio(audio, lang.whisperCode, tenant)
     const text   = normalizeSpeechTranscript(raw)
     return NextResponse.json({ text })
   } catch (err) {

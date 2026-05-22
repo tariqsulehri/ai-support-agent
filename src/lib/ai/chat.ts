@@ -13,7 +13,7 @@ export async function streamChatReply(
   messages: ChatMessage[],
   tenant: TenantConfig
 ) {
-  const client = getOpenAIClient(tenant.openaiApiKey)
+  const client = getOpenAIClient(tenant)
 
   const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
   const detectedLanguage = lastUserMsg

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const resolvedVoice    = getVoiceForLanguage(detectedLanguage, tenant)
     const resolvedProvider = tenant.ttsProvider
 
-    const audioBuffer = await synthesizeSpeech(text, resolvedVoice, resolvedProvider, tenant.openaiApiKey)
+    const audioBuffer = await synthesizeSpeech(text, resolvedVoice, resolvedProvider, tenant)
 
     return new Response(new Uint8Array(audioBuffer), {
       headers: {

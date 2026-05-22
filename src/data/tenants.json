@@ -5,6 +5,7 @@
     "apiKeys": [
       "testApiKey123Abcd"
     ],
+    "openaiApiKeyEnv": "OPENAI_SCRIPTO_KEY",
     "allowedDomains": [
       "https://www.aiscripto.com",
       "http://localhost:3000",
@@ -79,7 +80,7 @@
     "apiKeys": [
       "tkxelApiKey123Abcd"
     ],
-    "openaiApiKey": "sk-dummy-tkxel-key-replace-me",
+    "openaiApiKeyEnv": "TKXEL_OPENAI_API_KEY",
     "allowedDomains": [
       "http://localhost:3000",
       "http://127.0.0.1:5500",
@@ -152,6 +153,7 @@
     "apiKeys": [
       "postTestApiKey123Abcd"
     ],
+    "openaiApiKeyEnv": "OPENAI_API_KEY",
     "allowedDomains": [
       "https://pos-web-2026.vercel.app",
       "https://pos.net.pk",

@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     .map((m) => `${m.role === 'user' ? 'Visitor' : agentLabel}: ${m.content}`)
     .join('\n')
 
-  const openai = getOpenAIClient(tenant.openaiApiKey)
+  const openai = getOpenAIClient(tenant)
 
   try {
     const completion = await openai.chat.completions.create({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getLangConfig } from '@/lib/config/language'
 import { resolveTenantTtsVoice } from '@/lib/config/voice'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
+import { assertOpenAIKeyConfigured } from '@/lib/ai/client'
 export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
@@ -12,6 +13,7 @@ export async function GET(req: NextRequest) {
 
   const tenant = getTenantFromRequest(req)
   const lang   = getLangConfig(tenant.languageMode)
+  assertOpenAIKeyConfigured(tenant)
 
   return NextResponse.json({
     language:    lang.name,

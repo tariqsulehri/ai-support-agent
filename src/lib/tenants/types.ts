@@ -24,7 +24,7 @@ export interface TenantConfig {
   token?: string           // paired with x-embed-tenant header
   apiKeys?: string[]       // standalone x-api-key auth
   allowedDomains?: string[] // domain-based implicit auth (no token needed)
-  openaiApiKey?: string    // tenant-supplied OpenAI key; falls back to server env key
+  openaiApiKeyEnv?: string // env var name containing this tenant's OpenAI key
 
   // ── Persona ──────────────────────────────────────────────────────────────────
   agentName: string

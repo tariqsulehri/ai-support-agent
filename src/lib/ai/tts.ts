@@ -1,6 +1,7 @@
 import { getOpenAIClient } from './client'
 import { env } from '@/lib/config/env'
 import type { OpenAIVoice } from '@/types'
+import type { TenantConfig } from '@/lib/tenants/types'
 
 /**
  * Convert text to speech audio (MP3).
@@ -10,11 +11,11 @@ export async function synthesizeSpeech(
   text: string,
   voice: string = 'nova',
   provider: 'openai' | 'elevenlabs' = 'openai',
-  openaiApiKey?: string
+  tenant?: TenantConfig
 ): Promise<Buffer> {
   const normalized = normalizeForSpeech(text)
   if (provider === 'elevenlabs') return synthesizeElevenLabs(normalized)
-  return synthesizeOpenAI(normalized, voice as OpenAIVoice, openaiApiKey)
+  return synthesizeOpenAI(normalized, voice as OpenAIVoice, tenant)
 }
 
 // ── Pronunciation normalization ────────────────────────────────────────────────
@@ -31,8 +32,8 @@ function normalizeForSpeech(text: string): string {
 }
 
 // ── OpenAI TTS ─────────────────────────────────────────────────────────────────
-async function synthesizeOpenAI(text: string, voice: OpenAIVoice, apiKey?: string): Promise<Buffer> {
-  const client = getOpenAIClient(apiKey)
+async function synthesizeOpenAI(text: string, voice: OpenAIVoice, tenant?: TenantConfig): Promise<Buffer> {
+  const client = getOpenAIClient(tenant)
   const response = await client.audio.speech.create({
     model: 'tts-1',
     voice,
