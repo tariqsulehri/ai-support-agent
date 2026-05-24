@@ -12,9 +12,45 @@ import type {
   OpenAIVoice,
   LeadData,
   CallSummary,
+  ConfigResponse,
+  TranscribeResponse,
 } from '@/types'
 
 const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+type ApiErrorBody = {
+  error?: string
+  detail?: string
+}
+
+async function readJsonResponse<T>(res: Response, endpoint: string): Promise<T> {
+  const text = await res.text()
+  let data: unknown = null
+
+  if (text.trim()) {
+    try {
+      data = JSON.parse(text)
+    } catch {
+      throw new Error(`Invalid JSON from ${endpoint}`)
+    }
+  }
+
+  if (!res.ok) {
+    const apiError = data as ApiErrorBody | null
+    throw new Error(apiError?.detail ?? apiError?.error ?? `${endpoint} failed (${res.status})`)
+  }
+
+  if (data === null) {
+    throw new Error(`Empty response from ${endpoint}`)
+  }
+
+  return data as T
+}
+
+async function readErrorText(res: Response, endpoint: string): Promise<string> {
+  const text = await res.text()
+  return text.trim() || `${endpoint} failed (${res.status})`
+}
 
 // ── Reducer ────────────────────────────────────────────────────────────────────
 function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentState {
@@ -170,7 +206,11 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
       try {
         const cfg = await fetch('/api/config', {
           headers,
-        }).then((r) => r.json())
+        }).then((r) => readJsonResponse<ConfigResponse & {
+          greeting?: string | null
+          agentName?: string
+          companyName?: string
+        }>(r, '/api/config'))
         if (!cancelled && cfg.voice)       handleSetVoice(cfg.voice as OpenAIVoice)
         if (!cancelled && cfg.language)    setLang(cfg.language)
         if (!cancelled && cfg.agentName)   setAgent(cfg.agentName)
@@ -209,7 +249,8 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
         headers: embedHeadersRef.current,
         body: form,
       })
-      const data = await res.json()
+      const data = await readJsonResponse<TranscribeResponse>(res, '/api/transcribe')
+      if (data.error) throw new Error(data.error)
       userText   = data.text ?? ''
     } catch {
       dispatch({ type: 'ERROR', message: 'Transcription failed. Please try again.' })
@@ -241,6 +282,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
       body:    JSON.stringify({ messages }),
     })
 
+    if (!res.ok) throw new Error(await readErrorText(res, '/api/chat'))
     if (!res.body) throw new Error('No response body from /api/chat')
 
     const reader     = res.body.getReader()
@@ -290,7 +332,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
               },
               body:    JSON.stringify({ messages: historyRef.current, lead }),
             })
-              .then((r) => r.json())
+              .then((r) => readJsonResponse<CallSummary>(r, '/api/summarize'))
               .then((data: CallSummary) => {
                 dispatchFn?.({ type: 'CALL_SUMMARY', summary: data })
                 console.log(

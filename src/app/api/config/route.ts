@@ -8,20 +8,26 @@ export { OPTIONS } from '@/lib/utils/cors'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const authError = requireEmbedApiAuth(req)
-  if (authError) return authError
+  try {
+    const authError = requireEmbedApiAuth(req)
+    if (authError) return authError
 
-  const tenant = getTenantFromRequest(req)
-  const lang   = getLangConfig(tenant.languageMode)
-  assertOpenAIKeyConfigured(tenant)
+    const tenant = getTenantFromRequest(req)
+    const lang   = getLangConfig(tenant.languageMode)
+    assertOpenAIKeyConfigured(tenant)
 
-  return NextResponse.json({
-    language:    lang.name,
-    ttsProvider: tenant.ttsProvider,
-    voice:       resolveTenantTtsVoice(tenant),
-    voiceGender: tenant.voiceProfile?.gender ?? null,
-    agentName:   tenant.agentName,
-    companyName: tenant.companyName,
-    greeting:    tenant.greeting ?? null,
-  })
+    return NextResponse.json({
+      language:    lang.name,
+      ttsProvider: tenant.ttsProvider,
+      voice:       resolveTenantTtsVoice(tenant),
+      voiceGender: tenant.voiceProfile?.gender ?? null,
+      agentName:   tenant.agentName,
+      companyName: tenant.companyName,
+      greeting:    tenant.greeting ?? null,
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[config]', message)
+    return NextResponse.json({ error: 'Configuration failed', detail: message }, { status: 500 })
+  }
 }
