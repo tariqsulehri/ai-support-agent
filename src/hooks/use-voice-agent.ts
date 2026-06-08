@@ -23,6 +23,24 @@ type ApiErrorBody = {
   detail?: string
 }
 
+const CHAT_READ_TIMEOUT_MS = 25_000
+
+function readWithTimeout(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  timeoutMs: number
+): Promise<ReadableStreamReadResult<Uint8Array>> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      reject(new Error('Chat response timed out. Please try again.'))
+    }, timeoutMs)
+
+    reader.read()
+      .then((result) => resolve(result))
+      .catch(reject)
+      .finally(() => window.clearTimeout(timeout))
+  })
+}
+
 async function readJsonResponse<T>(res: Response, endpoint: string): Promise<T> {
   const text = await res.text()
   let data: unknown = null
@@ -81,7 +99,7 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
       const msg: Message = { id: uid(), role: 'assistant', content: action.fullText }
       return {
         ...state,
-        phase:        action.endCall ? 'ended' : 'speaking',
+        phase:        action.endCall ? 'ended' : 'idle',
         transcript:   [...state.transcript, msg],
         partialReply: '',
       }
@@ -104,7 +122,14 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
   }
 }
 
-const EMPTY_LEAD: LeadData = { name: null, email: null, phone: null, company: null, purpose: null }
+const EMPTY_LEAD: LeadData = {
+  name: null,
+  email: null,
+  phone: null,
+  company: null,
+  country: null,
+  purpose: null,
+}
 
 const initialState: VoiceAgentState = {
   phase:        'connecting',
@@ -170,11 +195,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
 
   const { isPlaying, enqueue, stopAll } = useAudioPlayer({
     requestHeaders: embedHeaders,
-    onPlaybackEnd: () => {
-      if (stateRef.current.phase === 'speaking') {
-        dispatch({ type: 'SPEAKING_DONE' })
-      }
-    },
+    onPlaybackEnd: () => {},
   })
 
   // ── Audio recorder ───────────────────────────────────────────────────────────
@@ -265,7 +286,11 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     dispatch({ type: 'TRANSCRIBED', text: userText })
     historyRef.current.push({ role: 'user', content: userText })
 
-    await streamChat(historyRef.current, dispatch)
+    try {
+      await streamChat(historyRef.current, dispatch)
+    } catch (err) {
+      dispatch({ type: 'ERROR', message: err instanceof Error ? err.message : 'Chat failed. Please try again.' })
+    }
   }
 
   // ── SSE chat stream consumer ──────────────────────────────────────────────────
@@ -288,9 +313,10 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     const reader     = res.body.getReader()
     const decoder    = new TextDecoder()
     let   lineBuffer = ''
+    let   sawDone = false
 
     while (true) {
-      const { done, value } = await reader.read()
+      const { done, value } = await readWithTimeout(reader, CHAT_READ_TIMEOUT_MS)
       if (done) break
 
       lineBuffer += decoder.decode(value, { stream: true })
@@ -310,13 +336,17 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
           dispatchFn?.({ type: 'STREAM_TOKEN', token: String(event.token) })
         }
         if (event.sentence) {
-          enqueue(String(event.sentence))
+          const sentence = String(event.sentence)
+          if (sentence.trim()) {
+            enqueue(sentence)
+          }
         }
         if (event.lead) {
           leadRef.current = { ...leadRef.current, ...(event.lead as LeadData) }
           dispatchFn?.({ type: 'LEAD_UPDATE', lead: event.lead as LeadData })
         }
         if (event.done) {
+          sawDone = true
           const fullText = String(event.fullText ?? '')
           const endCall  = Boolean(event.endCall)
           dispatchFn?.({ type: 'REPLY_COMPLETE', fullText, endCall })
@@ -345,6 +375,10 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
         }
       }
     }
+
+    if (!sawDone) {
+      dispatchFn?.({ type: 'ERROR', message: 'Chat stream ended before a complete reply.' })
+    }
   }
 
   // ── Text send ─────────────────────────────────────────────────────────────────
@@ -355,7 +389,9 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
 
     dispatch({ type: 'TRANSCRIBED', text })
     historyRef.current.push({ role: 'user', content: text })
-    streamChat(historyRef.current, dispatch)
+    streamChat(historyRef.current, dispatch).catch((err) => {
+      dispatch({ type: 'ERROR', message: err instanceof Error ? err.message : 'Chat failed. Please try again.' })
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

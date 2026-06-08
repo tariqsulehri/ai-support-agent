@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { synthesizeSpeech } from '@/lib/ai/tts'
-import { getVoiceForLanguage } from '@/lib/config/voice'
-import { detectLanguage } from '@/lib/utils/detect-language'
+import { resolveTenantTtsVoice } from '@/lib/config/voice'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import type { SpeakRequest } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
+
+const TTS_TIMEOUT_MS = 12_000
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error('TTS timed out'))
+    }, timeoutMs)
+
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => clearTimeout(timeout))
+  })
+}
 
 export async function POST(req: NextRequest) {
   const authError = requireEmbedApiAuth(req)
@@ -27,11 +41,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const tenant           = getTenantFromRequest(req)
-    const detectedLanguage = detectLanguage(text, tenant.supportedLanguages)
-    const resolvedVoice    = getVoiceForLanguage(detectedLanguage, tenant)
+    const resolvedVoice    = resolveTenantTtsVoice(tenant)
     const resolvedProvider = tenant.ttsProvider
 
-    const audioBuffer = await synthesizeSpeech(text, resolvedVoice, resolvedProvider, tenant)
+    const audioBuffer = await withTimeout(
+      synthesizeSpeech(text, resolvedVoice, resolvedProvider, tenant),
+      TTS_TIMEOUT_MS
+    )
 
     return new Response(new Uint8Array(audioBuffer), {
       headers: {

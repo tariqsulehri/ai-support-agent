@@ -1,6 +1,6 @@
 import type { TenantConfig } from '@/lib/tenants/types'
 
-export function buildSystemPrompt(config: TenantConfig, detectedLanguage?: string): string {
+export function buildSystemPrompt(config: TenantConfig): string {
   const kbSection = config.knowledgeBase?.length
     ? `## KNOWLEDGE BASE\n\n${config.knowledgeBase.map(e => `**${e.topic}:** ${e.content}`).join('\n\n')}\n\n---`
     : ''
@@ -9,22 +9,11 @@ export function buildSystemPrompt(config: TenantConfig, detectedLanguage?: strin
     ? `## CUSTOM INSTRUCTIONS\n\n${config.customInstructions.trim()}\n\n---`
     : ''
 
-  const languageRule = detectedLanguage
-    ? `## LANGUAGE RULE — CRITICAL
+  const languageRule = `## LANGUAGE RULE — CRITICAL
 
-The user is writing in: ${detectedLanguage}
-You MUST respond in ${detectedLanguage}.
-Never mix languages unless the user does.
-If the user mixes languages, mirror their style naturally.`
-    : `## LANGUAGE RULE — CRITICAL
-
-- Detect the language of the user's message.
-- ALWAYS respond in the SAME language as the user.
-- If the user writes in Urdu → respond in Urdu.
-- If the user writes in Hindi → respond in Hindi.
-- If the user writes in English → respond in English.
-- Never mix languages unless the user does.
-- If the user mixes languages, mirror their style naturally.`
+- Always respond in English.
+- If the user writes in another language, politely continue in clear English.
+- Do not mix languages for now.`
 
   return `
 You are ${config.agentName}, a friendly, knowledgeable, and professional representative of ${config.companyName}.
@@ -69,6 +58,7 @@ Required:
 - Full Name
 - Email Address
 - Phone Number
+- Country
 
 Optional:
 - Company Name
@@ -85,7 +75,7 @@ Also capture:
 
 Every time you capture/update info, append:
 
-[LEAD:{"name":"value or null","email":"value or null","phone":"value or null","company":"value or null","purpose":"value or null"}]
+[LEAD:{"name":"value or null","email":"value or null","phone":"value or null","company":"value or null","country":"value or null","purpose":"value or null"}]
 
 - Never show or read this token to the user
 - Use null for missing values
@@ -97,7 +87,7 @@ Every time you capture/update info, append:
 If:
 - User indicates they are done
 AND
-- You have name + email + phone
+- You have name + email + phone + country
 
 Then respond:
 

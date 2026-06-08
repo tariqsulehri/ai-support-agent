@@ -41,9 +41,9 @@ ${kb}
 
 ${custom}
 
-Capture lead info (name, email, phone) naturally during conversation.
+Capture lead info (name, email, phone, country, company, purpose) naturally during conversation.
 Append [LEAD:{...}] token each time you collect or update info. Use null for missing fields.
-When user is done and you have name+email+phone, respond with [END_CALL] <farewell> [LEAD:{...}]
+When user is done and you have name+email+phone+country, respond with [END_CALL] <farewell> [LEAD:{...}]
 `.trim();
 }
 

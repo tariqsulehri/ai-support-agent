@@ -14,6 +14,9 @@ interface UseAudioPlayerReturn {
   stopAll:    () => void
 }
 
+const TTS_FETCH_TIMEOUT_MS = 12_000
+const AUDIO_PLAYBACK_TIMEOUT_MS = 45_000
+
 /**
  * Sentence-pipeline audio player.
  *
@@ -41,16 +44,22 @@ export function useAudioPlayer({
   requestHeadersRef.current = requestHeaders ?? {}
 
   const fetchBlob = useCallback(async (text: string): Promise<Blob | null> => {
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), TTS_FETCH_TIMEOUT_MS)
+
     try {
       const res = await fetch('/api/speak', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', ...requestHeadersRef.current },
         body:    JSON.stringify({ text }),
+        signal:  controller.signal,
       })
       if (!res.ok) return null
       return await res.blob()
     } catch {
       return null
+    } finally {
+      window.clearTimeout(timeout)
     }
   }, [])
 
@@ -63,40 +72,41 @@ export function useAudioPlayer({
     setIsPlaying(true)
     onPlaybackStart?.()
 
-    // Prefetch the first sentence immediately
-    let prefetched: Promise<Blob | null> = fetchBlob(queueRef.current[0])
-
     while (queueRef.current.length > 0 && !abortRef.current) {
-      queueRef.current.shift()  // advance queue; blob already prefetched above
+      const text = queueRef.current.shift()
+      if (!text) continue
 
-      // Wait for the already-in-flight fetch (started either above or at end of last iteration)
-      const blob = await prefetched
+      const blob = await fetchBlob(text)
       if (abortRef.current) break
       if (!blob) continue
-
-      // Kick off the NEXT sentence fetch while we play the current one
-      if (queueRef.current.length > 0) {
-        prefetched = fetchBlob(queueRef.current[0])
-      }
 
       const url = URL.createObjectURL(blob)
 
       await new Promise<void>((resolve) => {
         const audio = new Audio(url)
         currentAudio.current = audio
+        let settled = false
 
-        audio.onended = () => {
+        const finish = () => {
+          if (settled) return
+          settled = true
+          window.clearTimeout(timeout)
           URL.revokeObjectURL(url)
           currentAudio.current = null
           resolve()
         }
-        audio.onerror = () => {
-          URL.revokeObjectURL(url)
-          currentAudio.current = null
-          resolve()
-        }
 
-        audio.play().catch(resolve)
+        const timeout = window.setTimeout(() => {
+          audio.pause()
+          finish()
+        }, AUDIO_PLAYBACK_TIMEOUT_MS)
+
+        audio.onended = finish
+        audio.onerror = finish
+
+        audio.play().catch(() => {
+          finish()
+        })
       })
     }
 

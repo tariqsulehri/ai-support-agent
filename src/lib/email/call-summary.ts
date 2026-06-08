@@ -53,6 +53,7 @@ function renderText(input: SendCallSummaryEmailInput): string {
     `Email: ${textValue(lead.email)}`,
     `Phone: ${textValue(lead.phone)}`,
     `Company: ${textValue(lead.company)}`,
+    `Country: ${textValue(lead.country)}`,
     `Purpose: ${textValue(lead.purpose)}`,
     '',
     'Summary',
@@ -77,6 +78,7 @@ function renderHtml(input: SendCallSummaryEmailInput): string {
     ['Email', lead.email],
     ['Phone', lead.phone],
     ['Company', lead.company],
+    ['Country', lead.country],
     ['Purpose', lead.purpose],
   ]
     .map(([label, value]) => `

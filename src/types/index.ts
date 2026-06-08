@@ -4,15 +4,71 @@ export interface LeadData {
   email:   string | null
   phone:   string | null
   company: string | null
+  country: string | null
   purpose: string | null  // reason for calling / what they need
+}
+
+export type ConversationCategory =
+  | 'software_development'
+  | 'ai_solution'
+  | 'web_app'
+  | 'mobile_app'
+  | 'devops_cloud'
+  | 'pricing_inquiry'
+  | 'support_request'
+  | 'partnership'
+  | 'job_or_hiring'
+  | 'general_inquiry'
+  | 'other'
+
+export type ConversationIntent =
+  | 'buying_interest'
+  | 'support'
+  | 'information'
+  | 'meeting_request'
+  | 'complaint'
+  | 'other'
+
+export type LeadQuality = 'hot' | 'warm' | 'cold' | 'unknown'
+export type ConversationSentiment = 'positive' | 'neutral' | 'negative'
+export type ConversationUrgency = 'high' | 'medium' | 'low' | 'unknown'
+
+export interface RequirementAnalysis {
+  summary: string
+  detectedNeed: string | null
+  servicesInterested: string[]
+  urgency: ConversationUrgency
+  budgetMentioned: boolean
+  timelineMentioned: boolean
+}
+
+export interface CallClassification {
+  category: ConversationCategory
+  subcategory: string | null
+  intent: ConversationIntent
+  leadQuality: LeadQuality
+  sentiment: ConversationSentiment
+}
+
+export interface ConversationAnalysis {
+  user: LeadData
+  requirement: RequirementAnalysis
+  classification: CallClassification
+  nextSteps: string[]
 }
 
 export interface CallSummary {
   summary:   string     // 2-3 sentence narrative of the discussion
   keyPoints: string[]   // 3-5 bullet points
+  analysis?: ConversationAnalysis
   email?: {
     sent: boolean
     recipients?: string[]
+    error?: string
+  }
+  database?: {
+    saved: boolean
+    id?: string
     error?: string
   }
 }

@@ -16,18 +16,16 @@
     ],
     "agentName": "Support Agent",
     "companyName": "AI-Scripto Automations",
-    "languageMode": "auto",
+    "languageMode": "english",
     "supportedLanguages": [
-      "english",
-      "urdu",
-      "hindi"
+      "english"
     ],
     "tone": "friendly, expert, and solution-oriented",
     "ttsProvider": "openai",
-    "ttsVoice": "onyx",
+    "ttsVoice": "nova",
     "voiceProfile": {
-      "gender": "male",
-      "style": "confident, calm, professional"
+      "gender": "female",
+      "style": "warm, calm, professional"
     },
     "services": [
       "Custom Software Development",
@@ -36,7 +34,7 @@
       "DevOps and Cloud Services"
     ],
     "greeting": "Hello! I'm your support agent from AI-Scripto Automations. How can I help you today?",
-    "customInstructions": "You are a male assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
+    "customInstructions": "You are a female assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
     "emailNotifications": {
       "enabled": false,
       "smtp": {
@@ -89,18 +87,16 @@
     ],
     "agentName": "Support Agent",
     "companyName": "tkxel",
-    "languageMode": "auto",
+    "languageMode": "english",
     "supportedLanguages": [
-      "english",
-      "urdu",
-      "hindi"
+      "english"
     ],
     "tone": "friendly, expert, and solution-oriented",
     "ttsProvider": "openai",
     "ttsVoice": "nova",
     "voiceProfile": {
       "gender": "female",
-      "style": "confident, calm, professional"
+      "style": "warm, calm, professional"
     },
     "services": [
       "Custom Software Development",
@@ -109,7 +105,7 @@
       "DevOps and Cloud Services"
     ],
     "greeting": "Hello! I'm your support agent from tkxel. How can I help you today?",
-    "customInstructions": "You are a male assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
+    "customInstructions": "You are a female assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
     "emailNotifications": {
       "enabled": false,
       "smtp": {
@@ -163,18 +159,16 @@
     ],
     "agentName": "Support Agent",
     "companyName": "Point of Solutions Automations",
-    "languageMode": "auto",
+    "languageMode": "english",
     "supportedLanguages": [
-      "english",
-      "urdu",
-      "hindi"
+      "english"
     ],
     "tone": "friendly, expert, and solution-oriented",
     "ttsProvider": "openai",
-    "ttsVoice": "onyx",
+    "ttsVoice": "nova",
     "voiceProfile": {
-      "gender": "male",
-      "style": "confident, calm, professional"
+      "gender": "female",
+      "style": "warm, calm, professional"
     },
     "services": [
       "Custom Software Development",
@@ -183,7 +177,7 @@
       "DevOps and Cloud Services"
     ],
     "greeting": "Hello! I'm your support agent from POS Automations. How can I help you today?",
-    "customInstructions": "You are a male assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
+    "customInstructions": "You are a female assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
     "emailNotifications": {
       "enabled": false,
       "smtp": {

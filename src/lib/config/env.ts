@@ -15,6 +15,11 @@ const envSchema = z.object({
 
   // Embed security
   EMBED_AUTH_ENABLED: z.enum(['true', 'false']).default('false'),
+
+  // MongoDB persistence for completed conversations
+  MONGODB_URI: z.string().optional(),
+  MONGODB_DB_NAME: z.string().default('voiceagent'),
+  MONGODB_CALLS_COLLECTION: z.string().default('conversations'),
 })
 
 export type Env = z.infer<typeof envSchema>

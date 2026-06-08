@@ -12,6 +12,7 @@ const FIELDS: { key: keyof LeadData; label: string; icon: React.ReactNode }[] = 
   { key: 'email',   label: 'Email',   icon: <MailIcon /> },
   { key: 'phone',   label: 'Phone',   icon: <PhoneIcon /> },
   { key: 'company', label: 'Company', icon: <BuildingIcon /> },
+  { key: 'country', label: 'Country', icon: <GlobeIcon /> },
   { key: 'purpose', label: 'Purpose', icon: <TagIcon /> },
 ]
 
@@ -108,6 +109,11 @@ function PhoneIcon() {
 function BuildingIcon() {
   return <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+  </svg>
+}
+function GlobeIcon() {
+  return <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M3.6 15h16.8M12 3c2.25 2.45 3.38 5.45 3.38 9S14.25 18.55 12 21c-2.25-2.45-3.38-5.45-3.38-9S9.75 5.45 12 3z"/>
   </svg>
 }
 function TagIcon() {
