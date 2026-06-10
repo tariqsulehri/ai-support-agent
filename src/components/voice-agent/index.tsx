@@ -6,7 +6,6 @@ import { TranscriptPanel }              from './transcript-panel'
 import { MicButton }                    from './mic-button'
 import { SettingsBar }                  from './settings-bar'
 import { TextInput, type TextInputHandle } from './text-input'
-import { LeadPanel }                    from './lead-panel'
 import { StatusIndicator }              from './status-indicator'
 
 interface VoiceAgentProps {
@@ -27,7 +26,7 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
     isRecording,
     language, voice, leadData, callSummary,
     agentName, companyName,
-    setVoice, stopPlayback, pressMic, releaseMic, sendText,
+    setVoice, stopPlayback, pressMic, releaseMic, sendText, startNewChat,
   } = useVoiceAgent({ tenantId, token })
 
   const initials = getInitials(agentName || 'CS')
@@ -105,6 +104,9 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
           agentName={agentName || 'Agent'}
           agentInitials={initials}
           phase={phase}
+          lead={leadData}
+          callSummary={callSummary}
+          onStartNewChat={startNewChat}
         />
 
         {/* ── Input bar ───────────────────────────────────────────────────── */}
@@ -157,9 +159,6 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
           <SettingsBar language={language} voice={voice} onVoice={setVoice} />
         </div>
       </div>
-
-      {/* ── Lead / Summary panel ────────────────────────────────────────── */}
-      <LeadPanel lead={leadData} callSummary={callSummary} />
     </div>
   )
 }

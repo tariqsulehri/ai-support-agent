@@ -25,7 +25,7 @@ export const TextInput = forwardRef<TextInputHandle, TextInputProps>(
     const [emailError, setEmailError] = useState<string | null>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
 
-    const isDisabled = phase === 'connecting' || phase === 'thinking' || phase === 'transcribing'
+    const isDisabled = phase === 'connecting' || phase === 'thinking' || phase === 'transcribing' || phase === 'ended'
     const canSend    = value.trim().length > 0 && (phase === 'idle' || phase === 'error')
 
     const handleSend = useCallback(() => {
@@ -68,7 +68,7 @@ export const TextInput = forwardRef<TextInputHandle, TextInputProps>(
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder={isDisabled ? 'Please wait…' : 'Type a message…'}
+            placeholder={phase === 'ended' ? 'Call completed' : isDisabled ? 'Please wait…' : 'Type a message…'}
             disabled={isDisabled}
             className="
               flex-1 resize-none bg-transparent px-3 py-2.5

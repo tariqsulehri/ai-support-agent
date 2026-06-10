@@ -59,8 +59,14 @@ export function validateEmbedQuery(
  */
 export function getTenantFromRequest(req: NextRequest): TenantConfig {
   const headers = headersFromRequest(req)
+  const authEnabled = isEmbedAuthEnabled()
+  const explicitHeaders = {
+    tenantId: headers.tenantId,
+    token: headers.token,
+    apiKey: headers.apiKey,
+  }
   const tenant =
-    resolveTenantFromHeaders(headers, { enforceToken: isEmbedAuthEnabled() }) ??
+    resolveTenantFromHeaders(authEnabled ? headers : explicitHeaders, { enforceToken: authEnabled }) ??
     getDefaultTenant()
 
   if (!tenant) {

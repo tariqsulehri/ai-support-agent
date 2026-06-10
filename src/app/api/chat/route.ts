@@ -44,7 +44,53 @@ export async function POST(req: NextRequest) {
   function extractLead(text: string): Record<string, string | null> | null {
     const m = text.match(/\[LEAD:(\{[\s\S]*?\})\]/)
     if (!m) return null
-    try { return JSON.parse(m[1]) } catch { return null }
+    try {
+      const parsed = JSON.parse(m[1]) as Record<string, unknown>
+      return Object.fromEntries(
+        Object.entries(parsed).map(([key, value]) => {
+          if (typeof value !== 'string') return [key, value ?? null]
+          const trimmed = value.trim()
+          return [key, !trimmed || trimmed.toLowerCase() === 'null' ? null : trimmed]
+        })
+      ) as Record<string, string | null>
+    } catch { return null }
+  }
+
+  function hasRequiredLead(lead: Record<string, string | null> | null): boolean {
+    return Boolean(lead?.name && lead.email && lead.phone && lead.country)
+  }
+
+  function lastUserMessage(): string {
+    return [...messages].reverse().find((message) => message.role === 'user')?.content ?? ''
+  }
+
+  function userWantsToEnd(text: string): boolean {
+    const normalized = text.toLowerCase().trim()
+    return [
+      'bye',
+      'goodbye',
+      'thank you',
+      'thanks',
+      'no thank you',
+      'no. thank you',
+      "that's all",
+      'that is all',
+      'nothing else',
+      'no more',
+    ].some((phrase) => normalized.includes(phrase))
+  }
+
+  function assistantClosed(text: string): boolean {
+    const normalized = text.toLowerCase()
+    return [
+      'have a great day',
+      'have a nice day',
+      'reach out to you soon',
+      'will reach out',
+      "we'll reach out",
+      'thank you for providing your details',
+      "you're welcome",
+    ].some((phrase) => normalized.includes(phrase))
   }
 
   const stream = new ReadableStream({
@@ -78,8 +124,18 @@ export async function POST(req: NextRequest) {
 
             const lead     = extractLead(accumulated)
             const cleaned  = stripLead(accumulated)
-            const endCall  = cleaned.trimStart().startsWith('[END_CALL]')
+            const explicitEndCall = cleaned.trimStart().startsWith('[END_CALL]')
+            const inferredEndCall = hasRequiredLead(lead) &&
+              (userWantsToEnd(lastUserMessage()) || assistantClosed(cleaned))
+            const endCall  = explicitEndCall || inferredEndCall
             const fullText = cleaned.replace('[END_CALL]', '').trim()
+
+            if (inferredEndCall && !explicitEndCall) {
+              console.info('[chat] inferred end call', {
+                tenantId: tenant.id,
+                hasLead: true,
+              })
+            }
 
             if (lead) controller.enqueue(send({ lead }))
             controller.enqueue(send({ done: true, fullText, endCall }))

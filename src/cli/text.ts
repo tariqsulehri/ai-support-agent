@@ -13,11 +13,13 @@ interface TenantConfig {
   knowledgeBase?: { topic: string; content: string }[];
 }
 
+const DEFAULT_TENANT_ID = "tkxel";
+
 function loadTenant(id?: string): TenantConfig {
   const file = path.resolve(__dirname, "../data/tenants.json");
   const tenants: TenantConfig[] = JSON.parse(fs.readFileSync(file, "utf8"));
   if (!tenants.length) throw new Error("tenants.json is empty");
-  if (!id) return tenants[0];
+  if (!id) return tenants.find(t => t.id === DEFAULT_TENANT_ID) ?? tenants[0];
   const found = tenants.find(t => t.id === id);
   if (!found) throw new Error(`Tenant "${id}" not found in tenants.json`);
   return found;

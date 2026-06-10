@@ -20,6 +20,13 @@ const envSchema = z.object({
   MONGODB_URI: z.string().optional(),
   MONGODB_DB_NAME: z.string().default('voiceagent'),
   MONGODB_CALLS_COLLECTION: z.string().default('conversations'),
+
+  // Email notifications for completed conversations
+  SERVICE: z.string().optional(),
+  EMAIL_USER: z.string().optional(),
+  EMAIL_PASS: z.string().optional(),
+  HOST: z.string().optional(),
+  EMAIL_PORT: z.coerce.number().optional(),
 })
 
 export type Env = z.infer<typeof envSchema>

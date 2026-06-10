@@ -64,7 +64,9 @@ export interface CallSummary {
   email?: {
     sent: boolean
     recipients?: string[]
+    messageId?: string
     error?: string
+    skippedLeadEmail?: string
   }
   database?: {
     saved: boolean
@@ -103,6 +105,7 @@ export interface VoiceAgentState {
 }
 
 export type VoiceAgentAction =
+  | { type: 'RESET' }
   | { type: 'CONNECTED' }
   | { type: 'START_LISTENING' }
   | { type: 'STOP_LISTENING' }

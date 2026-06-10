@@ -2,13 +2,51 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getOpenAIClient } from '@/lib/ai/client'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import { sendCallSummaryEmail } from '@/lib/email/call-summary'
-// import { saveCallRecord } from '@/lib/db/call-records'
+import { saveCallRecord } from '@/lib/db/call-records'
 import { analyzeConversation, emptyLead, fallbackAnalysis } from '@/lib/ai/analyze-conversation'
 import type { CallSummary, ChatHistory, LeadData } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+
+function hasEmail(value: string | null | undefined): boolean {
+  return Boolean(value?.trim())
+}
+
+async function finishCall({
+  tenant,
+  lead,
+  summary,
+  messages,
+}: {
+  tenant: ReturnType<typeof getTenantFromRequest>
+  lead: LeadData
+  summary: CallSummary
+  messages: ChatHistory
+}) {
+  const email = await sendCallSummaryEmail({ tenant, lead, summary, messages })
+  const database = await saveCallRecord({
+    tenant,
+    lead,
+    summary,
+    messages,
+    email,
+    analysis: summary.analysis,
+  })
+
+  console.info('[call-end] completed', {
+    tenantId: tenant.id,
+    emailSent: email.sent,
+    emailRecipients: email.recipients?.length ?? 0,
+    emailError: email.error,
+    dbSaved: database.saved,
+    dbId: database.id,
+    dbError: database.error,
+  })
+
+  return { email, database }
+}
 
 /**
  * POST /api/summarize
@@ -38,16 +76,25 @@ export async function POST(req: NextRequest) {
 
   const conversation = messages.filter((m) => m.content !== '__GREET__')
 
+  console.info('[call-end] started', {
+    tenantId: tenant.id,
+    messages: conversation.length,
+    leadEmailCaptured: hasEmail(lead.email),
+  })
+
   if (conversation.length < 2) {
     const briefSummary: CallSummary = {
       summary:   'The call was too brief to summarize.',
       keyPoints: [],
     }
     const analysis = fallbackAnalysis(lead, briefSummary.summary)
-    const email = await sendCallSummaryEmail({ tenant, lead, summary: briefSummary, messages })
-    // Temporarily disabled MongoDB persistence.
-    // const database = await saveCallRecord({ tenant, lead: analysis.user, summary: briefSummary, messages, email, analysis })
-    const database = { saved: false, error: 'MongoDB persistence temporarily disabled.' }
+    const enrichedSummary: CallSummary = { ...briefSummary, analysis }
+    const { email, database } = await finishCall({
+      tenant,
+      lead: analysis.user,
+      summary: enrichedSummary,
+      messages,
+    })
     return NextResponse.json({ ...briefSummary, analysis, email, database })
   }
 
@@ -89,10 +136,12 @@ Return only valid JSON matching this shape: { "summary": "...", "keyPoints": [".
     }
     const analysis = await analyzeConversation({ tenant, lead, messages, summary: summary.summary })
     const enrichedSummary: CallSummary = { ...summary, analysis }
-    const email = await sendCallSummaryEmail({ tenant, lead: analysis.user, summary: enrichedSummary, messages })
-    // Temporarily disabled MongoDB persistence.
-    // const database = await saveCallRecord({ tenant, lead: analysis.user, summary: enrichedSummary, messages, email, analysis })
-    const database = { saved: false, error: 'MongoDB persistence temporarily disabled.' }
+    const { email, database } = await finishCall({
+      tenant,
+      lead: analysis.user,
+      summary: enrichedSummary,
+      messages,
+    })
 
     return NextResponse.json({ ...summary, analysis, email, database })
   } catch (err) {

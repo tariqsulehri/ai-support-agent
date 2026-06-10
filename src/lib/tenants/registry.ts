@@ -3,6 +3,7 @@ import type { TenantConfig } from './types'
 
 // Cast the JSON — validated at startup by the index checks below
 const tenants = tenantsRaw as TenantConfig[]
+const DEFAULT_TENANT_ID = 'tkxel'
 
 // ── Indexes built once at module load ─────────────────────────────────────────
 const byId     = new Map<string, TenantConfig>()
@@ -35,7 +36,7 @@ export function getTenantByDomain(url: string): TenantConfig | null {
 }
 
 export function getDefaultTenant(): TenantConfig | null {
-  return tenants[0] ?? null
+  return getTenantById(DEFAULT_TENANT_ID) ?? tenants[0] ?? null
 }
 
 export function getAllTenants(): TenantConfig[] {

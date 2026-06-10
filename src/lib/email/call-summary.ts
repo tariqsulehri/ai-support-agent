@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer'
+import { env } from '@/lib/config/env'
 import type { CallSummary, ChatHistory, LeadData } from '@/types'
 import type { TenantConfig } from '@/lib/tenants/types'
 
@@ -9,14 +10,110 @@ interface SendCallSummaryEmailInput {
   messages: ChatHistory
 }
 
+type EmailTransportConfig =
+  | { service: string }
+  | { host: string | undefined; port: number; secure: boolean }
+
+type ResolvedEmailConfig =
+  | {
+      enabled: true
+      recipients: string[]
+      sendToLeadEmail: boolean
+      fromName: string
+      fromEmail: string
+      user: string
+      pass: string
+      transport: EmailTransportConfig
+    }
+  | {
+      enabled: false
+      error: string
+    }
+
 export interface SendCallSummaryEmailResult {
   sent: boolean
   recipients?: string[]
+  messageId?: string
   error?: string
+  skippedLeadEmail?: string
 }
 
 function compactRecipients(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.map((v) => v?.trim()).filter(Boolean) as string[])]
+}
+
+function normalizeValidEmail(value: string | null | undefined): string | null {
+  const email = value?.trim()
+  if (!email) return null
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? email : null
+}
+
+function maskEmail(email: string): string {
+  const [name, domain] = email.split('@')
+  if (!name || !domain) return email
+
+  return `${name.slice(0, 2)}***@${domain}`
+}
+
+function describeTransport(transport: EmailTransportConfig): string {
+  return 'service' in transport
+    ? `service:${transport.service}`
+    : `smtp:${transport.host ?? 'unknown'}:${transport.port}`
+}
+
+function hasGenericEmailConfig(): boolean {
+  return Boolean(env.EMAIL_USER?.trim() && env.EMAIL_PASS?.trim() && (env.SERVICE?.trim() || env.HOST?.trim()))
+}
+
+function resolveEmailConfig(tenant: TenantConfig): ResolvedEmailConfig | null {
+  const tenantConfig = tenant.emailNotifications
+
+  if (hasGenericEmailConfig()) {
+    const port = env.EMAIL_PORT ?? tenantConfig?.smtp.port ?? 465
+    return {
+      enabled: true,
+      recipients: tenantConfig?.recipients ?? [],
+      sendToLeadEmail: tenantConfig?.sendToLeadEmail ?? true,
+      fromName: tenantConfig?.fromName ?? `${tenant.companyName} Voice Agent`,
+      fromEmail: env.EMAIL_USER as string,
+      user: env.EMAIL_USER as string,
+      pass: env.EMAIL_PASS as string,
+      transport: env.SERVICE?.trim()
+        ? { service: env.SERVICE.trim() }
+        : {
+            host: env.HOST?.trim() ?? tenantConfig?.smtp.host,
+            port,
+            secure: port === 465,
+          },
+    }
+  }
+
+  if (!tenantConfig?.enabled) return null
+
+  const user = process.env[tenantConfig.smtp.userEnv]
+  const pass = process.env[tenantConfig.smtp.passEnv]
+  if (!user || !pass) {
+    return {
+      enabled: false,
+      error: `Missing SMTP env vars: ${tenantConfig.smtp.userEnv}/${tenantConfig.smtp.passEnv}`,
+    }
+  }
+
+  return {
+    enabled: true,
+    recipients: tenantConfig.recipients ?? [],
+    sendToLeadEmail: tenantConfig.sendToLeadEmail ?? false,
+    fromName: tenantConfig.fromName,
+    fromEmail: tenantConfig.fromEmail,
+    user,
+    pass,
+    transport: {
+      host: tenantConfig.smtp.host,
+      port: tenantConfig.smtp.port,
+      secure: tenantConfig.smtp.secure,
+    },
+  }
 }
 
 function escapeHtml(value: string): string {
@@ -109,44 +206,84 @@ function renderHtml(input: SendCallSummaryEmailInput): string {
 export async function sendCallSummaryEmail(
   input: SendCallSummaryEmailInput
 ): Promise<SendCallSummaryEmailResult> {
-  const config = input.tenant.emailNotifications
-  if (!config?.enabled) return { sent: false }
-
-  const user = process.env[config.smtp.userEnv]
-  const pass = process.env[config.smtp.passEnv]
-  if (!user || !pass) {
-    return {
-      sent: false,
-      error: `Missing SMTP env vars: ${config.smtp.userEnv}/${config.smtp.passEnv}`,
-    }
+  const config = resolveEmailConfig(input.tenant)
+  if (!config) {
+    console.info('[call-email] skipped: email notifications are not configured', {
+      tenantId: input.tenant.id,
+    })
+    return { sent: false }
+  }
+  if (!config.enabled) {
+    console.info('[call-email] skipped: email configuration is incomplete', {
+      tenantId: input.tenant.id,
+      error: config.error,
+    })
+    return { sent: false, error: config.error }
   }
 
+  const leadEmail = normalizeValidEmail(input.lead.email)
+  const skippedLeadEmail = input.lead.email?.trim() && !leadEmail
+    ? input.lead.email.trim()
+    : undefined
+
   const recipients = compactRecipients([
-    ...(config.recipients ?? []),
-    config.sendToLeadEmail ? input.lead.email : null,
+    ...config.recipients,
+    config.sendToLeadEmail ? leadEmail : null,
   ])
 
   if (recipients.length === 0) {
-    return { sent: false, error: 'No email recipients configured or captured.' }
+    console.info('[call-email] skipped: no valid recipient', {
+      tenantId: input.tenant.id,
+      skippedLeadEmail: skippedLeadEmail ? maskEmail(skippedLeadEmail) : undefined,
+    })
+    return {
+      sent: false,
+      error: skippedLeadEmail
+        ? 'Captured lead email is invalid, so email was skipped.'
+        : 'No email recipients configured or captured.',
+      skippedLeadEmail,
+    }
   }
 
   const transporter = nodemailer.createTransport({
-    host: config.smtp.host,
-    port: config.smtp.port,
-    secure: config.smtp.secure,
-    auth: { user, pass },
+    ...config.transport,
+    auth: { user: config.user, pass: config.pass },
   })
 
   try {
-    await transporter.sendMail({
+    console.info('[call-email] sending email', {
+      tenantId: input.tenant.id,
+      recipients: recipients.map(maskEmail),
+      transport: describeTransport(config.transport),
+    })
+
+    const info = await transporter.sendMail({
       from: `"${config.fromName}" <${config.fromEmail}>`,
       to: recipients,
       subject: `Voice agent summary - ${input.tenant.companyName}`,
       text: renderText(input),
       html: renderHtml(input),
     })
-    return { sent: true, recipients }
+
+    console.info('[call-email] email sent', {
+      tenantId: input.tenant.id,
+      recipients: recipients.map(maskEmail),
+      messageId: info.messageId,
+    })
+
+    return { sent: true, recipients, messageId: info.messageId, skippedLeadEmail }
   } catch (err) {
-    return { sent: false, recipients, error: err instanceof Error ? err.message : String(err) }
+    const error = err instanceof Error ? err.message : String(err)
+    console.error('[call-email] email failed', {
+      tenantId: input.tenant.id,
+      recipients: recipients.map(maskEmail),
+      error,
+    })
+    return {
+      sent: false,
+      recipients,
+      error,
+      skippedLeadEmail,
+    }
   }
 }

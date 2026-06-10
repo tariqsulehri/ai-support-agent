@@ -73,6 +73,9 @@ async function readErrorText(res: Response, endpoint: string): Promise<string> {
 // ── Reducer ────────────────────────────────────────────────────────────────────
 function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentState {
   switch (action.type) {
+    case 'RESET':
+      return { ...initialState }
+
     case 'CONNECTED':
       return { ...state, phase: 'idle' }
 
@@ -166,6 +169,7 @@ export interface UseVoiceAgentReturn {
   pressMic:     () => void   // push-to-talk: call on pointer down
   releaseMic:   () => void   // push-to-talk: call on pointer up/leave
   sendText:     (text: string) => void
+  startNewChat: () => void
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────────
@@ -177,6 +181,8 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   const [companyName, setCompany] = useState('')
   const [embedHeaders, setEmbedHeaders] = useState<Record<string, string>>({})
   const embedHeadersRef = useRef<Record<string, string>>({})
+  const greetingRef = useRef<string | null>(null)
+  const sessionIdRef = useRef(0)
 
   // Keep voice in a ref so async callbacks always read the latest value
   const voiceRef = useRef<OpenAIVoice>('nova')
@@ -240,11 +246,13 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
         if (cfg.greeting && !cancelled) {
           // Use the exact hardcoded greeting — guaranteed verbatim, no LLM
           const greetingText = cfg.greeting as string
+          greetingRef.current = greetingText
           dispatch({ type: 'REPLY_COMPLETE', fullText: greetingText, endCall: false })
           enqueue(greetingText)
           historyRef.current.push({ role: 'assistant', content: greetingText })
         } else {
-          await streamChat([{ role: 'user', content: '__GREET__' }], cancelled ? null : dispatch)
+          const greeting = await streamChat([{ role: 'user', content: '__GREET__' }], cancelled ? null : dispatch)
+          if (greeting?.fullText) greetingRef.current = greeting.fullText
         }
 
         if (!cancelled) dispatch({ type: 'CONNECTED' })
@@ -297,7 +305,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   async function streamChat(
     messages: ChatHistory,
     dispatchFn: typeof dispatch | null
-  ) {
+  ): Promise<{ fullText: string; endCall: boolean } | null> {
     const res = await fetch('/api/chat', {
       method:  'POST',
       headers: {
@@ -314,6 +322,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     const decoder    = new TextDecoder()
     let   lineBuffer = ''
     let   sawDone = false
+    let   result: { fullText: string; endCall: boolean } | null = null
 
     while (true) {
       const { done, value } = await readWithTimeout(reader, CHAT_READ_TIMEOUT_MS)
@@ -330,7 +339,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
 
         if (event.error) {
           dispatchFn?.({ type: 'ERROR', message: String(event.error) })
-          return
+          return result
         }
         if (event.token) {
           dispatchFn?.({ type: 'STREAM_TOKEN', token: String(event.token) })
@@ -349,11 +358,14 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
           sawDone = true
           const fullText = String(event.fullText ?? '')
           const endCall  = Boolean(event.endCall)
+          result = { fullText, endCall }
           dispatchFn?.({ type: 'REPLY_COMPLETE', fullText, endCall })
           historyRef.current.push({ role: 'assistant', content: fullText })
           if (endCall) {
             const lead = leadRef.current
+            const summarySessionId = sessionIdRef.current
             // Generate summary in background — don't block the farewell
+            console.log('[Call Report] finalizing call')
             fetch('/api/summarize', {
               method:  'POST',
               headers: {
@@ -364,13 +376,32 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
             })
               .then((r) => readJsonResponse<CallSummary>(r, '/api/summarize'))
               .then((data: CallSummary) => {
+                if (summarySessionId !== sessionIdRef.current) return
                 dispatchFn?.({ type: 'CALL_SUMMARY', summary: data })
                 console.log(
                   '[Call Report]',
                   JSON.stringify({ lead, ...data }, null, 2)
                 )
               })
-              .catch((err) => console.error('[summarize]', err))
+              .catch((err) => {
+                if (summarySessionId !== sessionIdRef.current) return
+                console.error('[summarize]', err)
+                dispatchFn?.({
+                  type: 'CALL_SUMMARY',
+                  summary: {
+                    summary: 'The call ended, but the final report could not be completed.',
+                    keyPoints: [],
+                    email: {
+                      sent: false,
+                      error: err instanceof Error ? err.message : String(err),
+                    },
+                    database: {
+                      saved: false,
+                      error: 'Call finalization failed before the record could be saved.',
+                    },
+                  },
+                })
+              })
           }
         }
       }
@@ -379,6 +410,8 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     if (!sawDone) {
       dispatchFn?.({ type: 'ERROR', message: 'Chat stream ended before a complete reply.' })
     }
+
+    return result
   }
 
   // ── Text send ─────────────────────────────────────────────────────────────────
@@ -426,6 +459,33 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     stopRec()   // fires onAudioReady → transcribe → send
   }, [isRecording, stopRec])
 
+  const startNewChat = useCallback(() => {
+    sessionIdRef.current += 1
+    historyRef.current = []
+    leadRef.current = EMPTY_LEAD
+    stopAll()
+    dispatch({ type: 'RESET' })
+
+    const greeting = greetingRef.current
+    if (greeting) {
+      dispatch({ type: 'REPLY_COMPLETE', fullText: greeting, endCall: false })
+      historyRef.current.push({ role: 'assistant', content: greeting })
+      enqueue(greeting)
+      dispatch({ type: 'CONNECTED' })
+      return
+    }
+
+    streamChat([{ role: 'user', content: '__GREET__' }], dispatch)
+      .then((freshGreeting) => {
+        if (freshGreeting?.fullText) greetingRef.current = freshGreeting.fullText
+        dispatch({ type: 'CONNECTED' })
+      })
+      .catch((err) => {
+        dispatch({ type: 'ERROR', message: err instanceof Error ? err.message : 'Chat failed. Please try again.' })
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enqueue, stopAll])
+
   return {
     phase:        state.phase,
     transcript:   state.transcript,
@@ -446,5 +506,6 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     pressMic,
     releaseMic,
     sendText,
+    startNewChat,
   }
 }
