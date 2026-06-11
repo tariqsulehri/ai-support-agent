@@ -134,15 +134,13 @@ function CallCompletedPanel({
             <span className="text-xs text-ms-muted truncate">{status.label}</span>
           </div>
         </div>
-        {callSummary && (
-          <button
-            type="button"
-            onClick={onStartNewChat}
-            className="shrink-0 rounded-lg bg-ms-teal px-3 py-2 text-xs font-semibold text-white hover:bg-ms-teal-dk transition-colors"
-          >
-            Start new chat
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onStartNewChat}
+          className="shrink-0 rounded-lg bg-ms-teal px-3 py-2 text-xs font-semibold text-white hover:bg-ms-teal-dk transition-colors"
+        >
+          Start new chat
+        </button>
       </div>
       <div className="px-4 py-3">
         <p className="text-xs text-ms-sub leading-relaxed">
