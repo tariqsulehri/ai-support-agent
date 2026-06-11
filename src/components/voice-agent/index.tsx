@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef } from 'react'
 import { useVoiceAgent } from '@/hooks/use-voice-agent'
 import { TranscriptPanel }              from './transcript-panel'
 import { MicButton }                    from './mic-button'
@@ -28,16 +28,6 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
     agentName, companyName,
     setVoice, stopPlayback, pressMic, releaseMic, sendText, startNewChat,
   } = useVoiceAgent({ tenantId, token })
-
-  // Auto-start new conversation when summary is ready
-  useEffect(() => {
-    if (phase === 'ended' && callSummary) {
-      const timer = window.setTimeout(() => {
-        startNewChat()
-      }, 1500)
-      return () => window.clearTimeout(timer)
-    }
-  }, [phase, callSummary, startNewChat])
 
   const initials = getInitials(agentName || 'CS')
   const isOnline = phase !== 'connecting' && phase !== 'error' && phase !== 'ended'

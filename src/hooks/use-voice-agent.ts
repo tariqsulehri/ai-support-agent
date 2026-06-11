@@ -474,6 +474,38 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     stopRec()   // fires onAudioReady → transcribe → send
   }, [isRecording, stopRec])
 
+  // Auto-restart new conversation when call summary completes
+  useEffect(() => {
+    if (state.phase !== 'ended' || !state.callSummary) return
+
+    const timer = window.setTimeout(() => {
+      sessionIdRef.current += 1
+      historyRef.current = []
+      leadRef.current = EMPTY_LEAD
+      stopAll()
+      dispatch({ type: 'RESET' })
+
+      const greeting = greetingRef.current
+      if (greeting) {
+        dispatch({ type: 'REPLY_COMPLETE', fullText: greeting, endCall: false })
+        historyRef.current.push({ role: 'assistant', content: greeting })
+        enqueue(greeting)
+        dispatch({ type: 'CONNECTED' })
+      } else {
+        streamChat([{ role: 'user', content: '__GREET__' }], dispatch)
+          .then((freshGreeting) => {
+            if (freshGreeting?.fullText) greetingRef.current = freshGreeting.fullText
+            dispatch({ type: 'CONNECTED' })
+          })
+          .catch((err) => {
+            console.error('[auto-restart]', err)
+          })
+      }
+    }, 1500)
+
+    return () => window.clearTimeout(timer)
+  }, [state.phase, state.callSummary, stopAll, enqueue])
+
   const startNewChat = useCallback(() => {
     sessionIdRef.current += 1
     historyRef.current = []
