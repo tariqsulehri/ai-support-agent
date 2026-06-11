@@ -75,18 +75,23 @@ async function readErrorText(res: Response, endpoint: string): Promise<string> {
 function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentState {
   switch (action.type) {
     case 'RESET':
+      console.log('[reducer] RESET')
       return { ...initialState }
 
     case 'CONNECTED':
+      console.log('[reducer] CONNECTED, phase -> idle')
       return { ...state, phase: 'idle' }
 
     case 'START_LISTENING':
+      console.log('[reducer] START_LISTENING')
       return { ...state, phase: 'listening', error: null }
 
     case 'STOP_LISTENING':
+      console.log('[reducer] STOP_LISTENING')
       return { ...state, phase: 'transcribing' }
 
     case 'TRANSCRIBED': {
+      console.log('[reducer] TRANSCRIBED')
       const msg: Message = { id: uid(), role: 'user', content: action.text }
       return {
         ...state,
@@ -100,6 +105,7 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
       return { ...state, partialReply: state.partialReply + action.token }
 
     case 'REPLY_COMPLETE': {
+      console.log('[reducer] REPLY_COMPLETE, endCall:', action.endCall, 'phase ->', action.endCall ? 'ended' : 'idle')
       const msg: Message = { id: uid(), role: 'assistant', content: action.fullText }
       return {
         ...state,
@@ -513,11 +519,15 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
 
       const greeting = greetingRef.current
       if (greeting) {
-        console.log('[auto-restart] using cached greeting')
+        console.log('[auto-restart] using cached greeting:', greeting.substring(0, 50))
+        console.log('[auto-restart] dispatching REPLY_COMPLETE')
         dispatch({ type: 'REPLY_COMPLETE', fullText: greeting, endCall: false })
         historyRef.current.push({ role: 'assistant', content: greeting })
+        console.log('[auto-restart] enqueuing greeting')
         enqueueRef.current?.(greeting)
+        console.log('[auto-restart] dispatching CONNECTED')
         dispatch({ type: 'CONNECTED' })
+        console.log('[auto-restart] reset complete, phase should be idle now')
       } else {
         console.log('[auto-restart] fetching fresh greeting')
         streamChat([{ role: 'user', content: '__GREET__' }], dispatch)
