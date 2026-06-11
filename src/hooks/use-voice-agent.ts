@@ -113,6 +113,7 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
       return { ...state, leadData: { ...state.leadData, ...action.lead } }
 
     case 'CALL_SUMMARY':
+      console.log('[reducer] CALL_SUMMARY received:', action.summary)
       return { ...state, callSummary: action.summary }
 
     case 'SPEAKING_DONE':
@@ -399,7 +400,12 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
             })
               .then((r) => readJsonResponse<CallSummary>(r, '/api/summarize'))
               .then((data: CallSummary) => {
-                if (summarySessionId !== sessionIdRef.current) return
+                console.log('[Call Report] summary received:', data)
+                if (summarySessionId !== sessionIdRef.current) {
+                  console.log('[Call Report] session mismatch, ignoring')
+                  return
+                }
+                console.log('[Call Report] dispatching CALL_SUMMARY')
                 dispatchFn?.({ type: 'CALL_SUMMARY', summary: data })
                 console.log(
                   '[Call Report]',
@@ -407,7 +413,11 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
                 )
               })
               .catch((err) => {
-                if (summarySessionId !== sessionIdRef.current) return
+                console.error('[Call Report] summary error:', err)
+                if (summarySessionId !== sessionIdRef.current) {
+                  console.log('[Call Report] session mismatch in error, ignoring')
+                  return
+                }
                 console.error('[summarize]', err)
                 dispatchFn?.({
                   type: 'CALL_SUMMARY',
