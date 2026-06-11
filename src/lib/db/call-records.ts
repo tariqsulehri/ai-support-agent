@@ -1,4 +1,4 @@
-import type { InsertOneResult, Document } from 'mongodb'
+import { ObjectId, type InsertOneResult, type Document } from 'mongodb'
 import { env } from '@/lib/config/env'
 import { getMongoDb, isMongoConfigured } from './mongodb'
 import type { TenantConfig } from '@/lib/tenants/types'
@@ -19,6 +19,8 @@ export interface SaveCallRecordResult {
   id?: string
   error?: string
 }
+
+export type LeadStatus = 'new' | 'reviewing' | 'qualified' | 'proposal' | 'won' | 'lost'
 
 function hasLeadData(lead: LeadData): boolean {
   return Object.values(lead).some((value) => Boolean(value?.trim()))
@@ -66,6 +68,36 @@ export async function saveCallRecord(input: SaveCallRecordInput): Promise<SaveCa
       })
 
     return { saved: true, id: result.insertedId.toString() }
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    console.error('[mongodb]', error)
+    return { saved: false, error }
+  }
+}
+
+export async function updateCallRecordStatus(id: string, status: LeadStatus): Promise<SaveCallRecordResult> {
+  if (!isMongoConfigured()) return { saved: false, error: 'MongoDB is not configured.' }
+  if (!ObjectId.isValid(id)) return { saved: false, error: 'Invalid call record id.' }
+
+  try {
+    const db = await getMongoDb()
+    if (!db) return { saved: false, error: 'MongoDB is not configured.' }
+
+    const result = await db.collection(env.MONGODB_CALLS_COLLECTION).updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          status,
+          updatedAt: new Date(),
+        },
+      }
+    )
+
+    return {
+      saved: result.matchedCount > 0,
+      id,
+      error: result.matchedCount > 0 ? undefined : 'Call record was not found.',
+    }
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
     console.error('[mongodb]', error)

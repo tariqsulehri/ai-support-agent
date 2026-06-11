@@ -27,6 +27,11 @@ const envSchema = z.object({
   EMAIL_PASS: z.string().optional(),
   HOST: z.string().optional(),
   EMAIL_PORT: z.coerce.number().optional(),
+
+  // Management dashboard protection. When DASHBOARD_PASSWORD is set,
+  // /dashboard requires HTTP Basic authentication.
+  DASHBOARD_USERNAME: z.string().default('admin'),
+  DASHBOARD_PASSWORD: z.string().optional(),
 })
 
 export type Env = z.infer<typeof envSchema>

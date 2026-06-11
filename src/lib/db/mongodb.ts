@@ -16,6 +16,8 @@ export async function getMongoDb(): Promise<Db | null> {
 
   globalForMongo.__voiceAgentMongoClient ??= MongoClient.connect(env.MONGODB_URI, {
     appName: 'voiceagent',
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 5000,
   })
 
   const client = await globalForMongo.__voiceAgentMongoClient

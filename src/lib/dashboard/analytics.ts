@@ -1,0 +1,324 @@
+import { env } from '@/lib/config/env'
+import { getMongoDb, isMongoConfigured } from '@/lib/db/mongodb'
+import type {
+  ChatHistory,
+  ConversationIntent,
+  ConversationSentiment,
+  ConversationUrgency,
+  LeadData,
+  LeadQuality,
+} from '@/types'
+
+type CountItem = {
+  label: string
+  count: number
+}
+
+export type DashboardCall = {
+  id: string
+  tenantId: string
+  companyName: string
+  lead: LeadData
+  status: string
+  leadQuality: LeadQuality | 'unknown'
+  intent: ConversationIntent | 'other'
+  urgency: ConversationUrgency
+  sentiment: ConversationSentiment
+  category: string
+  servicesInterested: string[]
+  summary: string
+  keyPoints: string[]
+  nextSteps: string[]
+  transcript: ChatHistory
+  emailSent: boolean
+  emailError: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type DashboardAnalytics = {
+  configured: boolean
+  generatedAt: string
+  totalCalls: number
+  callsWithLead: number
+  hotLeads: number
+  qualifiedPipeline: number
+  emailSent: number
+  emailFailures: number
+  averageMessages: number
+  conversionReadiness: number
+  recentCalls: DashboardCall[]
+  statusCounts: CountItem[]
+  leadQualityCounts: CountItem[]
+  intentCounts: CountItem[]
+  urgencyCounts: CountItem[]
+  sentimentCounts: CountItem[]
+  categoryCounts: CountItem[]
+  serviceCounts: CountItem[]
+  topCountries: CountItem[]
+  aiRecommendations: string[]
+  riskSignals: string[]
+  followUpQueue: DashboardCall[]
+}
+
+type RawRecord = {
+  _id: { toString(): string }
+  tenant?: {
+    id?: string
+    companyName?: string
+  }
+  lead?: Partial<LeadData>
+  user?: Partial<LeadData>
+  hasLead?: boolean
+  requirement?: {
+    servicesInterested?: string[]
+    urgency?: ConversationUrgency
+  } | null
+  classification?: {
+    category?: string
+    intent?: ConversationIntent
+    leadQuality?: LeadQuality
+    sentiment?: ConversationSentiment
+  } | null
+  summary?: {
+    text?: string
+    keyPoints?: string[]
+  }
+  callSummary?: {
+    summary?: string
+    keyPoints?: string[]
+    nextSteps?: string[]
+  }
+  transcript?: ChatHistory
+  status?: string
+  email?: {
+    sent?: boolean
+    error?: string
+  } | null
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+const EMPTY_ANALYTICS: DashboardAnalytics = {
+  configured: false,
+  generatedAt: new Date().toISOString(),
+  totalCalls: 0,
+  callsWithLead: 0,
+  hotLeads: 0,
+  qualifiedPipeline: 0,
+  emailSent: 0,
+  emailFailures: 0,
+  averageMessages: 0,
+  conversionReadiness: 0,
+  recentCalls: [],
+  statusCounts: [],
+  leadQualityCounts: [],
+  intentCounts: [],
+  urgencyCounts: [],
+  sentimentCounts: [],
+  categoryCounts: [],
+  serviceCounts: [],
+  topCountries: [],
+  aiRecommendations: [],
+  riskSignals: [],
+  followUpQueue: [],
+}
+
+function normalizeLead(input: Partial<LeadData> | undefined): LeadData {
+  return {
+    name: input?.name ?? null,
+    email: input?.email ?? null,
+    phone: input?.phone ?? null,
+    company: input?.company ?? null,
+    country: input?.country ?? null,
+    purpose: input?.purpose ?? null,
+  }
+}
+
+function hasLead(lead: LeadData): boolean {
+  return Object.values(lead).some((value) => Boolean(value?.trim()))
+}
+
+function dateString(value: Date | undefined): string {
+  return (value ?? new Date(0)).toISOString()
+}
+
+function increment(map: Map<string, number>, label: string | null | undefined): void {
+  const key = label?.trim() || 'unknown'
+  map.set(key, (map.get(key) ?? 0) + 1)
+}
+
+function rankedItems(map: Map<string, number>, limit = 8): CountItem[] {
+  return [...map.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, limit)
+}
+
+function toDashboardCall(record: RawRecord): DashboardCall {
+  const lead = normalizeLead(record.lead ?? record.user)
+  const classification = record.classification
+  const requirement = record.requirement
+
+  return {
+    id: record._id.toString(),
+    tenantId: record.tenant?.id ?? 'unknown',
+    companyName: record.tenant?.companyName ?? 'Unknown tenant',
+    lead,
+    status: record.status?.trim() || 'new',
+    leadQuality: classification?.leadQuality ?? 'unknown',
+    intent: classification?.intent ?? 'other',
+    urgency: requirement?.urgency ?? 'unknown',
+    sentiment: classification?.sentiment ?? 'neutral',
+    category: classification?.category ?? 'other',
+    servicesInterested: requirement?.servicesInterested ?? [],
+    summary: record.callSummary?.summary ?? record.summary?.text ?? 'No summary captured.',
+    keyPoints: record.callSummary?.keyPoints ?? record.summary?.keyPoints ?? [],
+    nextSteps: record.callSummary?.nextSteps ?? [],
+    transcript: record.transcript ?? [],
+    emailSent: Boolean(record.email?.sent),
+    emailError: record.email?.error ?? null,
+    createdAt: dateString(record.createdAt),
+    updatedAt: dateString(record.updatedAt),
+  }
+}
+
+function buildRecommendations(calls: DashboardCall[], analytics: Pick<DashboardAnalytics,
+  'totalCalls' | 'callsWithLead' | 'hotLeads' | 'emailFailures' | 'averageMessages'
+>): string[] {
+  if (calls.length === 0) {
+    return ['No completed communications are available yet. Start by validating call capture, MongoDB persistence, and email notifications end to end.']
+  }
+
+  const recommendations: string[] = []
+  const hotOpen = calls.filter((call) =>
+    call.leadQuality === 'hot' && !['won', 'lost'].includes(call.status)
+  )
+  const highUrgency = calls.filter((call) => call.urgency === 'high' && !['won', 'lost'].includes(call.status))
+  const leadCaptureRate = Math.round((analytics.callsWithLead / analytics.totalCalls) * 100)
+
+  if (hotOpen.length > 0) {
+    recommendations.push(`Prioritize ${hotOpen.length} hot lead${hotOpen.length === 1 ? '' : 's'} still outside won/lost status; assign owner follow-up within the same business day.`)
+  }
+  if (highUrgency.length > 0) {
+    recommendations.push(`${highUrgency.length} high-urgency conversation${highUrgency.length === 1 ? '' : 's'} need executive visibility because timeline pressure was detected.`)
+  }
+  if (leadCaptureRate < 70) {
+    recommendations.push(`Lead capture rate is ${leadCaptureRate}%. Tighten the agent prompt around name, email, phone, company, and buying purpose before closing calls.`)
+  }
+  if (analytics.emailFailures > 0) {
+    recommendations.push(`${analytics.emailFailures} summary email${analytics.emailFailures === 1 ? '' : 's'} failed. Review SMTP credentials and recipient rules so managers receive every call recap.`)
+  }
+  if (analytics.averageMessages < 4) {
+    recommendations.push('Average conversation depth is low. Review greeting and discovery questions to increase qualification quality.')
+  }
+
+  return recommendations.slice(0, 5)
+}
+
+function buildRiskSignals(calls: DashboardCall[]): string[] {
+  const risks: string[] = []
+  const negative = calls.filter((call) => call.sentiment === 'negative')
+  const complaints = calls.filter((call) => call.intent === 'complaint')
+  const staleNew = calls.filter((call) => {
+    const ageMs = Date.now() - new Date(call.createdAt).getTime()
+    return call.status === 'new' && ageMs > 24 * 60 * 60 * 1000
+  })
+  const emailErrors = calls.filter((call) => call.emailError)
+
+  if (negative.length) risks.push(`${negative.length} conversation${negative.length === 1 ? '' : 's'} had negative sentiment and should be reviewed for service recovery.`)
+  if (complaints.length) risks.push(`${complaints.length} complaint-intent communication${complaints.length === 1 ? '' : 's'} may require escalation.`)
+  if (staleNew.length) risks.push(`${staleNew.length} new lead${staleNew.length === 1 ? ' is' : 's are'} older than 24 hours without pipeline movement.`)
+  if (emailErrors.length) risks.push(`${emailErrors.length} record${emailErrors.length === 1 ? '' : 's'} show email delivery errors, which can hide important opportunities from leadership.`)
+
+  return risks.length ? risks.slice(0, 5) : ['No major risk signals detected in the current communication set.']
+}
+
+export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
+  if (!isMongoConfigured()) return EMPTY_ANALYTICS
+
+  try {
+    const db = await getMongoDb()
+    if (!db) return EMPTY_ANALYTICS
+
+    const records = await db
+      .collection<RawRecord>(env.MONGODB_CALLS_COLLECTION)
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .toArray()
+
+    const calls = records.map(toDashboardCall)
+    const totalCalls = calls.length
+    const statusMap = new Map<string, number>()
+    const qualityMap = new Map<string, number>()
+    const intentMap = new Map<string, number>()
+    const urgencyMap = new Map<string, number>()
+    const sentimentMap = new Map<string, number>()
+    const categoryMap = new Map<string, number>()
+    const serviceMap = new Map<string, number>()
+    const countryMap = new Map<string, number>()
+
+    let messageCount = 0
+    for (const call of calls) {
+      increment(statusMap, call.status)
+      increment(qualityMap, call.leadQuality)
+      increment(intentMap, call.intent)
+      increment(urgencyMap, call.urgency)
+      increment(sentimentMap, call.sentiment)
+      increment(categoryMap, call.category)
+      increment(countryMap, call.lead.country)
+      for (const service of call.servicesInterested) increment(serviceMap, service)
+      messageCount += call.transcript.length
+    }
+
+    const callsWithLead = calls.filter((call) => hasLead(call.lead)).length
+    const hotLeads = calls.filter((call) => call.leadQuality === 'hot').length
+    const qualifiedPipeline = calls.filter((call) =>
+      ['qualified', 'proposal', 'won'].includes(call.status)
+    ).length
+    const emailSent = calls.filter((call) => call.emailSent).length
+    const emailFailures = calls.filter((call) => call.emailError).length
+    const averageMessages = totalCalls ? Math.round((messageCount / totalCalls) * 10) / 10 : 0
+    const conversionReadiness = totalCalls
+      ? Math.round(((hotLeads * 2 + qualifiedPipeline + callsWithLead) / (totalCalls * 4)) * 100)
+      : 0
+    const partialAnalytics = { totalCalls, callsWithLead, hotLeads, emailFailures, averageMessages }
+
+    return {
+      configured: true,
+      generatedAt: new Date().toISOString(),
+      totalCalls,
+      callsWithLead,
+      hotLeads,
+      qualifiedPipeline,
+      emailSent,
+      emailFailures,
+      averageMessages,
+      conversionReadiness,
+      recentCalls: calls.slice(0, 30),
+      statusCounts: rankedItems(statusMap),
+      leadQualityCounts: rankedItems(qualityMap),
+      intentCounts: rankedItems(intentMap),
+      urgencyCounts: rankedItems(urgencyMap),
+      sentimentCounts: rankedItems(sentimentMap),
+      categoryCounts: rankedItems(categoryMap),
+      serviceCounts: rankedItems(serviceMap),
+      topCountries: rankedItems(countryMap, 6),
+      aiRecommendations: buildRecommendations(calls, partialAnalytics),
+      riskSignals: buildRiskSignals(calls),
+      followUpQueue: calls
+        .filter((call) =>
+          !['won', 'lost'].includes(call.status) &&
+          (call.leadQuality === 'hot' || call.urgency === 'high' || call.intent === 'meeting_request')
+        )
+        .slice(0, 10),
+    }
+  } catch (err) {
+    console.error('[dashboard]', err)
+    return {
+      ...EMPTY_ANALYTICS,
+      generatedAt: new Date().toISOString(),
+    }
+  }
+}

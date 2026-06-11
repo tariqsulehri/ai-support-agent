@@ -13,6 +13,7 @@ function buildFrameAncestors(): string {
 const frameAncestors = buildFrameAncestors()
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   async headers() {
     return [
       {
