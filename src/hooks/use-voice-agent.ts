@@ -503,48 +503,6 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     stopRec()   // fires onAudioReady → transcribe → send
   }, [isRecording, stopRec])
 
-  // Auto-restart new conversation when call summary completes
-  useEffect(() => {
-    if (state.phase !== 'ended' || !state.callSummary) return
-
-    console.log('[auto-restart] triggered, waiting 1.5s before reset')
-
-    const timer = window.setTimeout(() => {
-      console.log('[auto-restart] resetting conversation')
-      sessionIdRef.current += 1
-      historyRef.current = []
-      leadRef.current = EMPTY_LEAD
-      stopAllRef.current?.()
-      dispatch({ type: 'RESET' })
-
-      const greeting = greetingRef.current
-      if (greeting) {
-        console.log('[auto-restart] using cached greeting:', greeting.substring(0, 50))
-        console.log('[auto-restart] dispatching REPLY_COMPLETE')
-        dispatch({ type: 'REPLY_COMPLETE', fullText: greeting, endCall: false })
-        historyRef.current.push({ role: 'assistant', content: greeting })
-        console.log('[auto-restart] enqueuing greeting')
-        enqueueRef.current?.(greeting)
-        console.log('[auto-restart] dispatching CONNECTED')
-        dispatch({ type: 'CONNECTED' })
-        console.log('[auto-restart] reset complete, phase should be idle now')
-      } else {
-        console.log('[auto-restart] fetching fresh greeting')
-        streamChat([{ role: 'user', content: '__GREET__' }], dispatch)
-          .then((freshGreeting) => {
-            console.log('[auto-restart] got fresh greeting')
-            if (freshGreeting?.fullText) greetingRef.current = freshGreeting.fullText
-            dispatch({ type: 'CONNECTED' })
-          })
-          .catch((err) => {
-            console.error('[auto-restart]', err)
-          })
-      }
-    }, 1500)
-
-    return () => window.clearTimeout(timer)
-  }, [state.phase, state.callSummary])
-
   const startNewChat = useCallback(() => {
     sessionIdRef.current += 1
     historyRef.current = []
@@ -571,6 +529,19 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
       })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enqueue, stopAll])
+
+  // Auto-restart when summary completes
+  useEffect(() => {
+    if (state.phase !== 'ended' || !state.callSummary) return
+
+    console.log('[auto-restart] summary ready, waiting 1.5s')
+    const timer = window.setTimeout(() => {
+      console.log('[auto-restart] calling startNewChat')
+      startNewChat()
+    }, 1500)
+
+    return () => window.clearTimeout(timer)
+  }, [state.phase, state.callSummary, startNewChat])
 
   return {
     phase:        state.phase,
