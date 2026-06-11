@@ -192,6 +192,10 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     setVoice(v)
   }, [])
 
+  // Keep audio functions in refs for effect cleanup
+  const stopAllRef = useRef<typeof stopAll>()
+  const enqueueRef = useRef<typeof enqueue>()
+
   // Conversation history sent to /api/chat
   const historyRef = useRef<ChatHistory>([])
 
@@ -204,6 +208,10 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     requestHeaders: embedHeaders,
     onPlaybackEnd: () => {},
   })
+
+  // Update refs so effects can access latest functions
+  stopAllRef.current = stopAll
+  enqueueRef.current = enqueue
 
   // ── Audio recorder ───────────────────────────────────────────────────────────
   const { isRecording, hasSpeech, start: startRec, stop: stopRec } = useAudioRecorder({
@@ -485,7 +493,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
       sessionIdRef.current += 1
       historyRef.current = []
       leadRef.current = EMPTY_LEAD
-      stopAll()
+      stopAllRef.current?.()
       dispatch({ type: 'RESET' })
 
       const greeting = greetingRef.current
@@ -493,7 +501,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
         console.log('[auto-restart] using cached greeting')
         dispatch({ type: 'REPLY_COMPLETE', fullText: greeting, endCall: false })
         historyRef.current.push({ role: 'assistant', content: greeting })
-        enqueue(greeting)
+        enqueueRef.current?.(greeting)
         dispatch({ type: 'CONNECTED' })
       } else {
         console.log('[auto-restart] fetching fresh greeting')
@@ -510,7 +518,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     }, 1500)
 
     return () => window.clearTimeout(timer)
-  }, [state.phase, state.callSummary, stopAll, enqueue])
+  }, [state.phase, state.callSummary])
 
   const startNewChat = useCallback(() => {
     sessionIdRef.current += 1
