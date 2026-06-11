@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { streamChatReply, extractSentences } from '@/lib/ai/chat'
+import { evaluateCustomerMessage } from '@/lib/ai/conversation-policy'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import type { ChatMessage } from '@/lib/ai/chat'
 export { OPTIONS } from '@/lib/utils/cors'
@@ -91,6 +92,30 @@ export async function POST(req: NextRequest) {
       'thank you for providing your details',
       "you're welcome",
     ].some((phrase) => normalized.includes(phrase))
+  }
+
+  function policyResponse(reply: string): Response {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(send({ token: reply }))
+        controller.enqueue(send({ sentence: reply }))
+        controller.enqueue(send({ done: true, fullText: reply, endCall: false }))
+        controller.close()
+      },
+    })
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type':      'text/event-stream',
+        'Cache-Control':     'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      },
+    })
+  }
+
+  const policy = evaluateCustomerMessage(lastUserMessage(), tenant)
+  if (policy.type === 'out_of_scope') {
+    return policyResponse(policy.reply)
   }
 
   const stream = new ReadableStream({

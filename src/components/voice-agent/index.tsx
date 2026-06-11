@@ -31,6 +31,13 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
 
   const initials = getInitials(agentName || 'CS')
   const isOnline = phase !== 'connecting' && phase !== 'error' && phase !== 'ended'
+  const statusLabel = phase === 'connecting'
+    ? 'Connecting'
+    : phase === 'error'
+      ? 'Issue'
+      : isOnline
+        ? 'Online'
+        : 'Offline'
   const handleClose = () => {
     stopPlayback()
     onClose?.()
@@ -60,7 +67,7 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
           <div className="flex items-center gap-2 shrink-0">
             <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : 'bg-white/40'}`} />
             <span className="text-white/80 text-xs font-medium">
-              {isOnline ? 'Online' : 'Offline'}
+              {statusLabel}
             </span>
             {onClose && (
               <button

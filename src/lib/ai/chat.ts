@@ -18,7 +18,7 @@ export async function streamChatReply(
 
   return client.chat.completions.create({
     model:       'gpt-4o-mini',
-    max_tokens:  160,
+    max_tokens:  130,
     temperature: 0.4,
     stream:      true,
     messages: [

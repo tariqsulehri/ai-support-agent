@@ -32,8 +32,21 @@ export type DashboardCall = {
   transcript: ChatHistory
   emailSent: boolean
   emailError: string | null
+  owner: string | null
+  followUpAt: string | null
+  notes: string | null
+  statusHistory: Array<{ status: string; changedAt: string }>
   createdAt: string
   updatedAt: string
+}
+
+export type DashboardFilters = {
+  q?: string
+  status?: string
+  quality?: string
+  urgency?: string
+  range?: string
+  selectedId?: string
 }
 
 export type DashboardAnalytics = {
@@ -47,6 +60,10 @@ export type DashboardAnalytics = {
   emailFailures: number
   averageMessages: number
   conversionReadiness: number
+  openFollowUps: number
+  overdueFollowUps: number
+  filteredCalls: number
+  selectedCall: DashboardCall | null
   recentCalls: DashboardCall[]
   statusCounts: CountItem[]
   leadQualityCounts: CountItem[]
@@ -95,6 +112,10 @@ type RawRecord = {
     sent?: boolean
     error?: string
   } | null
+  owner?: string | null
+  followUpAt?: Date | null
+  notes?: string | null
+  statusHistory?: Array<{ status?: string; changedAt?: Date }>
   createdAt?: Date
   updatedAt?: Date
 }
@@ -110,6 +131,10 @@ const EMPTY_ANALYTICS: DashboardAnalytics = {
   emailFailures: 0,
   averageMessages: 0,
   conversionReadiness: 0,
+  openFollowUps: 0,
+  overdueFollowUps: 0,
+  filteredCalls: 0,
+  selectedCall: null,
   recentCalls: [],
   statusCounts: [],
   leadQualityCounts: [],
@@ -141,6 +166,10 @@ function hasLead(lead: LeadData): boolean {
 
 function dateString(value: Date | undefined): string {
   return (value ?? new Date(0)).toISOString()
+}
+
+function optionalDateString(value: Date | null | undefined): string | null {
+  return value ? value.toISOString() : null
 }
 
 function increment(map: Map<string, number>, label: string | null | undefined): void {
@@ -178,9 +207,61 @@ function toDashboardCall(record: RawRecord): DashboardCall {
     transcript: record.transcript ?? [],
     emailSent: Boolean(record.email?.sent),
     emailError: record.email?.error ?? null,
+    owner: record.owner?.trim() || null,
+    followUpAt: optionalDateString(record.followUpAt),
+    notes: record.notes?.trim() || null,
+    statusHistory: (record.statusHistory ?? []).map((item) => ({
+      status: item.status ?? 'unknown',
+      changedAt: dateString(item.changedAt),
+    })),
     createdAt: dateString(record.createdAt),
     updatedAt: dateString(record.updatedAt),
   }
+}
+
+function withinRange(call: DashboardCall, range: string | undefined): boolean {
+  if (!range || range === 'all') return true
+
+  const createdAt = new Date(call.createdAt).getTime()
+  const now = Date.now()
+  const days = range === 'today' ? 1 : Number(range)
+  if (!Number.isFinite(days)) return true
+
+  return createdAt >= now - days * 24 * 60 * 60 * 1000
+}
+
+function matchesSearch(call: DashboardCall, query: string | undefined): boolean {
+  const normalized = query?.trim().toLowerCase()
+  if (!normalized) return true
+
+  return [
+    call.lead.name,
+    call.lead.email,
+    call.lead.phone,
+    call.lead.company,
+    call.lead.country,
+    call.lead.purpose,
+    call.companyName,
+    call.category,
+    call.intent,
+    call.summary,
+    call.owner,
+    call.notes,
+    ...call.servicesInterested,
+    ...call.keyPoints,
+  ]
+    .filter(Boolean)
+    .some((value) => String(value).toLowerCase().includes(normalized))
+}
+
+function applyFilters(calls: DashboardCall[], filters: DashboardFilters): DashboardCall[] {
+  return calls.filter((call) =>
+    matchesSearch(call, filters.q) &&
+    withinRange(call, filters.range) &&
+    (!filters.status || filters.status === 'all' || call.status === filters.status) &&
+    (!filters.quality || filters.quality === 'all' || call.leadQuality === filters.quality) &&
+    (!filters.urgency || filters.urgency === 'all' || call.urgency === filters.urgency)
+  )
 }
 
 function buildRecommendations(calls: DashboardCall[], analytics: Pick<DashboardAnalytics,
@@ -234,7 +315,7 @@ function buildRiskSignals(calls: DashboardCall[]): string[] {
   return risks.length ? risks.slice(0, 5) : ['No major risk signals detected in the current communication set.']
 }
 
-export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
+export async function getDashboardAnalytics(filters: DashboardFilters = {}): Promise<DashboardAnalytics> {
   if (!isMongoConfigured()) return EMPTY_ANALYTICS
 
   try {
@@ -248,7 +329,8 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
       .limit(500)
       .toArray()
 
-    const calls = records.map(toDashboardCall)
+    const allCalls = records.map(toDashboardCall)
+    const calls = applyFilters(allCalls, filters)
     const totalCalls = calls.length
     const statusMap = new Map<string, number>()
     const qualityMap = new Map<string, number>()
@@ -279,6 +361,12 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
     ).length
     const emailSent = calls.filter((call) => call.emailSent).length
     const emailFailures = calls.filter((call) => call.emailError).length
+    const openFollowUps = calls.filter((call) => call.followUpAt && !['won', 'lost'].includes(call.status)).length
+    const overdueFollowUps = calls.filter((call) =>
+      call.followUpAt &&
+      new Date(call.followUpAt).getTime() < Date.now() &&
+      !['won', 'lost'].includes(call.status)
+    ).length
     const averageMessages = totalCalls ? Math.round((messageCount / totalCalls) * 10) / 10 : 0
     const conversionReadiness = totalCalls
       ? Math.round(((hotLeads * 2 + qualifiedPipeline + callsWithLead) / (totalCalls * 4)) * 100)
@@ -296,6 +384,10 @@ export async function getDashboardAnalytics(): Promise<DashboardAnalytics> {
       emailFailures,
       averageMessages,
       conversionReadiness,
+      openFollowUps,
+      overdueFollowUps,
+      filteredCalls: totalCalls,
+      selectedCall: calls.find((call) => call.id === filters.selectedId) ?? calls[0] ?? null,
       recentCalls: calls.slice(0, 30),
       statusCounts: rankedItems(statusMap),
       leadQualityCounts: rankedItems(qualityMap),

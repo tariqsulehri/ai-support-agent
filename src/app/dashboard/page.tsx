@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
-import { getDashboardAnalytics, type DashboardCall } from '@/lib/dashboard/analytics'
-import { updateCallRecordStatus, type LeadStatus } from '@/lib/db/call-records'
+import { getDashboardAnalytics, type DashboardCall, type DashboardFilters } from '@/lib/dashboard/analytics'
+import { updateCallRecordManagement, updateCallRecordStatus, type LeadStatus } from '@/lib/db/call-records'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 type DashboardPageProps = {
-  searchParams?: Promise<{ tab?: string }>
+  searchParams?: Promise<DashboardFilters & { tab?: string }>
 }
 
 type CountItem = {
@@ -63,6 +63,18 @@ async function updateStatusAction(formData: FormData) {
     await updateCallRecordStatus(id, status)
     revalidatePath('/dashboard')
   }
+}
+
+async function updateManagementAction(formData: FormData) {
+  'use server'
+
+  await updateCallRecordManagement({
+    id: String(formData.get('id') ?? ''),
+    owner: String(formData.get('owner') ?? ''),
+    followUpAt: String(formData.get('followUpAt') ?? ''),
+    notes: String(formData.get('notes') ?? ''),
+  })
+  revalidatePath('/dashboard')
 }
 
 function toneForQuality(value: string): 'neutral' | 'good' | 'warn' | 'bad' {
@@ -340,6 +352,166 @@ function StatusForm({ call }: { call: DashboardCall }) {
   )
 }
 
+function FilterBar({
+  filters,
+  activeTab,
+  exportHref,
+}: {
+  filters: DashboardFilters
+  activeTab: string
+  exportHref: string
+}) {
+  return (
+    <Panel className="mb-6 p-4">
+      <form action="/dashboard" className="grid gap-3 lg:grid-cols-[1.4fr_repeat(4,1fr)_auto_auto] lg:items-end">
+        <input type="hidden" name="tab" value={activeTab} />
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</span>
+          <input
+            name="q"
+            defaultValue={filters.q ?? ''}
+            placeholder="Name, email, phone, service, summary"
+            className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none focus:border-cyan-500"
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Range</span>
+          <select name="range" defaultValue={filters.range ?? '30'} className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm">
+            <option value="all">All time</option>
+            <option value="today">Today</option>
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</span>
+          <select name="status" defaultValue={filters.status ?? 'all'} className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm">
+            <option value="all">All statuses</option>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>{formatLabel(status)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Quality</span>
+          <select name="quality" defaultValue={filters.quality ?? 'all'} className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm">
+            <option value="all">All quality</option>
+            {['hot', 'warm', 'cold', 'unknown'].map((quality) => (
+              <option key={quality} value={quality}>{formatLabel(quality)}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Urgency</span>
+          <select name="urgency" defaultValue={filters.urgency ?? 'all'} className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm">
+            <option value="all">All urgency</option>
+            {['high', 'medium', 'low', 'unknown'].map((urgency) => (
+              <option key={urgency} value={urgency}>{formatLabel(urgency)}</option>
+            ))}
+          </select>
+        </label>
+        <button className="h-10 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+          Apply
+        </button>
+        <Link
+          href={exportHref}
+          prefetch={false}
+          className="flex h-10 items-center justify-center rounded-md border border-cyan-200 bg-cyan-50 px-5 text-sm font-semibold text-cyan-800 hover:bg-cyan-100"
+        >
+          Export
+        </Link>
+      </form>
+    </Panel>
+  )
+}
+
+function LeadDetailPanel({ call }: { call: DashboardCall | null }) {
+  if (!call) {
+    return (
+      <Panel className="p-5">
+        <h2 className="text-lg font-semibold text-slate-950">Lead Workspace</h2>
+        <p className="mt-2 text-sm text-slate-500">No lead selected for the current filter set.</p>
+      </Panel>
+    )
+  }
+
+  return (
+    <Panel className="overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-950 via-cyan-950 to-slate-900 p-5 text-white">
+        <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">Lead Workspace</p>
+        <h2 className="mt-2 text-2xl font-semibold">{call.lead.name || call.lead.company || 'Unknown lead'}</h2>
+        <p className="mt-1 text-sm text-slate-300">{call.lead.purpose || call.summary}</p>
+      </div>
+      <div className="grid gap-5 p-5 xl:grid-cols-[1fr_1fr]">
+        <div>
+          <div className="flex flex-wrap gap-2">
+            <Badge tone={toneForQuality(call.leadQuality)}>{formatLabel(call.leadQuality)}</Badge>
+            <Badge tone={call.urgency === 'high' ? 'bad' : call.urgency === 'medium' ? 'warn' : 'neutral'}>{formatLabel(call.urgency)} urgency</Badge>
+            <Badge tone={call.emailSent ? 'good' : call.emailError ? 'bad' : 'neutral'}>{call.emailSent ? 'Email sent' : call.emailError ? 'Email failed' : 'Email skipped'}</Badge>
+          </div>
+          <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+            {[
+              ['Email', call.lead.email],
+              ['Phone', call.lead.phone],
+              ['Company', call.lead.company],
+              ['Country', call.lead.country],
+              ['Intent', formatLabel(call.intent)],
+              ['Category', formatLabel(call.category)],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-md border border-slate-100 bg-slate-50 p-3">
+                <dt className="font-semibold text-slate-900">{label}</dt>
+                <dd className="mt-1 text-slate-600">{value || 'Not captured'}</dd>
+              </div>
+            ))}
+          </dl>
+          {call.nextSteps.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-sm font-semibold text-slate-950">AI Next Steps</h3>
+              <ul className="mt-2 space-y-2 text-sm text-slate-700">
+                {call.nextSteps.map((step) => (
+                  <li key={step} className="rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2">{step}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        <form action={updateManagementAction} className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+          <input type="hidden" name="id" value={call.id} />
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Management Follow-Up</h3>
+          <label className="mt-4 block">
+            <span className="text-sm font-semibold text-slate-800">Owner</span>
+            <input name="owner" defaultValue={call.owner ?? ''} placeholder="Sales owner or manager" className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm" />
+          </label>
+          <label className="mt-3 block">
+            <span className="text-sm font-semibold text-slate-800">Follow-up date</span>
+            <input name="followUpAt" type="datetime-local" defaultValue={call.followUpAt ? call.followUpAt.slice(0, 16) : ''} className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm" />
+          </label>
+          <label className="mt-3 block">
+            <span className="text-sm font-semibold text-slate-800">Management notes</span>
+            <textarea name="notes" defaultValue={call.notes ?? ''} rows={5} placeholder="Decision notes, objections, proposed next action" className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm" />
+          </label>
+          <button className="mt-4 h-10 rounded-md bg-cyan-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-cyan-700">
+            Save Lead Plan
+          </button>
+          {call.statusHistory.length > 0 && (
+            <div className="mt-5 border-t border-slate-200 pt-4">
+              <h3 className="text-sm font-semibold text-slate-950">Status History</h3>
+              <div className="mt-2 space-y-2">
+                {call.statusHistory.slice(-5).reverse().map((item, index) => (
+                  <p key={`${item.status}-${item.changedAt}-${index}`} className="text-sm text-slate-600">
+                    <span className="font-semibold text-slate-900">{formatLabel(item.status)}</span> on {formatDate(item.changedAt)}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </form>
+      </div>
+    </Panel>
+  )
+}
+
 function CommunicationList({ calls }: { calls: DashboardCall[] }) {
   if (calls.length === 0) {
     return <p className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">No completed conversations found.</p>
@@ -372,6 +544,13 @@ function CommunicationList({ calls }: { calls: DashboardCall[] }) {
             <div className="flex shrink-0 flex-col gap-3 lg:items-end">
               <p className="text-sm font-medium text-slate-500">{formatDate(call.createdAt)}</p>
               <StatusForm call={call} />
+              <Link
+                href={`/dashboard?tab=leads&selectedId=${call.id}`}
+                prefetch={false}
+                className="text-sm font-semibold text-cyan-700 hover:text-cyan-900"
+              >
+                Open lead workspace
+              </Link>
             </div>
           </div>
         </article>
@@ -410,11 +589,13 @@ function OverviewTab({ analytics }: { analytics: Awaited<ReturnType<typeof getDa
 function LeadsTab({ analytics }: { analytics: Awaited<ReturnType<typeof getDashboardAnalytics>> }) {
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard tone="emerald" label="Email Sent" value={analytics.emailSent} detail={`${analytics.emailFailures} delivery failures`} />
         <StatCard tone="cyan" label="Avg. Messages" value={analytics.averageMessages} detail="Conversation depth per completed call" />
         <StatCard tone="amber" label="Captured Leads" value={`${percent(analytics.callsWithLead, analytics.totalCalls)}%`} detail="Records with any contact or purpose data" />
+        <StatCard tone="rose" label="Overdue Follow-Ups" value={analytics.overdueFollowUps} detail={`${analytics.openFollowUps} open follow-up commitments`} />
       </div>
+      <LeadDetailPanel call={analytics.selectedCall} />
       <div className="grid gap-4 lg:grid-cols-2">
         <PipelineFunnel items={analytics.statusCounts} total={analytics.totalCalls} />
         <Distribution title="Urgency Levels" subtitle="Operational priority by conversation" items={analytics.urgencyCounts} total={analytics.totalCalls} />
@@ -515,10 +696,38 @@ function AiTab({ analytics }: { analytics: Awaited<ReturnType<typeof getDashboar
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const resolvedSearchParams = await searchParams
-  const activeTab = tabs.some((tab) => tab.id === resolvedSearchParams?.tab)
-    ? resolvedSearchParams?.tab
-    : 'overview'
-  const analytics = await getDashboardAnalytics()
+  const activeTab = (
+    tabs.some((tab) => tab.id === resolvedSearchParams?.tab)
+      ? resolvedSearchParams?.tab
+      : 'overview'
+  ) ?? 'overview'
+  const filters: DashboardFilters = {
+    q: resolvedSearchParams?.q,
+    status: resolvedSearchParams?.status,
+    quality: resolvedSearchParams?.quality,
+    urgency: resolvedSearchParams?.urgency,
+    range: resolvedSearchParams?.range ?? '30',
+    selectedId: resolvedSearchParams?.selectedId,
+  }
+  const analytics = await getDashboardAnalytics(filters)
+  const tabHref = (tab: string) => {
+    const params = new URLSearchParams()
+    params.set('tab', tab)
+    for (const key of ['q', 'status', 'quality', 'urgency', 'range', 'selectedId'] as const) {
+      const value = filters[key]
+      if (value && value !== 'all') params.set(key, value)
+    }
+    return `/dashboard?${params.toString()}`
+  }
+  const exportHref = () => {
+    const params = new URLSearchParams()
+    for (const key of ['q', 'status', 'quality', 'urgency', 'range'] as const) {
+      const value = filters[key]
+      if (value && value !== 'all') params.set(key, value)
+    }
+    const query = params.toString()
+    return query ? `/dashboard/export?${query}` : '/dashboard/export'
+  }
 
   return (
     <main className="min-h-dvh bg-[radial-gradient(circle_at_top_left,#cffafe_0,#f8fafc_36%,#eef2ff_100%)] text-slate-900">
@@ -552,7 +761,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             return (
               <Link
                 key={tab.id}
-                href={`/dashboard?tab=${tab.id}`}
+                href={tabHref(tab.id)}
                 prefetch={false}
                 className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
                   selected
@@ -565,6 +774,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             )
           })}
         </nav>
+
+        <FilterBar filters={filters} activeTab={activeTab} exportHref={exportHref()} />
 
         {activeTab === 'overview' && <OverviewTab analytics={analytics} />}
         {activeTab === 'communications' && <CommunicationsTab calls={analytics.recentCalls} />}

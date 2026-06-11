@@ -24,6 +24,7 @@ type ApiErrorBody = {
 }
 
 const CHAT_READ_TIMEOUT_MS = 25_000
+const BOOT_TIMEOUT_MS = 8_000
 
 function readWithTimeout(
   reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -257,12 +258,26 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
 
         if (!cancelled) dispatch({ type: 'CONNECTED' })
       } catch (err) {
-        if (!cancelled) dispatch({ type: 'ERROR', message: String(err) })
+        if (!cancelled) {
+          console.error('[voice-agent boot]', err)
+          dispatch({ type: 'ERROR', message: err instanceof Error ? err.message : 'Agent connection failed. Please refresh and try again.' })
+        }
       }
     }
 
+    const bootTimeout = window.setTimeout(() => {
+      if (cancelled) return
+      if (stateRef.current.phase === 'connecting') {
+        console.warn('[voice-agent boot] timeout')
+        dispatch({ type: 'ERROR', message: 'Agent connection timed out. Please refresh and try again.' })
+      }
+    }, BOOT_TIMEOUT_MS)
+
     boot()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      window.clearTimeout(bootTimeout)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
