@@ -389,7 +389,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
             const lead = leadRef.current
             const summarySessionId = sessionIdRef.current
             // Generate summary in background — don't block the farewell
-            console.log('[Call Report] finalizing call')
+            console.log('[Call Report] finalizing call, dispatchFn available:', !!dispatchFn, 'sessionId:', summarySessionId)
             fetch('/api/summarize', {
               method:  'POST',
               headers: {
@@ -400,13 +400,18 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
             })
               .then((r) => readJsonResponse<CallSummary>(r, '/api/summarize'))
               .then((data: CallSummary) => {
-                console.log('[Call Report] summary received:', data)
+                console.log('[Call Report] summary received, sessionId:', summarySessionId, 'current:', sessionIdRef.current)
                 if (summarySessionId !== sessionIdRef.current) {
                   console.log('[Call Report] session mismatch, ignoring')
                   return
                 }
-                console.log('[Call Report] dispatching CALL_SUMMARY')
-                dispatchFn?.({ type: 'CALL_SUMMARY', summary: data })
+                console.log('[Call Report] dispatching CALL_SUMMARY', data)
+                try {
+                  dispatchFn?.({ type: 'CALL_SUMMARY', summary: data })
+                  console.log('[Call Report] dispatch successful')
+                } catch (e) {
+                  console.error('[Call Report] dispatch failed:', e)
+                }
                 console.log(
                   '[Call Report]',
                   JSON.stringify({ lead, ...data }, null, 2)
