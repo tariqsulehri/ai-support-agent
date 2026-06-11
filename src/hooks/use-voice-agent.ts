@@ -478,7 +478,10 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   useEffect(() => {
     if (state.phase !== 'ended' || !state.callSummary) return
 
+    console.log('[auto-restart] triggered, waiting 1.5s before reset')
+
     const timer = window.setTimeout(() => {
+      console.log('[auto-restart] resetting conversation')
       sessionIdRef.current += 1
       historyRef.current = []
       leadRef.current = EMPTY_LEAD
@@ -487,13 +490,16 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
 
       const greeting = greetingRef.current
       if (greeting) {
+        console.log('[auto-restart] using cached greeting')
         dispatch({ type: 'REPLY_COMPLETE', fullText: greeting, endCall: false })
         historyRef.current.push({ role: 'assistant', content: greeting })
         enqueue(greeting)
         dispatch({ type: 'CONNECTED' })
       } else {
+        console.log('[auto-restart] fetching fresh greeting')
         streamChat([{ role: 'user', content: '__GREET__' }], dispatch)
           .then((freshGreeting) => {
+            console.log('[auto-restart] got fresh greeting')
             if (freshGreeting?.fullText) greetingRef.current = freshGreeting.fullText
             dispatch({ type: 'CONNECTED' })
           })
