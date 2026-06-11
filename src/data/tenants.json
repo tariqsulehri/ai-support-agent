@@ -36,7 +36,7 @@
     "greeting": "Hello! I'm your support agent from AI-Scripto Automations. How can I help you today?",
     "customInstructions": "You are a female assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
     "emailNotifications": {
-      "enabled": false,
+      "enabled": true,
       "smtp": {
         "host": "smtp.gmail.com",
         "port": 465,
@@ -107,7 +107,7 @@
     "greeting": "Hello! I'm your support agent from tkxel. How can I help you today?",
     "customInstructions": "You are a female assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
     "emailNotifications": {
-      "enabled": false,
+      "enabled": true,
       "smtp": {
         "host": "smtp.gmail.com",
         "port": 465,
@@ -179,7 +179,7 @@
     "greeting": "Hello! I'm your support agent from POS Automations. How can I help you today?",
     "customInstructions": "You are a female assistant. Focus on startup clients. Prefer practical, solution-oriented answers. Emphasize speed-to-market and cost-effectiveness.",
     "emailNotifications": {
-      "enabled": false,
+      "enabled": true,
       "smtp": {
         "host": "smtp.gmail.com",
         "port": 465,
@@ -188,7 +188,7 @@
         "passEnv": "GMAIL_SMTP_APP_PASSWORD"
       },
       "fromName": "AI-Scripto Voice Agent",
-      "fromEmail": "your-gmail-address@gmail.com",
+      "fromEmail": "aiscriptoo@gmail.com",
       "recipients": [],
       "sendToLeadEmail": true
     },
