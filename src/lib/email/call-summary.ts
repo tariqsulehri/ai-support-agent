@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer'
 import { env } from '@/lib/config/env'
+import { emailStyles } from '@/lib/email/email-styles'
 import type { CallSummary, ChatHistory, LeadData } from '@/types'
 import type { TenantConfig } from '@/lib/tenants/types'
 
@@ -70,7 +71,7 @@ function resolveEmailConfig(tenant: TenantConfig): ResolvedEmailConfig | null {
   const tenantConfig = tenant.emailNotifications
 
   if (hasGenericEmailConfig()) {
-    const port = env.EMAIL_PORT ?? tenantConfig?.smtp.port ?? 465
+    const port = env.EMAIL_PORT ?? tenantConfig?.smtp.port ?? 587
     return {
       enabled: true,
       recipients: tenantConfig?.recipients ?? [],
@@ -84,7 +85,7 @@ function resolveEmailConfig(tenant: TenantConfig): ResolvedEmailConfig | null {
         : {
             host: env.HOST?.trim() ?? tenantConfig?.smtp.host,
             port,
-            secure: port === 465,
+            secure: port === 587,
           },
     }
   }
@@ -178,29 +179,62 @@ function renderHtml(input: SendCallSummaryEmailInput): string {
     ['Country', lead.country],
     ['Purpose', lead.purpose],
   ]
-    .map(([label, value]) => `
-      <tr>
-        <td style="padding:6px 10px;color:#666;font-weight:600;">${label}</td>
-        <td style="padding:6px 10px;color:#222;">${escapeHtml(textValue(value))}</td>
-      </tr>
-    `)
+    .map(
+      ([label, value]) => `
+        <p class="p2"><strong>${label}:</strong> ${escapeHtml(textValue(value))}</p>`
+    )
     .join('')
 
-  return `
-    <div style="font-family:Arial,sans-serif;color:#222;line-height:1.5;">
-      <h2 style="margin:0 0 12px;">New ${escapeHtml(tenant.companyName)} voice-agent call summary</h2>
-      <h3 style="margin:18px 0 8px;">Contact</h3>
-      <table style="border-collapse:collapse;background:#f7f7f7;border-radius:8px;overflow:hidden;">
-        ${contactRows}
-      </table>
-      <h3 style="margin:18px 0 8px;">Summary</h3>
-      <p>${escapeHtml(summary.summary || 'No summary available.')}</p>
-      <h3 style="margin:18px 0 8px;">Key points</h3>
-      <ul>${keyPoints}</ul>
-      <h3 style="margin:18px 0 8px;">Transcript</h3>
-      <pre style="white-space:pre-wrap;background:#f7f7f7;padding:12px;border-radius:8px;font-family:Arial,sans-serif;">${escapeHtml(renderTranscript(messages, tenant.agentName) || 'No transcript available.')}</pre>
+  const transcriptItems = messages
+    .filter((m) => m.content !== '__GREET__')
+    .map((m) => {
+      const isVisitor = m.role === 'user'
+      const roleLabel = isVisitor ? 'Visitor' : tenant.agentName
+      const colorClass = isVisitor ? 'visitor' : 'agent'
+      return `
+        <li class="transcript-item ${colorClass}">
+          <span class="transcript-role">${escapeHtml(roleLabel)}</span>: ${escapeHtml(m.content)}
+        </li>`
+    })
+    .join('')
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+${emailStyles}
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-header">
+      <img src="https://www.aiscripto.com/images/logo.png" alt="Company Logo" />
+      <span> New ${escapeHtml(tenant.companyName)} voice-agent call summary</span>
     </div>
-  `
+    <div class="divider"></div>
+    <div class="email-body">
+      <h3>Contact Details</h3>
+      ${contactRows}
+      <h3>Purpose</h3>
+      <p class="p2">${escapeHtml(textValue(lead.purpose))}</p>
+      <h3>Summary</h3>
+      <p class="p2">${escapeHtml(summary.summary || 'No summary available.')}</p>
+      <h3>Key points</h3>
+      <ul>${keyPoints}</ul>
+      <h3>Transcript</h3>
+      <ul class="transcript-list">
+        ${transcriptItems || '<li class="transcript-item"><span class="transcript-role">Transcript:</span> No transcript available.</li>'}
+      </ul>
+    </div>
+    <div class="email-footer">
+      <p class="p2">Thank you for considering our services. If you have any questions, feel free to <a href="mailto:support@example.com">contact us</a>.</p>
+      <p class="p2">This is an automated email. Please do not reply directly to this message.</p>
+    </div>
+  </div>
+</body>
+</html>`
 }
 
 export async function sendCallSummaryEmail(
