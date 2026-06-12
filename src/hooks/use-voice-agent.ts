@@ -200,8 +200,8 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   }, [])
 
   // Keep audio functions in refs for effect cleanup
-  const stopAllRef = useRef<typeof stopAll>()
-  const enqueueRef = useRef<typeof enqueue>()
+  const stopAllRef = useRef<typeof stopAll | null>(null)
+  const enqueueRef = useRef<typeof enqueue | null>(null)
 
   // Conversation history sent to /api/chat
   const historyRef = useRef<ChatHistory>([])

@@ -18,7 +18,6 @@ interface Props {
 export function TranscriptPanel({
   messages,
   partialReply,
-  agentName,
   agentInitials,
   phase,
   lead,
