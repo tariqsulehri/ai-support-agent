@@ -71,7 +71,7 @@ function resolveEmailConfig(tenant: TenantConfig): ResolvedEmailConfig | null {
   const tenantConfig = tenant.emailNotifications
 
   if (hasGenericEmailConfig()) {
-    const port = env.EMAIL_PORT ?? tenantConfig?.smtp.port ?? 587
+    const port = env.EMAIL_PORT ?? tenantConfig?.smtp.port ?? 465
     return {
       enabled: true,
       recipients: tenantConfig?.recipients ?? [],
@@ -85,7 +85,7 @@ function resolveEmailConfig(tenant: TenantConfig): ResolvedEmailConfig | null {
         : {
             host: env.HOST?.trim() ?? tenantConfig?.smtp.host,
             port,
-            secure: port === 587,
+            secure: port === 465,
           },
     }
   }
