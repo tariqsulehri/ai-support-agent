@@ -7,6 +7,13 @@ export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * POST /api/transcribe
+ * Transcribes audio file to text using configured language settings.
+ * Requires valid embed API authentication and FormData with 'audio' file.
+ * @param {NextRequest} req - HTTP request containing audio file as multipart form data
+ * @returns {Promise<NextResponse>} JSON response with transcribed text or error message
+ */
 export async function POST(req: NextRequest) {
   const authError = requireEmbedApiAuth(req)
   if (authError) return authError
