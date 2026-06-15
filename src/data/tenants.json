@@ -214,5 +214,126 @@
         "content": "All projects include a 30-day post-launch support period. Extended maintenance plans are available."
       }
     ]
+  },
+  {
+    "id": "health",
+    "token": "healthToken123Abcd",
+    "apiKeys": [
+      "healthApiKey123Abcd"
+    ],
+    "openaiApiKeyEnv": "OPENAI_API_KEY",
+    "allowedDomains": [
+      "http://localhost:3000",
+      "http://127.0.0.1:5500",
+      "http://localhost:5173"
+    ],
+    "agentName": "PulzFit Health Assistant",
+    "companyName": "PulzFit",
+    "languageMode": "english",
+    "supportedLanguages": [
+      "english"
+    ],
+    "languageVoices": {
+      "english": "nova"
+    },
+    "tone": "calm, empathetic, health-aware, and practical",
+    "ttsProvider": "openai",
+    "ttsVoice": "nova",
+    "voiceProfile": {
+      "gender": "female",
+      "style": "warm, calm, reassuring, and concise"
+    },
+    "services": [
+      "Health Watch AI Assistant",
+      "Virtual Coach for Overtraining and Fatigue Detection",
+      "Medical Wellness Assistant for Hidden Stress and Cardiovascular Load Detection",
+      "Real-Time Physiological Signal Interpretation",
+      "Personalized Recovery Recommendations",
+      "Adaptive Breathing and CalmPulse Recovery Sessions",
+      "Smartphone Health Alerts and Wellness Safety Guidance",
+      "BioTwin Predictive Recovery Forecasts"
+    ],
+    "greeting": "Hello, I'm your PulzFit health assistant. I can help explain your watch signals, recovery status, stress patterns, and safe next steps from your health app demo.",
+    "customInstructions": "This tenant is for a customer demo of a watch-based health app. Use only the PulzFit scenario data and parameter values defined in the knowledge base. The two demo users are fixed use cases, so answer according to those exact values only. Do not add outside health facts, normal ranges, clinical thresholds, age-based formulas, training science, medical explanations, or wellness advice that is not present in the scenario data. If a user asks about a value, conclusion, risk level, recommendation, or forecast that is not in the scenarios, say the demo data does not include that parameter or outcome. Explain heart rate, HRV, SpO2, skin temperature, respiratory rate, GSR, fatigue load, recovery readiness, stress load, alerts, and recommended interventions only from the scenario content. Keep advice wellness-oriented and demo-safe. Do not diagnose disease, prescribe treatment, or replace a clinician. If the user reports chest pain, fainting, dizziness, unusual shortness of breath, persistent resting tachycardia, or feeling seriously unwell, use the safety wording from the scenario and advise stopping activity or seeking medical evaluation promptly. When data is missing, ask for the scenario/watch parameter needed rather than inventing values.",
+    "emailNotifications": {
+      "enabled": true,
+      "smtp": {
+        "host": "smtp.gmail.com",
+        "port": 465,
+        "secure": true,
+        "userEnv": "GMAIL_SMTP_USER",
+        "passEnv": "GMAIL_SMTP_APP_PASSWORD"
+      },
+      "fromName": "PulzFit Health Assistant",
+      "fromEmail": "health-demo@example.com",
+      "recipients": [],
+      "sendToLeadEmail": true
+    },
+    "knowledgeBase": [
+      {
+        "topic": "Demo Positioning",
+        "content": "PulzFit is a watch-based health app demo that goes beyond reporting metrics. It interprets physiological context, explains risk patterns, triggers timely interventions, and gives user-friendly recovery guidance for fitness and wellness scenarios."
+      },
+      {
+        "topic": "Scenario-Only Data Boundary",
+        "content": "For this demo, only use the two documented use cases and their exact parameter values. Do not use outside medical knowledge, general health thresholds, fitness formulas, or inferred values. If asked for anything beyond the documented parameters, say that the demo data does not include it and ask which scenario parameter the user wants to review."
+      },
+      {
+        "topic": "Scenario 1 - Overtraining and Fatigue Detection",
+        "content": "Risk level is HIGH. Detected pattern is acute overexertion plus accumulated fatigue. Signals: heart rate 178 bpm, HRV 18 ms, SpO2 94%, skin temperature 38.2°C, and 7-day fatigue index 8.8/10. The AI interpretation is near-maximal exertion, significantly suppressed recovery, mild oxygenation reduction during exertion, elevated physiological stress response, and severe accumulated fatigue load."
+      },
+      {
+        "topic": "Scenario 1 - Correlation Logic",
+        "content": "PulzFit should explain that very high heart rate, critically low HRV, elevated skin temperature, and high 7-day fatigue accumulation suggest the user may be entering an overreaching or overtraining state where performance gains may decline and injury or illness risk can increase."
+      },
+      {
+        "topic": "Scenario 1 - Voice Assistant Response",
+        "content": "For overtraining risk, the assistant says it is detecting excessive physiological strain, recovery markers are significantly below normal range, cardiovascular load remains extremely high, fatigue accumulation is elevated, and continuing at this intensity may reduce recovery quality and increase injury risk. Recommended action: reduce pace immediately by 20 to 30 percent and enter a recovery zone for the next 10 minutes."
+      },
+      {
+        "topic": "Scenario 1 - Smartphone Alert and Recovery Actions",
+        "content": "Alert title: Recovery Intervention Triggered. Message: the body is working harder than it can currently recover from. Live findings include HR 178 bpm very high, HRV 18 ms recovery suppressed, fatigue load 8.8/10 critical zone, and elevated thermal stress. Recommended actions: slow to recovery pace now, hydrate within 15 minutes, avoid additional high-intensity training today, and target 8+ hours of sleep tonight."
+      },
+      {
+        "topic": "Scenario 1 - Predictive and Safety Insight",
+        "content": "Predictive insight: maintaining this intensity for another 20-30 minutes could increase tomorrow's recovery deficit by about 35%; reducing intensity now substantially improves projected recovery readiness. Safety layer: SpO2 remains generally acceptable during exercise, but combined elevated temperature and fatigue indicators mean the user should monitor symptoms closely and stop exercise and seek medical evaluation if dizziness, chest discomfort, unusual shortness of breath, or feeling unwell occurs."
+      },
+      {
+        "topic": "Scenario 2 - Hidden Stress and Cardiovascular Load Detection",
+        "content": "Risk level is MODERATE-HIGH. Detected pattern is elevated physiological stress while sedentary. Signals: activity state sitting, heart rate 112 bpm, HRV 19 ms, SpO2 98%, respiratory rate 22/min, skin temperature 37.1°C, GSR 8.5 uS, and daily steps 1,420. The AI interpretation is elevated heart rate without physical activity, suppressed recovery and stress response, normal oxygenation, mildly elevated respiration, slightly elevated skin temperature, increased sympathetic nervous system activation, and low activity today."
+      },
+      {
+        "topic": "Scenario 2 - Correlation Logic",
+        "content": "PulzFit's anomaly engine identifies a mismatch: the user is physically inactive, yet the body behaves as if under significant demand. Elevated resting heart rate, low HRV, increased respiratory rate, and elevated galvanic skin response suggest sympathetic nervous system activation. Possible contributors include acute psychological stress, anxiety, high caffeine intake, poor sleep recovery, early illness onset, dehydration, and work-related pressure."
+      },
+      {
+        "topic": "Scenario 2 - Voice Assistant Response",
+        "content": "For sedentary stress, the assistant says the body is showing signs of elevated stress despite physical inactivity. Heart rate and respiratory activity are higher than expected for a seated state while recovery markers remain suppressed. Recommended action: start a three-minute recovery reset."
+      },
+      {
+        "topic": "Scenario 2 - Smartphone Alert and Recovery Actions",
+        "content": "Alert title: Stress Recovery Intervention. Message: physiology suggests elevated internal stress. Live findings include resting heart rate 112 bpm, reduced recovery status, elevated stress response, and low activity level. Recommended actions: stand and walk slowly for 3-5 minutes, drink 300-500 ml of water, perform a guided breathing session, and reduce stimulant intake for the next 2 hours."
+      },
+      {
+        "topic": "CalmPulse Adaptive Breathing Protocol",
+        "content": "The CalmPulse Recovery Session gives audio guidance: inhale for 4 seconds, hold for 2 seconds, exhale slowly for 6 seconds, and repeat for 3 minutes. During the session, PulzFit monitors heart rate reduction, respiratory normalization, and HRV recovery trend."
+      },
+      {
+        "topic": "BioTwin Predictive Recovery Forecast",
+        "content": "For sustained sedentary stress, BioTwin forecasts that continued stress over the next four hours may reduce sleep quality tonight and lower tomorrow's recovery readiness. Completing a recovery session now is projected to reduce cardiovascular strain and improve recovery metrics later today."
+      },
+      {
+        "topic": "Human-Friendly Stress Message",
+        "content": "For a 42-year-old user, avoid medical jargon and say: you're not moving much, but your body is acting like it is dealing with a challenge. This often happens during mentally demanding days. A short reset now can help prevent fatigue from building throughout the afternoon."
+      },
+      {
+        "topic": "Wellness Safety Notice",
+        "content": "This alert is based on physiological patterns and is not a medical diagnosis. If elevated heart rate persists while resting, or if symptoms such as chest pain, dizziness, fainting, or unusual shortness of breath occur, seek medical evaluation promptly."
+      },
+      {
+        "topic": "Scenario 2 - AI Conclusion",
+        "content": "Primary detection is elevated stress response while sedentary with 91% confidence. Recommended immediate action is a guided recovery protocol. Predicted outcome if followed: reduced stress load, improved afternoon focus, and better overnight recovery."
+      }
+    ]
   }
 ]

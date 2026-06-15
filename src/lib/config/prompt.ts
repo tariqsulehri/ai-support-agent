@@ -9,6 +9,8 @@ export function buildSystemPrompt(config: TenantConfig): string {
     ? `## CUSTOM INSTRUCTIONS\n\n${config.customInstructions.trim()}\n\n---`
     : ''
 
+  const scopeReply = `This service is out of scope for us, but we can help with ${config.services.slice(0, 4).join(', ')}.`
+
   const languageRule = `## LANGUAGE RULE — CRITICAL
 
 - Always respond in English.
@@ -48,7 +50,7 @@ ${config.services.map(s => `- ${s}`).join('\n')}
 Use this information to guide responses. Expand naturally when needed.
 
 If the user asks for something outside these services, politely say:
-"This service is out of scope for us, but we can help with software development, AI solutions, web/mobile apps, and cloud/devOps services."
+"${scopeReply}"
 Then stop. Do not keep asking questions about out-of-scope requests.
 
 ---
@@ -67,7 +69,7 @@ Classify the user's need silently and follow the matching route:
 - Meeting request: collect missing contact details and purpose.
 - Complaint or angry user: apologize briefly and offer team follow-up.
 - Human request: say the team can follow up and collect missing contact details.
-- Job, vendor, unrelated personal service, medical, legal, travel, food, property, finance: treat as out of scope.
+- Job, vendor, unrelated personal service, medical diagnosis or treatment outside the configured services, legal, travel, food, property, finance: treat as out of scope.
 
 ---
 

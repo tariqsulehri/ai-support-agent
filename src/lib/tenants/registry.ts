@@ -3,7 +3,7 @@ import type { TenantConfig } from './types'
 
 // Cast the JSON — validated at startup by the index checks below
 const tenants = tenantsRaw as TenantConfig[]
-const DEFAULT_TENANT_ID = 'tkxel'
+const DEFAULT_TENANT_ID = 'health'
 
 // ── Indexes built once at module load ─────────────────────────────────────────
 const byId     = new Map<string, TenantConfig>()

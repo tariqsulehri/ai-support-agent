@@ -42,6 +42,11 @@ function mentionsTenantService(message: string, tenant: TenantConfig): boolean {
   )
 }
 
+function tenantScopeReply(tenant: TenantConfig): string {
+  const services = tenant.services.slice(0, 4).join(', ')
+  return `This service is out of scope for us, but we can help with ${services}.`
+}
+
 export function evaluateCustomerMessage(
   message: string,
   tenant: TenantConfig
@@ -55,6 +60,6 @@ export function evaluateCustomerMessage(
 
   return {
     type: 'out_of_scope',
-    reply: 'This service is out of scope for us, but we can help with software development, AI solutions, web/mobile apps, and cloud/devOps services.',
+    reply: tenantScopeReply(tenant),
   }
 }
