@@ -6,6 +6,7 @@ interface UseAudioPlayerOptions {
   requestHeaders?: Record<string, string>
   onPlaybackStart?: () => void
   onPlaybackEnd?:   () => void
+  onPlaybackError?: (message: string) => void
 }
 
 interface UseAudioPlayerReturn {
@@ -33,6 +34,7 @@ export function useAudioPlayer({
   requestHeaders,
   onPlaybackStart,
   onPlaybackEnd,
+  onPlaybackError,
 }: UseAudioPlayerOptions): UseAudioPlayerReturn {
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -43,7 +45,7 @@ export function useAudioPlayer({
   const requestHeadersRef = useRef<Record<string, string>>(requestHeaders ?? {})
   requestHeadersRef.current = requestHeaders ?? {}
 
-  const fetchBlob = useCallback(async (text: string): Promise<Blob | null> => {
+  const fetchBlob = useCallback(async (text: string): Promise<Blob> => {
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), TTS_FETCH_TIMEOUT_MS)
 
@@ -54,10 +56,11 @@ export function useAudioPlayer({
         body:    JSON.stringify({ text }),
         signal:  controller.signal,
       })
-      if (!res.ok) return null
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '')
+        throw new Error(detail.trim() || `/api/speak failed (${res.status})`)
+      }
       return await res.blob()
-    } catch {
-      return null
     } finally {
       window.clearTimeout(timeout)
     }
@@ -76,11 +79,18 @@ export function useAudioPlayer({
       const text = queueRef.current.shift()
       if (!text) continue
 
-      const blob = await fetchBlob(text)
+      let blob: Blob
+      try {
+        blob = await fetchBlob(text)
+      } catch (err) {
+        onPlaybackError?.(err instanceof Error ? err.message : String(err))
+        continue
+      }
+
       if (abortRef.current) break
-      if (!blob) continue
 
       const url = URL.createObjectURL(blob)
+      let playbackError: string | null = null
 
       await new Promise<void>((resolve) => {
         const audio = new Audio(url)
@@ -104,16 +114,19 @@ export function useAudioPlayer({
         audio.onended = finish
         audio.onerror = finish
 
-        audio.play().catch(() => {
+        audio.play().catch((err) => {
+          playbackError = err instanceof Error ? err.message : String(err)
           finish()
         })
       })
+
+      if (playbackError) onPlaybackError?.(playbackError)
     }
 
     playingRef.current = false
     setIsPlaying(false)
     onPlaybackEnd?.()
-  }, [fetchBlob, onPlaybackStart, onPlaybackEnd])
+  }, [fetchBlob, onPlaybackStart, onPlaybackEnd, onPlaybackError])
 
   const enqueue = useCallback(
     (text: string) => {

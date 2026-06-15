@@ -109,7 +109,7 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
       const msg: Message = { id: uid(), role: 'assistant', content: action.fullText }
       return {
         ...state,
-        phase:        action.endCall ? 'ended' : 'idle',
+        phase:        action.endCall ? 'ended' : state.phase === 'speaking' ? 'speaking' : 'idle',
         transcript:   [...state.transcript, msg],
         partialReply: '',
       }
@@ -122,11 +122,15 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
       console.log('[reducer] CALL_SUMMARY received:', action.summary)
       return { ...state, callSummary: action.summary }
 
+    case 'START_SPEAKING':
+      return state.phase === 'ended' ? state : { ...state, phase: 'speaking', error: null }
+
     case 'SPEAKING_DONE':
-      return { ...state, phase: 'idle' }
+      return state.phase === 'speaking' ? { ...state, phase: 'idle' } : state
 
     case 'ERROR':
       return { ...state, phase: 'error', error: action.message }
+
 
     default:
       return state
@@ -213,7 +217,17 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
 
   const { isPlaying, enqueue, stopAll } = useAudioPlayer({
     requestHeaders: embedHeaders,
-    onPlaybackEnd: () => {},
+    onPlaybackStart: () => dispatch({ type: 'START_SPEAKING' }),
+    onPlaybackEnd:   () => dispatch({ type: 'SPEAKING_DONE' }),
+    onPlaybackError: (message) => {
+      console.error('[voice playback]', message)
+      dispatch({
+        type: 'ERROR',
+        message: /notallowed|allowed|interact|gesture|play\(\)/i.test(message)
+          ? 'Audio playback was blocked by the browser. Tap the mic or send a message, then try again.'
+          : `Voice playback failed: ${message}`,
+      })
+    },
   })
 
   // Update refs so effects can access latest functions
@@ -264,14 +278,15 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
           const greetingText = cfg.greeting as string
           greetingRef.current = greetingText
           dispatch({ type: 'REPLY_COMPLETE', fullText: greetingText, endCall: false })
-          enqueue(greetingText)
           historyRef.current.push({ role: 'assistant', content: greetingText })
+          dispatch({ type: 'CONNECTED' })
+          enqueue(greetingText)
         } else {
           const greeting = await streamChat([{ role: 'user', content: '__GREET__' }], cancelled ? null : dispatch)
           if (greeting?.fullText) greetingRef.current = greeting.fullText
-        }
 
-        if (!cancelled) dispatch({ type: 'CONNECTED' })
+          if (!cancelled) dispatch({ type: 'CONNECTED' })
+        }
       } catch (err) {
         if (!cancelled) {
           console.error('[voice-agent boot]', err)
@@ -342,7 +357,7 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
         'Content-Type': 'application/json',
         ...embedHeadersRef.current,
       },
-      body:    JSON.stringify({ messages }),
+      body:    JSON.stringify({ messages, lead: leadRef.current }),
     })
 
     if (!res.ok) throw new Error(await readErrorText(res, '/api/chat'))
@@ -514,8 +529,8 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     if (greeting) {
       dispatch({ type: 'REPLY_COMPLETE', fullText: greeting, endCall: false })
       historyRef.current.push({ role: 'assistant', content: greeting })
-      enqueue(greeting)
       dispatch({ type: 'CONNECTED' })
+      enqueue(greeting)
       return
     }
 

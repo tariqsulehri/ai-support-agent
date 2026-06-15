@@ -114,6 +114,7 @@ export type VoiceAgentAction =
   | { type: 'REPLY_COMPLETE'; fullText: string; endCall: boolean }
   | { type: 'LEAD_UPDATE'; lead: LeadData }
   | { type: 'CALL_SUMMARY'; summary: CallSummary }
+  | { type: 'START_SPEAKING' }
   | { type: 'SPEAKING_DONE' }
   | { type: 'ERROR'; message: string }
 
