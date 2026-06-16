@@ -9,7 +9,7 @@ export function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin':  '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-embed-tenant, x-embed-token, x-embed-parent, x-api-key',
       'Access-Control-Max-Age':       '86400',
     },
   })

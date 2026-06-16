@@ -3,6 +3,7 @@ import { streamChatReply, extractSentences } from '@/lib/ai/chat'
 import { evaluateCustomerMessage } from '@/lib/ai/conversation-policy'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import type { ChatMessage } from '@/lib/ai/chat'
+import type { LeadData } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
@@ -24,9 +25,13 @@ export async function POST(req: NextRequest) {
   const tenant = getTenantFromRequest(req)
 
   let messages: ChatMessage[]
+  let existingLead: Partial<LeadData> = {}
   try {
     const body = await req.json()
     messages = body.messages
+    if (body.lead && typeof body.lead === 'object') {
+      existingLead = body.lead
+    }
     if (!Array.isArray(messages)) throw new Error('messages must be an array')
   } catch {
     return new Response('Invalid request body', { status: 400 })
@@ -41,6 +46,9 @@ export async function POST(req: NextRequest) {
   const LEAD_RE = /\[LEAD:\{[^}]*(?:\{[^}]*\}[^}]*)?\}\]/g
   function stripLead(text: string): string {
     return text.replace(LEAD_RE, '').trim()
+  }
+  function stripEndCall(text: string): string {
+    return text.replace(/\[END_CALL\]/g, '').trim()
   }
   function extractLead(text: string): Record<string, string | null> | null {
     const m = text.match(/\[LEAD:(\{[\s\S]*?\})\]/)
@@ -57,7 +65,7 @@ export async function POST(req: NextRequest) {
     } catch { return null }
   }
 
-  function hasRequiredLead(lead: Record<string, string | null> | null): boolean {
+  function hasRequiredLead(lead: Partial<LeadData> | null): boolean {
     return Boolean(lead?.name && lead.email && lead.phone && lead.country)
   }
 
@@ -138,22 +146,23 @@ export async function POST(req: NextRequest) {
             const { sentences, remainder } = extractSentences(sentenceBuffer)
             sentenceBuffer = remainder
             for (const sentence of sentences) {
-              const clean = stripLead(sentence)
+              const clean = stripEndCall(stripLead(sentence))
               if (clean) controller.enqueue(send({ sentence: clean }))
             }
           }
 
           if (finishReason === 'stop') {
-            const tail = stripLead(sentenceBuffer.trim())
+            const tail = stripEndCall(stripLead(sentenceBuffer.trim()))
             if (tail.length > 0) controller.enqueue(send({ sentence: tail }))
 
             const lead     = extractLead(accumulated)
+            const mergedLead = { ...existingLead, ...(lead ?? {}) }
             const cleaned  = stripLead(accumulated)
-            const explicitEndCall = cleaned.trimStart().startsWith('[END_CALL]')
-            const inferredEndCall = hasRequiredLead(lead) &&
+            const explicitEndCall = cleaned.includes('[END_CALL]')
+            const inferredEndCall = hasRequiredLead(mergedLead) &&
               (userWantsToEnd(lastUserMessage()) || assistantClosed(cleaned))
             const endCall  = explicitEndCall || inferredEndCall
-            const fullText = cleaned.replace('[END_CALL]', '').trim()
+            const fullText = stripEndCall(cleaned)
 
             if (inferredEndCall && !explicitEndCall) {
               console.info('[chat] inferred end call', {

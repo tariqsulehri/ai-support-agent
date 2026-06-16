@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, x-embed-tenant, x-embed-token, x-embed-parent, x-api-key' },
           // Prevent Cloudflare / nginx from buffering SSE streams
           { key: 'X-Accel-Buffering', value: 'no' },
           { key: 'Cache-Control', value: 'no-cache, no-transform' },
