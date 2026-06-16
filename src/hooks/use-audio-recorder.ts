@@ -16,7 +16,7 @@ interface UseAudioRecorderOptions {
    * Default 3000ms.
    */
   preSpeechTimeout?: number
-  onAudioReady: (blob: Blob) => void
+  onAudioReady: (blob: Blob, hadSpeech: boolean) => void
 }
 
 interface UseAudioRecorderReturn {
@@ -48,6 +48,7 @@ export function useAudioRecorder({
   const chunksRef   = useRef<Blob[]>([])
   const audioCtxRef = useRef<AudioContext | null>(null)
   const vadTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const speechDetectedRef = useRef(false)
 
   const stop = useCallback(() => {
     if (vadTimerRef.current) {
@@ -73,6 +74,7 @@ export function useAudioRecorder({
     }
 
     chunksRef.current = []
+    speechDetectedRef.current = false
 
     const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
       ? 'audio/webm;codecs=opus'
@@ -87,7 +89,7 @@ export function useAudioRecorder({
     rec.onstop = () => {
       stream.getTracks().forEach((t) => t.stop())
       const blob = new Blob(chunksRef.current, { type: mimeType })
-      onAudioReady(blob)
+      onAudioReady(blob, speechDetectedRef.current)
     }
 
     rec.start(100)
@@ -119,6 +121,7 @@ export function useAudioRecorder({
         // Voice detected
         if (!speechDetected) {
           speechDetected = true
+          speechDetectedRef.current = true
           setHasSpeech(true)
         }
         silentMs = 0

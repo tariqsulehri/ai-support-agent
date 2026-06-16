@@ -25,6 +25,7 @@ type ApiErrorBody = {
 
 const CHAT_READ_TIMEOUT_MS = 25_000
 const BOOT_TIMEOUT_MS = 8_000
+const MIN_TRANSCRIBABLE_AUDIO_BYTES = 4_000
 
 function readWithTimeout(
   reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -236,7 +237,11 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
 
   // ── Audio recorder ───────────────────────────────────────────────────────────
   const { isRecording, hasSpeech, start: startRec, stop: stopRec } = useAudioRecorder({
-    onAudioReady: async (blob) => {
+    onAudioReady: async (blob, hadSpeech) => {
+      if (!hadSpeech && blob.size < MIN_TRANSCRIBABLE_AUDIO_BYTES) {
+        dispatch({ type: 'CONNECTED' })
+        return
+      }
       dispatch({ type: 'STOP_LISTENING' })
       await processAudio(blob)
     },
@@ -487,10 +492,24 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const startListening = useCallback(() => {
+    dispatch({ type: 'START_LISTENING' })
+    startRec().catch((err) => dispatch({ type: 'ERROR', message: String(err) }))
+  }, [startRec])
+
+  const interruptAndListen = useCallback(() => {
+    stopAll()
+    startListening()
+  }, [startListening, stopAll])
+
   // ── Mic toggle (click mode) ───────────────────────────────────────────────────
   const toggleMic = useCallback(() => {
     const phase = stateRef.current.phase
-    if (phase === 'speaking' || phase === 'thinking') {
+    if (phase === 'speaking') {
+      interruptAndListen()
+      return
+    }
+    if (phase === 'thinking') {
       stopAll()
       dispatch({ type: 'CONNECTED' })
       return
@@ -500,18 +519,20 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
       return
     }
     if (phase === 'idle') {
-      dispatch({ type: 'START_LISTENING' })
-      startRec().catch((err) => dispatch({ type: 'ERROR', message: String(err) }))
+      startListening()
     }
-  }, [isRecording, startRec, stopRec, stopAll])
+  }, [interruptAndListen, isRecording, startListening, stopRec, stopAll])
 
   // ── Push-to-talk ──────────────────────────────────────────────────────────────
   const pressMic = useCallback(() => {
     const phase = stateRef.current.phase
+    if (phase === 'speaking') {
+      interruptAndListen()
+      return
+    }
     if (phase !== 'idle' && phase !== 'error') return
-    dispatch({ type: 'START_LISTENING' })
-    startRec().catch((err) => dispatch({ type: 'ERROR', message: String(err) }))
-  }, [startRec])
+    startListening()
+  }, [interruptAndListen, startListening])
 
   const releaseMic = useCallback(() => {
     if (!isRecording) return

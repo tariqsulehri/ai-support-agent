@@ -49,7 +49,12 @@ function getState(phase: Phase, isRecording: boolean) {
     title:    'Release to send',
     disabled: false,
   }
-  if (phase === 'thinking' || phase === 'transcribing' || phase === 'speaking') return {
+  if (phase === 'speaking') return {
+    cls:      'bg-ms-teal-lt hover:bg-ms-teal-md active:scale-95',
+    title:    'Interrupt and speak',
+    disabled: false,
+  }
+  if (phase === 'thinking' || phase === 'transcribing') return {
     cls:      'bg-surface text-ms-muted cursor-not-allowed opacity-50',
     title:    'Processing…',
     disabled: true,
