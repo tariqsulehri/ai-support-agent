@@ -1,7 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
-    const baseUrl = "https://ai-support-agent-navy.vercel.app";
+export async function GET(req: NextRequest) {
+    // Derive the host the loader was fetched from so the iframe always points at
+    // the live deployment. AGENT_BASE_URL overrides it (e.g. a custom domain).
+    const proto = req.headers.get("x-forwarded-proto") ?? "https";
+    const host = req.headers.get("host");
+    const baseUrl =
+        process.env.AGENT_BASE_URL?.trim() ||
+        (host ? `${proto}://${host}` : "https://ai-support-agent-navy.vercel.app");
 
     const js = `
 (function () {
