@@ -18,17 +18,20 @@ interface UseAudioPlayerReturn {
 const TTS_FETCH_TIMEOUT_MS = 12_000
 const AUDIO_PLAYBACK_TIMEOUT_MS = 45_000
 
+/** A queued sentence whose audio is fetched eagerly, before its turn to play. */
+interface SpeechJob {
+  text: string
+  blob: Promise<Blob>
+}
+
 /**
  * Sentence-pipeline audio player.
  *
- * Maintains an ordered queue of text sentences.
- * For each sentence it:
- *   1. Fetches audio from /api/speak
- *   2. Plays it immediately via HTML Audio
- *   3. Advances to the next sentence when done
- *
- * This creates a low-latency pipeline: the first sentence plays while
- * subsequent sentences are still being fetched.
+ * Maintains an ordered queue of sentences. The moment a sentence is enqueued
+ * its audio fetch is kicked off, so by the time the previous sentence finishes
+ * playing the next clip is already in hand. Playback then advances with no
+ * network round-trip in between — the agent reads across sentence breaks the
+ * way a person speaks instead of stalling at every period.
  */
 export function useAudioPlayer({
   requestHeaders,
@@ -38,7 +41,7 @@ export function useAudioPlayer({
 }: UseAudioPlayerOptions): UseAudioPlayerReturn {
   const [isPlaying, setIsPlaying] = useState(false)
 
-  const queueRef      = useRef<string[]>([])
+  const queueRef      = useRef<SpeechJob[]>([])
   const playingRef    = useRef(false)
   const currentAudio  = useRef<HTMLAudioElement | null>(null)
   const abortRef      = useRef(false)
@@ -76,12 +79,13 @@ export function useAudioPlayer({
     onPlaybackStart?.()
 
     while (queueRef.current.length > 0 && !abortRef.current) {
-      const text = queueRef.current.shift()
-      if (!text) continue
+      const job = queueRef.current.shift()
+      if (!job) continue
 
       let blob: Blob
       try {
-        blob = await fetchBlob(text)
+        // Already in flight since enqueue — usually resolved by now.
+        blob = await job.blob
       } catch (err) {
         onPlaybackError?.(err instanceof Error ? err.message : String(err))
         continue
@@ -131,10 +135,14 @@ export function useAudioPlayer({
   const enqueue = useCallback(
     (text: string) => {
       if (!text.trim()) return
-      queueRef.current.push(text)
+      // Kick off the fetch now, not when this sentence reaches the front of the
+      // queue, so the next clip is ready before the current one ends.
+      const blob = fetchBlob(text)
+      blob.catch(() => {}) // swallow unhandled rejection if aborted before played
+      queueRef.current.push({ text, blob })
       processQueue()
     },
-    [processQueue]
+    [fetchBlob, processQueue]
   )
 
   const stopAll = useCallback(() => {
