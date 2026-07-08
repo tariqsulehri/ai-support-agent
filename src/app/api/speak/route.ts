@@ -4,6 +4,7 @@ import { resolveTenantTtsVoice } from '@/lib/config/voice'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import { recordUsageEvent } from '@/lib/observability/usage'
 import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
+import { getTenantRuntimeConfigurationMessages } from '@/lib/tenants/runtime-configuration'
 import type { SpeakRequest } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
@@ -45,6 +46,17 @@ export async function POST(req: NextRequest) {
     const tenant           = await getTenantFromRequest(req)
     const accessError = requireTenantRuntimeAccess(tenant, 'speak')
     if (accessError) return accessError
+
+    const configurationMessages = await getTenantRuntimeConfigurationMessages(tenant, {
+      requireOpenAI: tenant.ttsProvider === 'openai',
+    })
+    if (configurationMessages.length > 0) {
+      return NextResponse.json({
+        error: 'Tenant configuration incomplete',
+        detail: configurationMessages.join(' '),
+        messages: configurationMessages,
+      }, { status: 422 })
+    }
 
     await recordUsageEvent({
       tenantId: tenant.id,

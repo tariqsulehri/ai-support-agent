@@ -24,6 +24,7 @@ import {
 } from '@/lib/tenants/management'
 import type { AuthSession } from '@/lib/auth/types'
 import { recordAuditLog } from '@/lib/observability/audit'
+import { DATABASE_STRING_NOT_CONFIGURED, OPENAI_KEY_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -458,7 +459,12 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
   const embedReady = detail.tenant.status === 'active' &&
     subscriptionReady &&
     Boolean(detail.openAiSecret) &&
+    Boolean(detail.databaseUrlSecret) &&
     verifiedDomains.length > 0
+  const missingRuntimeMessages = [
+    ...(!detail.databaseUrlSecret ? [DATABASE_STRING_NOT_CONFIGURED] : []),
+    ...(!detail.openAiSecret ? [OPENAI_KEY_NOT_CONFIGURED] : []),
+  ]
 
   return (
     <main className="min-h-dvh bg-slate-100 px-4 py-8 text-slate-950">
@@ -503,6 +509,11 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
             Tenant created successfully.
           </div>
         )}
+        {missingRuntimeMessages.length > 0 && (
+          <div className="mb-5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+            {missingRuntimeMessages.join(' ')}
+          </div>
+        )}
 
         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6">
@@ -520,7 +531,7 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
                 />
                 <ChecklistItem
                   label="OpenAI Key"
-                  detail={detail.openAiSecret ? `Stored as ${detail.openAiSecret.maskedValue}.` : 'Tenant owner/admin must add an OpenAI key.'}
+                  detail={detail.openAiSecret ? `Stored as ${detail.openAiSecret.maskedValue}.` : OPENAI_KEY_NOT_CONFIGURED}
                   complete={Boolean(detail.openAiSecret)}
                 />
                 <ChecklistItem
@@ -530,7 +541,7 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
                 />
                 <ChecklistItem
                   label="Database URL"
-                  detail={detail.databaseUrlSecret ? `Stored as ${detail.databaseUrlSecret.maskedValue}.` : 'Optional unless tenant DB sync is enabled.'}
+                  detail={detail.databaseUrlSecret ? `Stored as ${detail.databaseUrlSecret.maskedValue}.` : DATABASE_STRING_NOT_CONFIGURED}
                   complete={Boolean(detail.databaseUrlSecret)}
                 />
                 <ChecklistItem
@@ -686,7 +697,7 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
 
             <Panel title="OpenAI Key">
               <p className="text-sm text-slate-500">
-                Current key: {detail.openAiSecret ? detail.openAiSecret.maskedValue : 'Not stored'}
+                Current key: {detail.openAiSecret ? detail.openAiSecret.maskedValue : OPENAI_KEY_NOT_CONFIGURED}
               </p>
               {canEditSecrets ? (
                 <form action={saveOpenAiKeyAction} className="mt-4 space-y-3">
@@ -705,7 +716,7 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
 
             <Panel title="Database URL">
               <p className="text-sm text-slate-500">
-                Current URL: {detail.databaseUrlSecret ? detail.databaseUrlSecret.maskedValue : 'Not stored'}
+                Current URL: {detail.databaseUrlSecret ? detail.databaseUrlSecret.maskedValue : DATABASE_STRING_NOT_CONFIGURED}
               </p>
               {canEditSecrets ? (
                 <form action={saveDatabaseUrlAction} className="mt-4 space-y-3">

@@ -6,6 +6,7 @@ import { saveCallRecord } from '@/lib/db/call-records'
 import { analyzeConversation, emptyLead, fallbackAnalysis } from '@/lib/ai/analyze-conversation'
 import { recordUsageEvent } from '@/lib/observability/usage'
 import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
+import { getTenantRuntimeConfigurationMessages } from '@/lib/tenants/runtime-configuration'
 import type { CallSummary, ChatHistory, LeadData } from '@/types'
 import type { TenantConfig } from '@/lib/tenants/types'
 export { OPTIONS } from '@/lib/utils/cors'
@@ -75,6 +76,15 @@ export async function POST(req: NextRequest) {
   const tenant = await getTenantFromRequest(req)
   const accessError = requireTenantRuntimeAccess(tenant, 'summarize')
   if (accessError) return accessError
+
+  const configurationMessages = await getTenantRuntimeConfigurationMessages(tenant)
+  if (configurationMessages.length > 0) {
+    return NextResponse.json({
+      error: 'Tenant configuration incomplete',
+      detail: configurationMessages.join(' '),
+      messages: configurationMessages,
+    }, { status: 422 })
+  }
 
   let messages: ChatHistory
   let lead: LeadData = emptyLead()

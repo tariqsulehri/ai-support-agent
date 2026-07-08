@@ -1,9 +1,10 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { streamChatReply, extractSentences } from '@/lib/ai/chat'
 import { evaluateCustomerMessage } from '@/lib/ai/conversation-policy'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import { recordUsageEvent } from '@/lib/observability/usage'
 import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
+import { getTenantRuntimeConfigurationMessages } from '@/lib/tenants/runtime-configuration'
 import type { ChatMessage } from '@/lib/ai/chat'
 import type { LeadData } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
@@ -27,6 +28,15 @@ export async function POST(req: NextRequest) {
   const tenant = await getTenantFromRequest(req)
   const accessError = requireTenantRuntimeAccess(tenant, 'chat')
   if (accessError) return accessError
+
+  const configurationMessages = await getTenantRuntimeConfigurationMessages(tenant)
+  if (configurationMessages.length > 0) {
+    return NextResponse.json({
+      error: 'Tenant configuration incomplete',
+      detail: configurationMessages.join(' '),
+      messages: configurationMessages,
+    }, { status: 422 })
+  }
 
   await recordUsageEvent({ tenantId: tenant.id, type: 'chat.request' })
 

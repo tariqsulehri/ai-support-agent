@@ -4,6 +4,7 @@ import { env } from '@/lib/config/env'
 import { getMongoDb, isMongoConfigured } from './mongodb'
 import { getAllTenants, getTenantById } from '@/lib/tenants/registry'
 import { getDecryptedTenantSecret } from '@/lib/tenants/secrets'
+import { DATABASE_STRING_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
 import type { DashboardAccessScope } from '@/lib/auth/types'
 import type { TenantConfig } from '@/lib/tenants/types'
 
@@ -101,11 +102,10 @@ export async function getConversationStoreForTenant(
     return null
   }
 
-  const fallback = await getInternalConversationStore()
-  if (fallback) {
-    await ensureConversationIndexes(fallback)
-    return fallback
-  }
+  console.warn('[conversation-store] tenant database string missing', {
+    tenantId: tenant.id,
+    error: DATABASE_STRING_NOT_CONFIGURED,
+  })
   return null
 }
 

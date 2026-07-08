@@ -1,5 +1,6 @@
 import { ObjectId, type InsertOneResult, type Document } from 'mongodb'
 import { conversationCollection, getConversationStoreForTenant, getConversationStoresForScope } from './conversation-store'
+import { DATABASE_STRING_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
 import type { TenantConfig } from '@/lib/tenants/types'
 import type { CallSummary, ChatHistory, ConversationAnalysis, LeadData } from '@/types'
 import type { SendCallSummaryEmailResult } from '@/lib/email/call-summary'
@@ -43,7 +44,7 @@ function scopedRecordQuery(id: string, scope?: DashboardAccessScope): Document {
 export async function saveCallRecord(input: SaveCallRecordInput): Promise<SaveCallRecordResult> {
   try {
     const store = await getConversationStoreForTenant(input.tenant)
-    if (!store) return { saved: false, error: 'Conversation database is not configured.' }
+    if (!store) return { saved: false, error: DATABASE_STRING_NOT_CONFIGURED }
 
     const now = new Date()
     const result: InsertOneResult<Document> = await conversationCollection(store)

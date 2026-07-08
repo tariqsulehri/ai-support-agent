@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import { env } from '@/lib/config/env'
+import { OPENAI_KEY_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
 import type { TenantConfig } from '@/lib/tenants/types'
 
 const clients = new Map<string, OpenAI>()
@@ -12,13 +13,13 @@ function getApiKey(tenant?: TenantConfig): string {
   if (tenant?.openaiApiKeyEnv) {
     const tenantKey = process.env[tenant.openaiApiKeyEnv]
     if (!tenantKey) {
-      throw new Error(`No OpenAI API key: set ${tenant.openaiApiKeyEnv} in env.`)
+      throw new Error(OPENAI_KEY_NOT_CONFIGURED)
     }
     return tenantKey
   }
 
   if (!env.OPENAI_API_KEY) {
-    throw new Error('No OpenAI API key: set OPENAI_API_KEY in env.')
+    throw new Error(OPENAI_KEY_NOT_CONFIGURED)
   }
   return env.OPENAI_API_KEY
 }
