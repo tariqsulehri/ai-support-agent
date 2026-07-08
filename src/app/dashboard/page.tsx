@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { getDashboardAnalytics, type DashboardCall, type DashboardFilters } from '@/lib/dashboard/analytics'
 import { updateCallRecordManagement, updateCallRecordStatus, type LeadStatus } from '@/lib/db/call-records'
 import { canMutateDashboard, dashboardScopeForSession, getVerifiedSession } from '@/lib/auth/session'
+import { getManagedTenantDetail, type ManagedTenantDetail } from '@/lib/tenants/management'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -17,13 +18,15 @@ type CountItem = {
   count: number
 }
 
-const tabs = [
+const baseTabs = [
   { id: 'overview', label: 'Overview' },
   { id: 'communications', label: 'Communications' },
   { id: 'leads', label: 'Lead Status' },
   { id: 'ai', label: 'AI Assisted' },
   { id: 'capabilities', label: 'Capabilities' },
 ] as const
+
+const tenantConfigurationTab = { id: 'configuration', label: 'Configuration' } as const
 
 const statusOptions: LeadStatus[] = ['new', 'reviewing', 'qualified', 'proposal', 'won', 'lost']
 const chartColors = ['#0891b2', '#059669', '#f59e0b', '#d946ef', '#f43f5e', '#6366f1']
@@ -823,11 +826,113 @@ function CapabilitiesTab() {
   )
 }
 
+function ConfigurationStatus({
+  label,
+  detail,
+  complete,
+}: {
+  label: string
+  detail: string
+  complete: boolean
+}) {
+  return (
+    <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-950">{label}</p>
+          <p className="mt-1 break-words text-sm leading-5 text-slate-500">{detail}</p>
+        </div>
+        <span className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold ${
+          complete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'
+        }`}>
+          {complete ? 'Ready' : 'Required'}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function TenantConfigurationTab({
+  tenantId,
+  detail,
+}: {
+  tenantId: string
+  detail: ManagedTenantDetail | null
+}) {
+  const settingsHref = `/admin/tenants/${tenantId}`
+
+  if (!detail) {
+    return (
+      <Panel className="p-5">
+        <h2 className="text-xl font-semibold text-slate-950">Tenant Configuration</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          Tenant configuration is not available for this account yet.
+        </p>
+      </Panel>
+    )
+  }
+
+  const verifiedDomains = detail.domains.filter((domain) => domain.verificationStatus === 'verified')
+  const emailConfig = detail.settings.emailNotifications
+
+  return (
+    <div className="space-y-6">
+      <Panel className="p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Tenant Configuration</p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950">{detail.tenant.companyName}</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Configure the agent profile, OpenAI key, tenant database URL, SMTP, domain verification, and embed setup from one dashboard entry point.
+            </p>
+          </div>
+          <Link
+            href={settingsHref}
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-cyan-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-cyan-700"
+          >
+            Open Configuration
+          </Link>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <ConfigurationStatus
+            label="OpenAI Key"
+            detail={detail.openAiSecret ? `Stored as ${detail.openAiSecret.maskedValue}.` : 'OpenAI key not configured.'}
+            complete={Boolean(detail.openAiSecret)}
+          />
+          <ConfigurationStatus
+            label="Database URL"
+            detail={detail.databaseUrlSecret ? `Stored as ${detail.databaseUrlSecret.maskedValue}.` : 'Database string not configured.'}
+            complete={Boolean(detail.databaseUrlSecret)}
+          />
+          <ConfigurationStatus
+            label="Verified Domain"
+            detail={verifiedDomains.length ? `${verifiedDomains.length} verified domain(s).` : 'Domain verification is pending.'}
+            complete={verifiedDomains.length > 0}
+          />
+          <ConfigurationStatus
+            label="SMTP Email"
+            detail={emailConfig?.enabled
+              ? detail.smtpPasswordSecret
+                ? `Enabled as ${detail.smtpPasswordSecret.maskedValue}.`
+                : 'SMTP is enabled but password is not stored yet.'
+              : 'Optional. Configure SMTP to send call summaries.'}
+            complete={!emailConfig?.enabled || Boolean(detail.smtpPasswordSecret)}
+          />
+        </div>
+      </Panel>
+    </div>
+  )
+}
+
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await getVerifiedSession()
   if (!session) redirect('/admin/login?next=/dashboard')
 
   const resolvedSearchParams = await searchParams
+  const tabs = session.role === 'platform_admin'
+    ? baseTabs
+    : [...baseTabs, tenantConfigurationTab]
   const activeTab = (
     tabs.some((tab) => tab.id === resolvedSearchParams?.tab)
       ? resolvedSearchParams?.tab
@@ -841,9 +946,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     range: resolvedSearchParams?.range ?? '30',
     selectedId: resolvedSearchParams?.selectedId,
   }
-  const analytics = await getDashboardAnalytics(filters, {
-    scope: dashboardScopeForSession(session),
-  })
+  const [analytics, tenantDetail] = await Promise.all([
+    getDashboardAnalytics(filters, {
+      scope: dashboardScopeForSession(session),
+    }),
+    session.role !== 'platform_admin' && session.tenantId
+      ? getManagedTenantDetail(session.tenantId)
+      : Promise.resolve(null),
+  ])
   const tabHref = (tab: string) => {
     const params = new URLSearchParams()
     params.set('tab', tab)
@@ -883,9 +993,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     Manage tenants
                   </Link>
                 )}
-                {session.role !== 'platform_admin' && session.tenantId && (
-                  <Link href={`/admin/tenants/${session.tenantId}`} className="mt-2 block text-xs font-semibold text-cyan-100 hover:text-white">
-                    Tenant settings
+                {session.role !== 'platform_admin' && (
+                  <Link href={tabHref('configuration')} className="mt-2 block text-xs font-semibold text-cyan-100 hover:text-white">
+                    Configuration
                   </Link>
                 )}
                 <form action="/api/admin/auth/logout" method="post" className="mt-2">
@@ -931,6 +1041,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         {activeTab === 'leads' && <LeadsTab analytics={analytics} />}
         {activeTab === 'ai' && <AiTab analytics={analytics} />}
         {activeTab === 'capabilities' && <CapabilitiesTab />}
+        {activeTab === 'configuration' && session.tenantId && (
+          <TenantConfigurationTab tenantId={session.tenantId} detail={tenantDetail} />
+        )}
       </div>
     </main>
   )
