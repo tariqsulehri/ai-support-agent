@@ -1,46 +1,76 @@
-import tenantsRaw from '@/data/tenants.json'
 import type { TenantConfig } from './types'
+import {
+  getDbAllTenants,
+  getDbDefaultTenant,
+  getDbTenantByApiKey,
+  getDbTenantByDomain,
+  getDbTenantById,
+  getDbTenantByPublicId,
+  validateDbTenantToken,
+} from './db-registry'
+import {
+  getJsonAllTenants,
+  getJsonDefaultTenant,
+  getJsonTenantByApiKey,
+  getJsonTenantByDomain,
+  getJsonTenantById,
+  resolveJsonTenantFromHeaders,
+} from './json-registry'
 
-// Cast the JSON — validated at startup by the index checks below
-const tenants = tenantsRaw as TenantConfig[]
 const DEFAULT_TENANT_ID = 'health'
 
-// ── Indexes built once at module load ─────────────────────────────────────────
-const byId     = new Map<string, TenantConfig>()
-const byApiKey = new Map<string, TenantConfig>()
-const byDomain = new Map<string, TenantConfig>() // keyed by URL origin
-
-for (const t of tenants) {
-  byId.set(t.id, t)
-  for (const k of t.apiKeys ?? [])        byApiKey.set(k, t)
-  for (const d of t.allowedDomains ?? []) {
-    try { byDomain.set(new URL(d).origin, t) } catch { /* skip malformed */ }
-  }
+function logJsonFallback(reason: string, context: Record<string, string | undefined> = {}): void {
+  console.info('[tenants] using json fallback', { reason, ...context })
 }
 
 // ── Lookups ───────────────────────────────────────────────────────────────────
-export function getTenantById(id: string): TenantConfig | null {
-  return byId.get(id) ?? null
+export async function getTenantById(id: string): Promise<TenantConfig | null> {
+  const dbResult = await getDbTenantById(id)
+  if (dbResult.tenant || dbResult.blocked) return dbResult.tenant
+
+  const fallback = getJsonTenantById(id)
+  if (fallback) logJsonFallback(dbResult.reason ?? 'tenant not found in database', { tenantId: id })
+  return fallback
 }
 
-export function getTenantByApiKey(key: string): TenantConfig | null {
-  return byApiKey.get(key) ?? null
+export async function getTenantByPublicId(publicId: string): Promise<TenantConfig | null> {
+  const dbResult = await getDbTenantByPublicId(publicId)
+  return dbResult.tenant
 }
 
-export function getTenantByDomain(url: string): TenantConfig | null {
-  try {
-    return byDomain.get(new URL(url).origin) ?? null
-  } catch {
-    return null
-  }
+export async function getTenantByApiKey(key: string): Promise<TenantConfig | null> {
+  const dbResult = await getDbTenantByApiKey(key)
+  if (dbResult.tenant || dbResult.blocked) return dbResult.tenant
+
+  const fallback = getJsonTenantByApiKey(key)
+  if (fallback) logJsonFallback(dbResult.reason ?? 'api key not found in database')
+  return fallback
 }
 
-export function getDefaultTenant(): TenantConfig | null {
-  return getTenantById(DEFAULT_TENANT_ID) ?? tenants[0] ?? null
+export async function getTenantByDomain(url: string): Promise<TenantConfig | null> {
+  const dbResult = await getDbTenantByDomain(url)
+  if (dbResult.tenant || dbResult.blocked) return dbResult.tenant
+
+  const fallback = getJsonTenantByDomain(url)
+  if (fallback) logJsonFallback(dbResult.reason ?? 'domain not found in database', { parentUrl: url })
+  return fallback
 }
 
-export function getAllTenants(): TenantConfig[] {
-  return tenants
+export async function getDefaultTenant(): Promise<TenantConfig | null> {
+  const tenant = await getDbDefaultTenant(DEFAULT_TENANT_ID)
+  if (tenant) return tenant
+
+  const fallback = getJsonDefaultTenant(DEFAULT_TENANT_ID)
+  if (fallback) logJsonFallback('default tenant not found in database')
+  return fallback
+}
+
+export async function getAllTenants(): Promise<TenantConfig[]> {
+  const dbTenants = await getDbAllTenants()
+  if (dbTenants.length > 0) return dbTenants
+
+  logJsonFallback('no active database tenants found')
+  return getJsonAllTenants()
 }
 
 // ── Resolution (header-agnostic — caller extracts values) ─────────────────────
@@ -60,19 +90,25 @@ export interface ResolutionOptions {
  * Priority: id+token  →  apiKey  →  domain
  * Returns null if no match — caller decides 401 vs. default fallback.
  */
-export function resolveTenantFromHeaders(
+export async function resolveTenantFromHeaders(
   h: ResolutionHeaders,
   options: ResolutionOptions = {}
-): TenantConfig | null {
+): Promise<TenantConfig | null> {
   const enforceToken = options.enforceToken ?? true
 
   // 1. Explicit tenant id + optional token
   if (h.tenantId) {
-    const tenant = getTenantById(h.tenantId)
-    if (!tenant) return null
-    // Only enforce token if the tenant has one configured
-    if (enforceToken && tenant.token && tenant.token !== h.token) return null
-    return tenant
+    const dbResult = enforceToken
+      ? await validateDbTenantToken(h.tenantId, h.token)
+      : await getDbTenantById(h.tenantId)
+
+    if (dbResult.tenant || dbResult.blocked || dbResult.source === 'database') {
+      return dbResult.tenant
+    }
+
+    const fallback = resolveJsonTenantFromHeaders(h, options)
+    if (fallback) logJsonFallback(dbResult.reason ?? 'tenant headers not found in database', { tenantId: h.tenantId })
+    return fallback
   }
 
   // 2. API key
@@ -82,7 +118,7 @@ export function resolveTenantFromHeaders(
 
   // 3. Domain / referrer
   if (h.parentUrl) {
-    const found = getTenantByDomain(h.parentUrl)
+    const found = await getTenantByDomain(h.parentUrl)
     if (found) return found
   }
 

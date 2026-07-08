@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDashboardAnalytics, type DashboardFilters } from '@/lib/dashboard/analytics'
+import { dashboardScopeForSession, getVerifiedSession } from '@/lib/auth/session'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -10,6 +11,11 @@ function csvValue(value: string | number | null | undefined): string {
 }
 
 export async function GET(req: NextRequest) {
+  const session = await getVerifiedSession()
+  if (!session) {
+    return NextResponse.redirect(new URL('/admin/login?next=/dashboard/export', req.url))
+  }
+
   const searchParams = req.nextUrl.searchParams
   const filters: DashboardFilters = {
     q: searchParams.get('q') ?? undefined,
@@ -18,7 +24,9 @@ export async function GET(req: NextRequest) {
     urgency: searchParams.get('urgency') ?? undefined,
     range: searchParams.get('range') ?? undefined,
   }
-  const analytics = await getDashboardAnalytics(filters)
+  const analytics = await getDashboardAnalytics(filters, {
+    scope: dashboardScopeForSession(session),
+  })
 
   const rows = [
     [

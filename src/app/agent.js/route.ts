@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
   const width = script.getAttribute("data-width") || "420px";
   const height = script.getAttribute("data-height") || "680px";
 
-  if (!tenant || !token) {
-    console.error("AI Agent: Missing tenant or token");
+  if (!tenant) {
+    console.error("AI Agent: Missing tenant");
     return;
   }
 
@@ -35,6 +35,28 @@ export async function GET(req: NextRequest) {
   }
 
   let isLoaded = false;
+  let sessionPromise = null;
+
+  function getEmbedSession() {
+    if (sessionPromise) return sessionPromise;
+
+    sessionPromise = fetch("${baseUrl}/api/embed/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tenant: tenant,
+        parentUrl: window.location.href
+      })
+    }).then(async function (res) {
+      const data = await res.json().catch(function () { return {}; });
+      if (!res.ok || !data.session) {
+        throw new Error(data.error || "Domain is not verified for this tenant");
+      }
+      return data.session;
+    });
+
+    return sessionPromise;
+  }
 
   function rgbToHex(rgb) {
     const m = rgb.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
@@ -103,12 +125,21 @@ export async function GET(req: NextRequest) {
     document.body.appendChild(container);
     document.body.appendChild(button);
 
-    button.onclick = function () {
+    button.onclick = async function () {
       if (!isLoaded) {
+        let session = "";
+        try {
+          session = await getEmbedSession();
+        } catch (err) {
+          console.error("AI Agent:", err && err.message ? err.message : err);
+          return;
+        }
+
         const url = new URL("${baseUrl}/voice");
 
         url.searchParams.set("tenant", tenant);
-        url.searchParams.set("token", token);
+        url.searchParams.set("session", session);
+        if (token) url.searchParams.set("token", token);
 
         const primaryColor = detectPrimaryColor();
         if (primaryColor) url.searchParams.set("primaryColor", primaryColor);

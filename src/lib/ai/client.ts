@@ -5,6 +5,10 @@ import type { TenantConfig } from '@/lib/tenants/types'
 const clients = new Map<string, OpenAI>()
 
 function getApiKey(tenant?: TenantConfig): string {
+  if (tenant?.runtimeSecrets?.openaiApiKey) {
+    return tenant.runtimeSecrets.openaiApiKey
+  }
+
   if (tenant?.openaiApiKeyEnv) {
     const tenantKey = process.env[tenant.openaiApiKeyEnv]
     if (!tenantKey) {
@@ -20,8 +24,9 @@ function getApiKey(tenant?: TenantConfig): string {
 }
 
 /**
- * Returns an OpenAI client using a server-side env key.
- * Tenant configs may name an env var; raw keys must never live in JSON, URLs, or headers.
+ * Returns an OpenAI client using a server-side key.
+ * Priority: encrypted tenant secret → tenant env var → platform env var.
+ * Raw keys must never live in JSON, URLs, headers, or client responses.
  */
 export function getOpenAIClient(tenant?: TenantConfig): OpenAI {
   const apiKey = getApiKey(tenant)

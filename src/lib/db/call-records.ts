@@ -4,6 +4,7 @@ import { getMongoDb, isMongoConfigured } from './mongodb'
 import type { TenantConfig } from '@/lib/tenants/types'
 import type { CallSummary, ChatHistory, ConversationAnalysis, LeadData } from '@/types'
 import type { SendCallSummaryEmailResult } from '@/lib/email/call-summary'
+import type { DashboardAccessScope } from '@/lib/auth/types'
 
 export interface SaveCallRecordInput {
   tenant: TenantConfig
@@ -27,10 +28,17 @@ export interface UpdateCallRecordManagementInput {
   owner?: string | null
   followUpAt?: string | null
   notes?: string | null
+  scope?: DashboardAccessScope
 }
 
 function hasLeadData(lead: LeadData): boolean {
   return Object.values(lead).some((value) => Boolean(value?.trim()))
+}
+
+function scopedRecordQuery(id: string, scope?: DashboardAccessScope): Document {
+  const query: Document = { _id: new ObjectId(id) }
+  if (scope?.kind === 'tenant') query['tenant.id'] = scope.tenantId
+  return query
 }
 
 export async function saveCallRecord(input: SaveCallRecordInput): Promise<SaveCallRecordResult> {
@@ -86,7 +94,11 @@ export async function saveCallRecord(input: SaveCallRecordInput): Promise<SaveCa
   }
 }
 
-export async function updateCallRecordStatus(id: string, status: LeadStatus): Promise<SaveCallRecordResult> {
+export async function updateCallRecordStatus(
+  id: string,
+  status: LeadStatus,
+  scope?: DashboardAccessScope
+): Promise<SaveCallRecordResult> {
   if (!isMongoConfigured()) return { saved: false, error: 'MongoDB is not configured.' }
   if (!ObjectId.isValid(id)) return { saved: false, error: 'Invalid call record id.' }
 
@@ -107,7 +119,7 @@ export async function updateCallRecordStatus(id: string, status: LeadStatus): Pr
       },
     }
     const result = await db.collection(env.MONGODB_CALLS_COLLECTION).updateOne(
-      { _id: new ObjectId(id) },
+      scopedRecordQuery(id, scope),
       update
     )
 
@@ -135,7 +147,7 @@ export async function updateCallRecordManagement(
 
     const followUpAt = input.followUpAt?.trim() ? new Date(input.followUpAt) : null
     const result = await db.collection(env.MONGODB_CALLS_COLLECTION).updateOne(
-      { _id: new ObjectId(input.id) },
+      scopedRecordQuery(input.id, input.scope),
       {
         $set: {
           owner: input.owner?.trim() || null,

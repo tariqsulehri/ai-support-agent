@@ -1,5 +1,6 @@
 import { env } from '@/lib/config/env'
 import { getMongoDb, isMongoConfigured } from '@/lib/db/mongodb'
+import type { DashboardAccessScope } from '@/lib/auth/types'
 import type {
   ChatHistory,
   ConversationIntent,
@@ -47,6 +48,10 @@ export type DashboardFilters = {
   urgency?: string
   range?: string
   selectedId?: string
+}
+
+export type DashboardAnalyticsOptions = {
+  scope?: DashboardAccessScope
 }
 
 export type DashboardAnalytics = {
@@ -315,16 +320,24 @@ function buildRiskSignals(calls: DashboardCall[]): string[] {
   return risks.length ? risks.slice(0, 5) : ['No major risk signals detected in the current communication set.']
 }
 
-export async function getDashboardAnalytics(filters: DashboardFilters = {}): Promise<DashboardAnalytics> {
+export async function getDashboardAnalytics(
+  filters: DashboardFilters = {},
+  options: DashboardAnalyticsOptions = {}
+): Promise<DashboardAnalytics> {
   if (!isMongoConfigured()) return EMPTY_ANALYTICS
 
   try {
     const db = await getMongoDb()
     if (!db) return EMPTY_ANALYTICS
 
+    const query =
+      options.scope?.kind === 'tenant'
+        ? { 'tenant.id': options.scope.tenantId }
+        : {}
+
     const records = await db
       .collection<RawRecord>(env.MONGODB_CALLS_COLLECTION)
-      .find({})
+      .find(query)
       .sort({ createdAt: -1 })
       .limit(500)
       .toArray()

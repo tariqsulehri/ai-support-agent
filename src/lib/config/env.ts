@@ -9,6 +9,11 @@ import { z } from 'zod'
 const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
 
+  // Platform key used to encrypt tenant-owned secrets at rest.
+  // Required only when creating or reading records from tenant_secrets.
+  PLATFORM_ENCRYPTION_KEY: z.string().optional(),
+  AUTH_SECRET: z.string().optional(),
+
   // ElevenLabs — only required when a tenant uses ttsProvider: "elevenlabs"
   ELEVENLABS_API_KEY:  z.string().optional(),
   ELEVENLABS_VOICE_ID: z.string().default('pNInz6obpgDQGcFmaJgB'),
@@ -20,6 +25,18 @@ const envSchema = z.object({
   MONGODB_URI: z.string().optional(),
   MONGODB_DB_NAME: z.string().default('voiceagent'),
   MONGODB_CALLS_COLLECTION: z.string().default('conversations'),
+
+  // Optional platform logs. Audit logs are detailed security records.
+  // Usage writes aggregate per-tenant counters only, never detailed event rows.
+  AUDIT_LOGS_ENABLED: z.enum(['true', 'false']).default('false'),
+  USAGE_EVENTS_ENABLED: z.enum(['true', 'false']).default('false'),
+  AUDIT_LOGS_TTL_DAYS: z.coerce.number().int().positive().optional(),
+  USAGE_EVENTS_TTL_DAYS: z.coerce.number().int().positive().optional(),
+
+  // Optional subscription and per-tenant runtime protection.
+  SUBSCRIPTION_ENFORCEMENT_ENABLED: z.enum(['true', 'false']).default('false'),
+  TENANT_RATE_LIMIT_ENABLED: z.enum(['true', 'false']).default('false'),
+  TENANT_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
 
   // Email notifications for completed conversations
   SERVICE: z.string().optional(),

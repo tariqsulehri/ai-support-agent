@@ -1,38 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server'
-
-function unauthorized(): NextResponse {
-  return new NextResponse('Authentication required', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="Voice Agent Dashboard"',
-    },
-  })
-}
-
-function isAuthorized(req: NextRequest): boolean {
-  const password = process.env.DASHBOARD_PASSWORD
-  if (!password) return true
-
-  const username = process.env.DASHBOARD_USERNAME || 'admin'
-  const header = req.headers.get('authorization')
-  if (!header?.startsWith('Basic ')) return false
-
-  try {
-    const decoded = atob(header.slice('Basic '.length))
-    const separatorIndex = decoded.indexOf(':')
-    const suppliedUser = decoded.slice(0, separatorIndex)
-    const suppliedPassword = decoded.slice(separatorIndex + 1)
-    return suppliedUser === username && suppliedPassword === password
-  } catch {
-    return false
-  }
-}
+import { SESSION_COOKIE_NAME } from '@/lib/auth/types'
 
 export function middleware(req: NextRequest) {
-  if (!isAuthorized(req)) return unauthorized()
-  return NextResponse.next()
+  const hasSessionCookie = Boolean(req.cookies.get(SESSION_COOKIE_NAME)?.value)
+  if (hasSessionCookie) return NextResponse.next()
+
+  const url = req.nextUrl.clone()
+  url.pathname = '/admin/login'
+  url.search = ''
+  url.searchParams.set('next', req.nextUrl.pathname + req.nextUrl.search)
+  return NextResponse.redirect(url)
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ['/dashboard/:path*', '/admin/tenants/:path*'],
 }

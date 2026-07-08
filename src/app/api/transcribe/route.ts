@@ -3,6 +3,8 @@ import { transcribeAudio } from '@/lib/ai/transcribe'
 import { getLangConfig } from '@/lib/config/language'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import { normalizeSpeechTranscript } from '@/lib/utils/normalize-speech'
+import { recordUsageEvent } from '@/lib/observability/usage'
+import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
 export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +17,7 @@ export const dynamic = 'force-dynamic'
  * @returns {Promise<NextResponse>} JSON response with transcribed text or error message
  */
 export async function POST(req: NextRequest) {
-  const authError = requireEmbedApiAuth(req)
+  const authError = await requireEmbedApiAuth(req)
   if (authError) return authError
 
   let formData: FormData
@@ -35,7 +37,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const tenant = getTenantFromRequest(req)
+    const tenant = await getTenantFromRequest(req)
+    const accessError = requireTenantRuntimeAccess(tenant, 'transcribe')
+    if (accessError) return accessError
+
+    await recordUsageEvent({
+      tenantId: tenant.id,
+      type: 'transcription.request',
+      metadata: { audioBytes: audio.size },
+    })
     const lang   = getLangConfig(tenant.languageMode)
     const raw    = await transcribeAudio(audio, lang.whisperCode, tenant)
     const text   = normalizeSpeechTranscript(raw)

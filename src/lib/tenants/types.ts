@@ -6,16 +6,30 @@ export interface KBEntry {
 export interface EmailNotificationConfig {
   enabled: boolean
   smtp: {
-    host: string
+    service?: string
+    host?: string
     port: number
     secure: boolean
-    userEnv: string
-    passEnv: string
+    user?: string
+    userEnv?: string
+    passEnv?: string
   }
   fromName: string
   fromEmail: string
   recipients?: string[]
   sendToLeadEmail?: boolean
+}
+
+export type TenantSubscriptionStatus = 'trial' | 'active' | 'past_due' | 'canceled' | 'expired'
+export type TenantSubscriptionType = 'free' | 'starter' | 'growth' | 'enterprise' | 'custom'
+export type TenantBillingCycle = 'monthly' | 'yearly' | 'one_time' | 'custom'
+
+export interface TenantRuntimeSubscription {
+  status: TenantSubscriptionStatus
+  type: TenantSubscriptionType
+  billingCycle: TenantBillingCycle
+  seats?: number
+  expiresAt?: Date | string
 }
 
 export interface TenantConfig {
@@ -25,6 +39,19 @@ export interface TenantConfig {
   apiKeys?: string[]       // standalone x-api-key auth
   allowedDomains?: string[] // domain-based implicit auth (no token needed)
   openaiApiKeyEnv?: string // env var name containing this tenant's OpenAI key
+  runtimeSecrets?: {
+    /**
+     * Server-only decrypted OpenAI key loaded from tenant_secrets.
+     * Never serialize TenantConfig directly into client responses.
+     */
+    openaiApiKey?: string
+    /**
+     * Server-only decrypted SMTP password loaded from tenant_secrets.
+     * The matching SMTP username and host live in tenant settings.
+     */
+    smtpPassword?: string
+  }
+  subscription?: TenantRuntimeSubscription
 
   // ── Persona ──────────────────────────────────────────────────────────────────
   agentName: string

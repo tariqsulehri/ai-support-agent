@@ -160,6 +160,7 @@ const initialState: VoiceAgentState = {
 export interface UseVoiceAgentOptions {
   tenantId?:    string
   token?:       string
+  sessionToken?: string
 }
 
 export interface UseVoiceAgentReturn {
@@ -186,7 +187,7 @@ export interface UseVoiceAgentReturn {
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────────
-export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): UseVoiceAgentReturn {
+export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOptions = {}): UseVoiceAgentReturn {
   const [state, dispatch]       = useReducer(reducer, initialState)
   const [voice, setVoice]       = useState<OpenAIVoice>('nova')
   const [language, setLang]     = useState('English')
@@ -256,8 +257,10 @@ export function useVoiceAgent({ tenantId, token }: UseVoiceAgentOptions = {}): U
     // Prefer props (SSR-forwarded) then fall back to URL params
     const resolvedTenant = tenantId ?? params.get('tenant') ?? ''
     const resolvedToken  = token    ?? params.get('token')  ?? ''
+    const resolvedSession = sessionToken ?? params.get('session') ?? ''
     if (resolvedTenant)    headers['x-embed-tenant'] = resolvedTenant
     if (resolvedToken)     headers['x-embed-token']  = resolvedToken
+    if (resolvedSession)   headers['x-embed-session'] = resolvedSession
     if (parent)            headers['x-embed-parent']  = parent
     embedHeadersRef.current = headers
     setEmbedHeaders(headers)

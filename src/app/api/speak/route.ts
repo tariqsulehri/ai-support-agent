@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { synthesizeSpeech } from '@/lib/ai/tts'
 import { resolveTenantTtsVoice } from '@/lib/config/voice'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
+import { recordUsageEvent } from '@/lib/observability/usage'
+import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
 import type { SpeakRequest } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
@@ -23,7 +25,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 }
 
 export async function POST(req: NextRequest) {
-  const authError = requireEmbedApiAuth(req)
+  const authError = await requireEmbedApiAuth(req)
   if (authError) return authError
 
   let body: SpeakRequest
@@ -40,7 +42,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const tenant           = getTenantFromRequest(req)
+    const tenant           = await getTenantFromRequest(req)
+    const accessError = requireTenantRuntimeAccess(tenant, 'speak')
+    if (accessError) return accessError
+
+    await recordUsageEvent({
+      tenantId: tenant.id,
+      type: 'tts.request',
+      metadata: { textChars: text.length },
+    })
     const resolvedVoice    = resolveTenantTtsVoice(tenant)
     const resolvedProvider = tenant.ttsProvider
 

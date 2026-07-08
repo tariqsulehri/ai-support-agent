@@ -13,7 +13,7 @@ interface SendCallSummaryEmailInput {
 
 type EmailTransportConfig =
   | { service: string }
-  | { host: string | undefined; port: number; secure: boolean }
+  | { host: string; port: number; secure: boolean }
 
 type ResolvedEmailConfig =
   | {
@@ -67,37 +67,29 @@ function hasGenericEmailConfig(): boolean {
   return Boolean(env.EMAIL_USER?.trim() && env.EMAIL_PASS?.trim() && (env.SERVICE?.trim() || env.HOST?.trim()))
 }
 
-function resolveEmailConfig(tenant: TenantConfig): ResolvedEmailConfig | null {
+function resolveTenantEmailConfig(tenant: TenantConfig): ResolvedEmailConfig | null {
   const tenantConfig = tenant.emailNotifications
-
-  if (hasGenericEmailConfig()) {
-    const port = env.EMAIL_PORT ?? tenantConfig?.smtp.port ?? 465
-    return {
-      enabled: true,
-      recipients: tenantConfig?.recipients ?? [],
-      sendToLeadEmail: tenantConfig?.sendToLeadEmail ?? true,
-      fromName: tenantConfig?.fromName ?? `${tenant.companyName} Voice Agent`,
-      fromEmail: env.EMAIL_USER as string,
-      user: env.EMAIL_USER as string,
-      pass: env.EMAIL_PASS as string,
-      transport: env.SERVICE?.trim()
-        ? { service: env.SERVICE.trim() }
-        : {
-            host: env.HOST?.trim() ?? tenantConfig?.smtp.host,
-            port,
-            secure: port === 465,
-          },
-    }
-  }
-
   if (!tenantConfig?.enabled) return null
 
-  const user = process.env[tenantConfig.smtp.userEnv]
-  const pass = process.env[tenantConfig.smtp.passEnv]
+  const user = tenantConfig.smtp.user?.trim() ||
+    (tenantConfig.smtp.userEnv ? process.env[tenantConfig.smtp.userEnv]?.trim() : undefined)
+  const pass = tenant.runtimeSecrets?.smtpPassword?.trim() ||
+    (tenantConfig.smtp.passEnv ? process.env[tenantConfig.smtp.passEnv]?.trim() : undefined)
+  const service = tenantConfig.smtp.service?.trim()
+  const host = tenantConfig.smtp.host?.trim()
+
   if (!user || !pass) {
     return {
       enabled: false,
-      error: `Missing SMTP env vars: ${tenantConfig.smtp.userEnv}/${tenantConfig.smtp.passEnv}`,
+      error: tenantConfig.smtp.userEnv || tenantConfig.smtp.passEnv
+        ? `Missing SMTP credentials for ${tenantConfig.smtp.userEnv ?? 'configured user'}/${tenantConfig.smtp.passEnv ?? 'configured password'}`
+        : 'Missing tenant SMTP username or password.',
+    }
+  }
+  if (!service && !host) {
+    return {
+      enabled: false,
+      error: 'Missing tenant SMTP service or host.',
     }
   }
 
@@ -109,12 +101,50 @@ function resolveEmailConfig(tenant: TenantConfig): ResolvedEmailConfig | null {
     fromEmail: tenantConfig.fromEmail,
     user,
     pass,
-    transport: {
-      host: tenantConfig.smtp.host,
-      port: tenantConfig.smtp.port,
-      secure: tenantConfig.smtp.secure,
-    },
+    transport: service
+      ? { service }
+      : {
+          host: host as string,
+          port: tenantConfig.smtp.port,
+          secure: tenantConfig.smtp.secure,
+        },
   }
+}
+
+function resolveEmailConfig(tenant: TenantConfig): ResolvedEmailConfig | null {
+  const tenantConfig = tenant.emailNotifications
+  const tenantEmailConfig = resolveTenantEmailConfig(tenant)
+  if (tenantEmailConfig) return tenantEmailConfig
+
+  if (hasGenericEmailConfig()) {
+    const port = env.EMAIL_PORT ?? tenantConfig?.smtp.port ?? 465
+    const host = env.HOST?.trim() ?? tenantConfig?.smtp.host?.trim()
+    if (!env.SERVICE?.trim() && !host) {
+      return {
+        enabled: false,
+        error: 'Missing SMTP host.',
+      }
+    }
+
+    return {
+      enabled: true,
+      recipients: tenantConfig?.recipients ?? [],
+      sendToLeadEmail: tenantConfig?.sendToLeadEmail ?? true,
+      fromName: tenantConfig?.fromName ?? `${tenant.companyName} Voice Agent`,
+      fromEmail: env.EMAIL_USER as string,
+      user: env.EMAIL_USER as string,
+      pass: env.EMAIL_PASS as string,
+      transport: env.SERVICE?.trim()
+        ? { service: env.SERVICE.trim() }
+        : {
+            host: host as string,
+            port,
+            secure: port === 465,
+          },
+    }
+  }
+
+  return null
 }
 
 function escapeHtml(value: string): string {

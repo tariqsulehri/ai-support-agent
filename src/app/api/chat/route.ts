@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { streamChatReply, extractSentences } from '@/lib/ai/chat'
 import { evaluateCustomerMessage } from '@/lib/ai/conversation-policy'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
+import { recordUsageEvent } from '@/lib/observability/usage'
+import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
 import type { ChatMessage } from '@/lib/ai/chat'
 import type { LeadData } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
@@ -19,10 +21,14 @@ export const dynamic = 'force-dynamic'
  *   { error: string }                                    — something went wrong
  */
 export async function POST(req: NextRequest) {
-  const authError = requireEmbedApiAuth(req)
+  const authError = await requireEmbedApiAuth(req)
   if (authError) return authError
 
-  const tenant = getTenantFromRequest(req)
+  const tenant = await getTenantFromRequest(req)
+  const accessError = requireTenantRuntimeAccess(tenant, 'chat')
+  if (accessError) return accessError
+
+  await recordUsageEvent({ tenantId: tenant.id, type: 'chat.request' })
 
   let messages: ChatMessage[]
   let existingLead: Partial<LeadData> = {}

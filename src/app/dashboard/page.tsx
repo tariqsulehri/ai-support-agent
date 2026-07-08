@@ -1,7 +1,9 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { getDashboardAnalytics, type DashboardCall, type DashboardFilters } from '@/lib/dashboard/analytics'
 import { updateCallRecordManagement, updateCallRecordStatus, type LeadStatus } from '@/lib/db/call-records'
+import { canMutateDashboard, dashboardScopeForSession, getVerifiedSession } from '@/lib/auth/session'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -20,6 +22,7 @@ const tabs = [
   { id: 'communications', label: 'Communications' },
   { id: 'leads', label: 'Lead Status' },
   { id: 'ai', label: 'AI Assisted' },
+  { id: 'capabilities', label: 'Capabilities' },
 ] as const
 
 const statusOptions: LeadStatus[] = ['new', 'reviewing', 'qualified', 'proposal', 'won', 'lost']
@@ -32,6 +35,55 @@ const softClasses = [
   'border-fuchsia-100 bg-fuchsia-50 text-fuchsia-800',
   'border-rose-100 bg-rose-50 text-rose-800',
   'border-indigo-100 bg-indigo-50 text-indigo-800',
+]
+const capabilityCards = [
+  {
+    title: 'Conversation Intelligence',
+    summary: 'Turns completed voice-agent sessions into searchable management records.',
+    points: ['Transcript review', 'Intent and category classification', 'Sentiment and urgency signals', 'AI-generated summaries and key points'],
+  },
+  {
+    title: 'Lead Operations',
+    summary: 'Keeps captured prospects moving through a simple sales workflow.',
+    points: ['Lead detail workspace', 'Status updates and history', 'Owner assignment', 'Follow-up dates and notes'],
+  },
+  {
+    title: 'Executive Reporting',
+    summary: 'Surfaces high-level performance indicators for leadership decisions.',
+    points: ['Completed calls and captured leads', 'Hot lead volume', 'Pipeline readiness', 'Readiness score and follow-up queue'],
+  },
+]
+const featureCards = [
+  {
+    title: 'Dashboard Features',
+    items: ['Date-range, search, status, quality, and urgency filters', 'CSV export for filtered records', 'Lead quality, intent, service, country, and sentiment breakdowns', 'Communication timeline with transcript previews'],
+  },
+  {
+    title: 'Management Tools',
+    items: ['Lead status selector', 'Follow-up owner and due date fields', 'Management notes', 'AI next-step recommendations and risk signals'],
+  },
+  {
+    title: 'Voice Agent Capabilities',
+    items: ['Voice and text conversations', 'Lead capture fields', 'Multilingual response behavior', 'Email call-summary notifications'],
+  },
+]
+const technologyGroups = [
+  {
+    title: 'Frontend',
+    items: ['Next.js App Router', 'React 19', 'TypeScript', 'Tailwind CSS'],
+  },
+  {
+    title: 'AI And Voice',
+    items: ['OpenAI chat completions', 'OpenAI Whisper transcription', 'OpenAI TTS', 'ElevenLabs TTS option'],
+  },
+  {
+    title: 'Data And Messaging',
+    items: ['MongoDB call records', 'Nodemailer SMTP delivery', 'Server Actions', 'CSV export route'],
+  },
+  {
+    title: 'Validation And Tooling',
+    items: ['Zod validation', 'ESLint', 'PostCSS', 'tsx CLI tools'],
+  },
 ]
 
 function formatLabel(value: string): string {
@@ -57,10 +109,13 @@ function percent(part: number, total: number): number {
 async function updateStatusAction(formData: FormData) {
   'use server'
 
+  const session = await getVerifiedSession()
+  if (!session || !canMutateDashboard(session)) return
+
   const id = String(formData.get('id') ?? '')
   const status = String(formData.get('status') ?? '') as LeadStatus
   if (statusOptions.includes(status)) {
-    await updateCallRecordStatus(id, status)
+    await updateCallRecordStatus(id, status, dashboardScopeForSession(session))
     revalidatePath('/dashboard')
   }
 }
@@ -68,11 +123,15 @@ async function updateStatusAction(formData: FormData) {
 async function updateManagementAction(formData: FormData) {
   'use server'
 
+  const session = await getVerifiedSession()
+  if (!session || !canMutateDashboard(session)) return
+
   await updateCallRecordManagement({
     id: String(formData.get('id') ?? ''),
     owner: String(formData.get('owner') ?? ''),
     followUpAt: String(formData.get('followUpAt') ?? ''),
     notes: String(formData.get('notes') ?? ''),
+    scope: dashboardScopeForSession(session),
   })
   revalidatePath('/dashboard')
 }
@@ -694,7 +753,80 @@ function AiTab({ analytics }: { analytics: Awaited<ReturnType<typeof getDashboar
   )
 }
 
+function CapabilitiesTab() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 lg:grid-cols-3">
+        {capabilityCards.map((card, index) => (
+          <Panel key={card.title} className="overflow-hidden">
+            <div className={`h-1 ${barClasses[index % barClasses.length]}`} />
+            <div className="p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Capability</p>
+              <h2 className="mt-2 text-lg font-semibold text-slate-950">{card.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{card.summary}</p>
+              <ul className="mt-4 space-y-2">
+                {card.points.map((point) => (
+                  <li key={point} className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Panel>
+        ))}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        {featureCards.map((card, index) => (
+          <Panel key={card.title} className="p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-slate-950">{card.title}</h2>
+              <span className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${softClasses[index % softClasses.length]}`}>
+                {card.items.length} items
+              </span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {card.items.map((item) => (
+                <p key={item} className="rounded-md border border-white bg-white px-3 py-2 text-sm leading-6 text-slate-700 shadow-sm">
+                  {item}
+                </p>
+              ))}
+            </div>
+          </Panel>
+        ))}
+      </div>
+
+      <Panel className="p-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Technology Used</p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950">Application Stack</h2>
+          </div>
+          <p className="text-sm text-slate-500">Runtime, AI, data, and delivery tools behind the dashboard.</p>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {technologyGroups.map((group) => (
+            <div key={group.title} className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+              <h3 className="text-sm font-semibold text-slate-950">{group.title}</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {group.items.map((item) => (
+                  <span key={item} className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+    </div>
+  )
+}
+
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  const session = await getVerifiedSession()
+  if (!session) redirect('/admin/login?next=/dashboard')
+
   const resolvedSearchParams = await searchParams
   const activeTab = (
     tabs.some((tab) => tab.id === resolvedSearchParams?.tab)
@@ -709,7 +841,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     range: resolvedSearchParams?.range ?? '30',
     selectedId: resolvedSearchParams?.selectedId,
   }
-  const analytics = await getDashboardAnalytics(filters)
+  const analytics = await getDashboardAnalytics(filters, {
+    scope: dashboardScopeForSession(session),
+  })
   const tabHref = (tab: string) => {
     const params = new URLSearchParams()
     params.set('tab', tab)
@@ -743,7 +877,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </p>
               </div>
               <div className="rounded-lg border border-white/15 bg-white/10 px-4 py-3 text-sm text-slate-100 shadow-inner">
-                Updated {formatDate(analytics.generatedAt)}
+                <p>Updated {formatDate(analytics.generatedAt)}</p>
+                {session.role === 'platform_admin' && (
+                  <Link href="/admin/tenants" className="mt-2 block text-xs font-semibold text-cyan-100 hover:text-white">
+                    Manage tenants
+                  </Link>
+                )}
+                {session.role !== 'platform_admin' && session.tenantId && (
+                  <Link href={`/admin/tenants/${session.tenantId}`} className="mt-2 block text-xs font-semibold text-cyan-100 hover:text-white">
+                    Tenant settings
+                  </Link>
+                )}
+                <form action="/api/admin/auth/logout" method="post" className="mt-2">
+                  <button className="text-xs font-semibold text-cyan-100 hover:text-white">
+                    Sign out {session.name}
+                  </button>
+                </form>
               </div>
             </div>
           </div>
@@ -781,6 +930,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         {activeTab === 'communications' && <CommunicationsTab calls={analytics.recentCalls} />}
         {activeTab === 'leads' && <LeadsTab analytics={analytics} />}
         {activeTab === 'ai' && <AiTab analytics={analytics} />}
+        {activeTab === 'capabilities' && <CapabilitiesTab />}
       </div>
     </main>
   )

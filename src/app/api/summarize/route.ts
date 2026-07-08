@@ -4,7 +4,10 @@ import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-
 import { sendCallSummaryEmail } from '@/lib/email/call-summary'
 import { saveCallRecord } from '@/lib/db/call-records'
 import { analyzeConversation, emptyLead, fallbackAnalysis } from '@/lib/ai/analyze-conversation'
+import { recordUsageEvent } from '@/lib/observability/usage'
+import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
 import type { CallSummary, ChatHistory, LeadData } from '@/types'
+import type { TenantConfig } from '@/lib/tenants/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
@@ -20,7 +23,7 @@ async function finishCall({
   summary,
   messages,
 }: {
-  tenant: ReturnType<typeof getTenantFromRequest>
+  tenant: TenantConfig
   lead: LeadData
   summary: CallSummary
   messages: ChatHistory
@@ -45,6 +48,16 @@ async function finishCall({
     dbError: database.error,
   })
 
+  await recordUsageEvent({
+    tenantId: tenant.id,
+    type: 'conversation.completed',
+    metadata: {
+      messages: messages.length,
+      emailSent: email.sent,
+      dbSaved: database.saved,
+    },
+  })
+
   return { email, database }
 }
 
@@ -56,10 +69,12 @@ async function finishCall({
  * Called once at the end of a call to produce a structured recap.
  */
 export async function POST(req: NextRequest) {
-  const authError = requireEmbedApiAuth(req)
+  const authError = await requireEmbedApiAuth(req)
   if (authError) return authError
 
-  const tenant = getTenantFromRequest(req)
+  const tenant = await getTenantFromRequest(req)
+  const accessError = requireTenantRuntimeAccess(tenant, 'summarize')
+  if (accessError) return accessError
 
   let messages: ChatHistory
   let lead: LeadData = emptyLead()

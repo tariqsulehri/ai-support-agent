@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "cli:voice": "tsx src/cli/voice.ts",
-    "cli:text": "tsx src/cli/text.ts"
+    "cli:text": "tsx src/cli/text.ts",
+    "tenants:migrate": "tsx src/scripts/migrate-tenants.ts",
+    "tenants:secrets:migrate-openai": "tsx src/scripts/migrate-openai-secrets.ts",
+    "tenants:secret:set-openai": "tsx src/scripts/set-tenant-openai-secret.ts",
+    "auth:user:create": "tsx src/scripts/create-auth-user.ts"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.0.0",

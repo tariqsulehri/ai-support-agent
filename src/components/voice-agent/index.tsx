@@ -11,6 +11,7 @@ import { StatusIndicator }              from './status-indicator'
 interface VoiceAgentProps {
   tenantId?:    string
   token?:       string
+  sessionToken?: string
   onClose?:     () => void
 }
 
@@ -18,7 +19,7 @@ function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
-export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
+export function VoiceAgent({ tenantId, token, sessionToken, onClose }: VoiceAgentProps) {
   const textRef = useRef<TextInputHandle>(null)
 
   const {
@@ -27,7 +28,7 @@ export function VoiceAgent({ tenantId, token, onClose }: VoiceAgentProps) {
     language, voice, leadData, callSummary,
     agentName, companyName,
     setVoice, stopPlayback, pressMic, releaseMic, sendText, startNewChat,
-  } = useVoiceAgent({ tenantId, token })
+  } = useVoiceAgent({ tenantId, token, sessionToken })
 
   // Debug: log state changes
   useEffect(() => {

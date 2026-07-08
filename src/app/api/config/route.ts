@@ -3,16 +3,22 @@ import { getLangConfig } from '@/lib/config/language'
 import { resolveTenantTtsVoice } from '@/lib/config/voice'
 import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import { assertOpenAIKeyConfigured } from '@/lib/ai/client'
+import { recordUsageEvent } from '@/lib/observability/usage'
+import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
 export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
-    const authError = requireEmbedApiAuth(req)
+    const authError = await requireEmbedApiAuth(req)
     if (authError) return authError
 
-    const tenant = getTenantFromRequest(req)
+    const tenant = await getTenantFromRequest(req)
+    const accessError = requireTenantRuntimeAccess(tenant, 'config')
+    if (accessError) return accessError
+
+    await recordUsageEvent({ tenantId: tenant.id, type: 'config.request' })
     const lang   = getLangConfig(tenant.languageMode)
     assertOpenAIKeyConfigured(tenant)
 
