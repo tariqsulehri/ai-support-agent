@@ -1,5 +1,5 @@
-import { env } from '@/lib/config/env'
-import { getMongoDb, isMongoConfigured } from '@/lib/db/mongodb'
+import { conversationCollection, getConversationStoresForScope } from '@/lib/db/conversation-store'
+import type { Document } from 'mongodb'
 import type { DashboardAccessScope } from '@/lib/auth/types'
 import type {
   ChatHistory,
@@ -83,7 +83,7 @@ export type DashboardAnalytics = {
   followUpQueue: DashboardCall[]
 }
 
-type RawRecord = {
+type RawRecord = Document & {
   _id: { toString(): string }
   tenant?: {
     id?: string
@@ -324,23 +324,28 @@ export async function getDashboardAnalytics(
   filters: DashboardFilters = {},
   options: DashboardAnalyticsOptions = {}
 ): Promise<DashboardAnalytics> {
-  if (!isMongoConfigured()) return EMPTY_ANALYTICS
-
   try {
-    const db = await getMongoDb()
-    if (!db) return EMPTY_ANALYTICS
+    const stores = await getConversationStoresForScope(options.scope)
+    if (stores.length === 0) return EMPTY_ANALYTICS
 
-    const query =
-      options.scope?.kind === 'tenant'
-        ? { 'tenant.id': options.scope.tenantId }
-        : {}
+    const recordsByStore = await Promise.all(stores.map(async (store) => {
+      const query = store.tenantId
+        ? { 'tenant.id': store.tenantId }
+        : options.scope?.kind === 'tenant'
+          ? { 'tenant.id': options.scope.tenantId }
+          : {}
 
-    const records = await db
-      .collection<RawRecord>(env.MONGODB_CALLS_COLLECTION)
-      .find(query)
-      .sort({ createdAt: -1 })
-      .limit(500)
-      .toArray()
+      return conversationCollection<RawRecord>(store)
+        .find(query)
+        .sort({ createdAt: -1 })
+        .limit(500)
+        .toArray()
+    }))
+
+    const records = recordsByStore
+      .flat()
+      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
+      .slice(0, 500)
 
     const allCalls = records.map(toDashboardCall)
     const calls = applyFilters(allCalls, filters)

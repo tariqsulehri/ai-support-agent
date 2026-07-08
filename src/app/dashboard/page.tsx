@@ -900,7 +900,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         {!analytics.configured && (
           <section className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
-            MongoDB is not configured, so the dashboard cannot read completed calls yet. Set MONGODB_URI, MONGODB_DB_NAME, and MONGODB_CALLS_COLLECTION to enable live analytics.
+            Conversation storage is not available for this view yet. Tenant dashboards require the tenant MongoDB URL, while platform fallback uses MONGODB_URI, MONGODB_DB_NAME, and MONGODB_CALLS_COLLECTION.
           </section>
         )}
 

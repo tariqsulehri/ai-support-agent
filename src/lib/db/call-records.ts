@@ -1,6 +1,5 @@
 import { ObjectId, type InsertOneResult, type Document } from 'mongodb'
-import { env } from '@/lib/config/env'
-import { getMongoDb, isMongoConfigured } from './mongodb'
+import { conversationCollection, getConversationStoreForTenant, getConversationStoresForScope } from './conversation-store'
 import type { TenantConfig } from '@/lib/tenants/types'
 import type { CallSummary, ChatHistory, ConversationAnalysis, LeadData } from '@/types'
 import type { SendCallSummaryEmailResult } from '@/lib/email/call-summary'
@@ -42,15 +41,12 @@ function scopedRecordQuery(id: string, scope?: DashboardAccessScope): Document {
 }
 
 export async function saveCallRecord(input: SaveCallRecordInput): Promise<SaveCallRecordResult> {
-  if (!isMongoConfigured()) return { saved: false }
-
   try {
-    const db = await getMongoDb()
-    if (!db) return { saved: false }
+    const store = await getConversationStoreForTenant(input.tenant)
+    if (!store) return { saved: false, error: 'Conversation database is not configured.' }
 
     const now = new Date()
-    const result: InsertOneResult<Document> = await db
-      .collection(env.MONGODB_CALLS_COLLECTION)
+    const result: InsertOneResult<Document> = await conversationCollection(store)
       .insertOne({
         tenant: {
           id: input.tenant.id,
@@ -99,12 +95,11 @@ export async function updateCallRecordStatus(
   status: LeadStatus,
   scope?: DashboardAccessScope
 ): Promise<SaveCallRecordResult> {
-  if (!isMongoConfigured()) return { saved: false, error: 'MongoDB is not configured.' }
   if (!ObjectId.isValid(id)) return { saved: false, error: 'Invalid call record id.' }
 
   try {
-    const db = await getMongoDb()
-    if (!db) return { saved: false, error: 'MongoDB is not configured.' }
+    const stores = await getConversationStoresForScope(scope)
+    if (stores.length === 0) return { saved: false, error: 'Conversation database is not configured.' }
 
     const update: Document = {
       $set: {
@@ -118,15 +113,18 @@ export async function updateCallRecordStatus(
         },
       },
     }
-    const result = await db.collection(env.MONGODB_CALLS_COLLECTION).updateOne(
-      scopedRecordQuery(id, scope),
-      update
-    )
+    for (const store of stores) {
+      const result = await conversationCollection(store).updateOne(
+        scopedRecordQuery(id, scope),
+        update
+      )
+      if (result.matchedCount > 0) return { saved: true, id }
+    }
 
     return {
-      saved: result.matchedCount > 0,
+      saved: false,
       id,
-      error: result.matchedCount > 0 ? undefined : 'Call record was not found.',
+      error: 'Call record was not found.',
     }
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
@@ -138,30 +136,34 @@ export async function updateCallRecordStatus(
 export async function updateCallRecordManagement(
   input: UpdateCallRecordManagementInput
 ): Promise<SaveCallRecordResult> {
-  if (!isMongoConfigured()) return { saved: false, error: 'MongoDB is not configured.' }
   if (!ObjectId.isValid(input.id)) return { saved: false, error: 'Invalid call record id.' }
 
   try {
-    const db = await getMongoDb()
-    if (!db) return { saved: false, error: 'MongoDB is not configured.' }
+    const stores = await getConversationStoresForScope(input.scope)
+    if (stores.length === 0) return { saved: false, error: 'Conversation database is not configured.' }
 
     const followUpAt = input.followUpAt?.trim() ? new Date(input.followUpAt) : null
-    const result = await db.collection(env.MONGODB_CALLS_COLLECTION).updateOne(
-      scopedRecordQuery(input.id, input.scope),
-      {
-        $set: {
-          owner: input.owner?.trim() || null,
-          followUpAt: followUpAt && !Number.isNaN(followUpAt.getTime()) ? followUpAt : null,
-          notes: input.notes?.trim() || null,
-          updatedAt: new Date(),
-        },
-      }
-    )
+    const update: Document = {
+      $set: {
+        owner: input.owner?.trim() || null,
+        followUpAt: followUpAt && !Number.isNaN(followUpAt.getTime()) ? followUpAt : null,
+        notes: input.notes?.trim() || null,
+        updatedAt: new Date(),
+      },
+    }
+
+    for (const store of stores) {
+      const result = await conversationCollection(store).updateOne(
+        scopedRecordQuery(input.id, input.scope),
+        update
+      )
+      if (result.matchedCount > 0) return { saved: true, id: input.id }
+    }
 
     return {
-      saved: result.matchedCount > 0,
+      saved: false,
       id: input.id,
-      error: result.matchedCount > 0 ? undefined : 'Call record was not found.',
+      error: 'Call record was not found.',
     }
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
