@@ -196,12 +196,12 @@ function MessageBubble({ role, content, agentInitials, showMeta, streaming }: Bu
         {/* Avatar — only on first in a group */}
         {showMeta ? <Avatar initials={agentInitials} /> : <div className="w-7 shrink-0" />}
 
-        <div className="flex flex-col gap-0.5 max-w-[80%]">
+        <div className="flex min-w-0 max-w-[80%] flex-col gap-0.5">
           {showMeta && (
             <span className="text-[11px] text-ms-muted font-medium ml-0.5">Client Support</span>
           )}
-          <div className="bg-white border border-surface-border rounded-2xl rounded-bl-sm
-                          px-4 py-2.5 shadow-bubble text-sm text-ms-text leading-relaxed">
+          <div className="whitespace-pre-wrap break-words bg-white border border-surface-border rounded-2xl rounded-bl-sm
+                          px-4 py-2.5 shadow-bubble text-sm text-ms-text leading-relaxed [overflow-wrap:anywhere]">
             {content}
             {streaming && (
               <span className="inline-block w-0.5 h-3.5 bg-ms-blue ml-0.5
@@ -216,12 +216,12 @@ function MessageBubble({ role, content, agentInitials, showMeta, streaming }: Bu
   // User bubble
   return (
     <div className={`flex justify-end msg-enter ${showMeta ? 'mt-3' : 'mt-0.5'}`}>
-      <div className="max-w-[80%] flex flex-col items-end gap-0.5">
+      <div className="flex min-w-0 max-w-[80%] flex-col items-end gap-0.5">
         {showMeta && (
           <span className="text-[11px] text-ms-muted font-medium mr-0.5">You</span>
         )}
-        <div className="bg-ms-blue rounded-2xl rounded-br-sm px-4 py-2.5
-                        text-sm text-white leading-relaxed shadow-bubble">
+        <div className="whitespace-pre-wrap break-words bg-ms-blue rounded-2xl rounded-br-sm px-4 py-2.5
+                        text-sm text-white leading-relaxed shadow-bubble [overflow-wrap:anywhere]">
           {content}
         </div>
       </div>

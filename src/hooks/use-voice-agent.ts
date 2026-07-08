@@ -103,11 +103,15 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
     }
 
     case 'STREAM_TOKEN':
-      return { ...state, partialReply: state.partialReply + action.token }
+      return { ...state, partialReply: removeVisibleLeadMarkers(state.partialReply + action.token) }
 
     case 'REPLY_COMPLETE': {
       console.log('[reducer] REPLY_COMPLETE, endCall:', action.endCall, 'phase ->', action.endCall ? 'ended' : 'idle')
-      const msg: Message = { id: uid(), role: 'assistant', content: action.fullText }
+      const msg: Message = {
+        id: uid(),
+        role: 'assistant',
+        content: removeVisibleLeadMarkers(action.fullText),
+      }
       return {
         ...state,
         phase:        action.endCall ? 'ended' : state.phase === 'speaking' ? 'speaking' : 'idle',
@@ -145,6 +149,13 @@ const EMPTY_LEAD: LeadData = {
   company: null,
   country: null,
   purpose: null,
+}
+
+function removeVisibleLeadMarkers(text: string): string {
+  return text
+    .replace(/\[LEAD:\s*\{[\s\S]*?\}\]/g, '')
+    .replace(/\[LEAD:[\s\S]*$/g, '')
+    .trimEnd()
 }
 
 const initialState: VoiceAgentState = {

@@ -59,12 +59,21 @@ export async function POST(req: NextRequest) {
     return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
   }
 
-  const LEAD_RE = /\[LEAD:\{[^}]*(?:\{[^}]*\}[^}]*)?\}\]/g
+  const LEAD_RE = /\[LEAD:\s*\{[\s\S]*?\}\]/g
   function stripLead(text: string): string {
     return text.replace(LEAD_RE, '').trim()
   }
+  function stripLeadForDisplay(text: string): string {
+    return text
+      .replace(LEAD_RE, '')
+      .replace(/\[LEAD:[\s\S]*$/g, '')
+      .trimEnd()
+  }
   function stripEndCall(text: string): string {
     return text.replace(/\[END_CALL\]/g, '').trim()
+  }
+  function displayText(text: string): string {
+    return stripEndCall(stripLeadForDisplay(text))
   }
   function extractLead(text: string): Record<string, string | null> | null {
     const m = text.match(/\[LEAD:(\{[\s\S]*?\})\]/)
@@ -147,8 +156,9 @@ export async function POST(req: NextRequest) {
       try {
         const completion = await streamChatReply(messages, tenant)
 
-        let accumulated    = ''
-        let sentenceBuffer = ''
+        let accumulated        = ''
+        let visibleAccumulated = ''
+        let sentenceBuffer     = ''
 
         for await (const chunk of completion) {
           const token       = chunk.choices[0]?.delta?.content ?? ''
@@ -156,19 +166,25 @@ export async function POST(req: NextRequest) {
 
           if (token) {
             accumulated    += token
-            sentenceBuffer += token
-            controller.enqueue(send({ token }))
+            const nextVisible = displayText(accumulated)
+            const visibleToken = nextVisible.slice(visibleAccumulated.length)
+            visibleAccumulated = nextVisible
+
+            if (visibleToken) {
+              sentenceBuffer += visibleToken
+              controller.enqueue(send({ token: visibleToken }))
+            }
 
             const { sentences, remainder } = extractSentences(sentenceBuffer)
             sentenceBuffer = remainder
             for (const sentence of sentences) {
-              const clean = stripEndCall(stripLead(sentence))
+              const clean = displayText(sentence)
               if (clean) controller.enqueue(send({ sentence: clean }))
             }
           }
 
           if (finishReason === 'stop') {
-            const tail = stripEndCall(stripLead(sentenceBuffer.trim()))
+            const tail = displayText(sentenceBuffer.trim())
             if (tail.length > 0) controller.enqueue(send({ sentence: tail }))
 
             const lead     = extractLead(accumulated)
@@ -178,7 +194,7 @@ export async function POST(req: NextRequest) {
             const inferredEndCall = hasRequiredLead(mergedLead) &&
               (userWantsToEnd(lastUserMessage()) || assistantClosed(cleaned))
             const endCall  = explicitEndCall || inferredEndCall
-            const fullText = stripEndCall(cleaned)
+            const fullText = displayText(accumulated)
 
             if (inferredEndCall && !explicitEndCall) {
               console.info('[chat] inferred end call', {
