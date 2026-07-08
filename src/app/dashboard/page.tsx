@@ -4,7 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { getDashboardAnalytics, type DashboardCall, type DashboardFilters } from '@/lib/dashboard/analytics'
 import { updateCallRecordManagement, updateCallRecordStatus, type LeadStatus } from '@/lib/db/call-records'
 import { canMutateDashboard, dashboardScopeForSession, getVerifiedSession } from '@/lib/auth/session'
-import { getManagedTenantDetail, type ManagedTenantDetail } from '@/lib/tenants/management'
+import {
+  getManagedTenantDetail,
+  listManagedTenants,
+  type ManagedTenantDetail,
+  type ManagedTenantSummary,
+} from '@/lib/tenants/management'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -27,6 +32,7 @@ const baseTabs = [
 ] as const
 
 const tenantConfigurationTab = { id: 'configuration', label: 'Configuration' } as const
+const platformTenantTab = { id: 'tenants', label: 'Tenants' } as const
 
 const statusOptions: LeadStatus[] = ['new', 'reviewing', 'qualified', 'proposal', 'won', 'lost']
 const chartColors = ['#0891b2', '#059669', '#f59e0b', '#d946ef', '#f43f5e', '#6366f1']
@@ -852,6 +858,115 @@ function ConfigurationStatus({
   )
 }
 
+function PlatformTenantsTab({ tenants }: { tenants: ManagedTenantSummary[] }) {
+  const activeTenants = tenants.filter((tenant) => tenant.status === 'active').length
+  const disabledTenants = tenants.filter((tenant) => tenant.status === 'disabled').length
+  const missingKeys = tenants.filter((tenant) => !tenant.hasOpenAiKey).length
+
+  return (
+    <div className="space-y-6">
+      <Panel className="p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Super Admin</p>
+            <h2 className="mt-2 text-xl font-semibold text-slate-950">Tenant Control Center</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+              Manage all tenant accounts, create new tenants, review subscription state, and open a single tenant configuration from one dashboard.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/tenants"
+              className="inline-flex h-10 items-center justify-center rounded-md bg-cyan-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-cyan-700"
+            >
+              Manage All Tenants
+            </Link>
+            <Link
+              href="/admin/tenants?tab=create"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Create Tenant
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-4">
+          <StatCard label="Total Tenants" value={tenants.length} detail="Registered tenant accounts" tone="cyan" />
+          <StatCard label="Active" value={activeTenants} detail="Currently enabled tenants" tone="emerald" />
+          <StatCard label="Disabled" value={disabledTenants} detail="Temporarily disabled tenants" tone="amber" />
+          <StatCard label="Missing OpenAI Key" value={missingKeys} detail="Tenants needing API setup" tone="rose" />
+        </div>
+      </Panel>
+
+      <Panel className="overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h3 className="text-lg font-semibold text-slate-950">Tenant Accounts</h3>
+          <p className="mt-1 text-sm text-slate-500">Open one tenant to configure domain, subscription, users, and setup status.</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-sm">
+            <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-5 py-3">Tenant</th>
+                <th className="px-5 py-3">Domains</th>
+                <th className="px-5 py-3">Subscription</th>
+                <th className="px-5 py-3">OpenAI Key</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {tenants.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-slate-500">No tenants configured yet.</td>
+                </tr>
+              ) : tenants.map((tenant) => (
+                <tr key={tenant.tenantId}>
+                  <td className="px-5 py-4">
+                    <p className="font-semibold text-slate-950">{tenant.companyName}</p>
+                    <p className="mt-1 font-mono text-xs text-slate-500">{tenant.tenantId}</p>
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">
+                    <span className="line-clamp-2 break-words">
+                      {tenant.domains.length ? tenant.domains.join(', ') : 'No domains'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge tone={tenant.subscriptionStatus === 'active' || tenant.subscriptionStatus === 'trial' ? 'good' : 'warn'}>
+                        {formatLabel(tenant.subscriptionStatus)}
+                      </Badge>
+                      <Badge>{formatLabel(tenant.subscriptionType)}</Badge>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    <Badge tone={tenant.hasOpenAiKey ? 'good' : 'warn'}>
+                      {tenant.hasOpenAiKey ? 'Configured' : 'Missing'}
+                    </Badge>
+                  </td>
+                  <td className="px-5 py-4">
+                    <Badge tone={tenant.status === 'active' ? 'good' : tenant.status === 'disabled' ? 'warn' : 'neutral'}>
+                      {formatLabel(tenant.status)}
+                    </Badge>
+                  </td>
+                  <td className="px-5 py-4 text-right">
+                    <Link
+                      href={`/admin/tenants/${tenant.tenantId}`}
+                      className="inline-flex h-9 items-center justify-center rounded-md bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800"
+                    >
+                      Manage Tenant
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  )
+}
+
 function TenantConfigurationTab({
   tenantId,
   detail,
@@ -931,7 +1046,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const resolvedSearchParams = await searchParams
   const tabs = session.role === 'platform_admin'
-    ? baseTabs
+    ? [...baseTabs, platformTenantTab]
     : [...baseTabs, tenantConfigurationTab]
   const activeTab = (
     tabs.some((tab) => tab.id === resolvedSearchParams?.tab)
@@ -946,13 +1061,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     range: resolvedSearchParams?.range ?? '30',
     selectedId: resolvedSearchParams?.selectedId,
   }
-  const [analytics, tenantDetail] = await Promise.all([
+  const [analytics, tenantDetail, platformTenants] = await Promise.all([
     getDashboardAnalytics(filters, {
       scope: dashboardScopeForSession(session),
     }),
     session.role !== 'platform_admin' && session.tenantId
       ? getManagedTenantDetail(session.tenantId)
       : Promise.resolve(null),
+    session.role === 'platform_admin'
+      ? listManagedTenants()
+      : Promise.resolve([]),
   ])
   const tabHref = (tab: string) => {
     const params = new URLSearchParams()
@@ -989,8 +1107,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <div className="rounded-lg border border-white/15 bg-white/10 px-4 py-3 text-sm text-slate-100 shadow-inner">
                 <p>Updated {formatDate(analytics.generatedAt)}</p>
                 {session.role === 'platform_admin' && (
-                  <Link href="/admin/tenants" className="mt-2 block text-xs font-semibold text-cyan-100 hover:text-white">
-                    Manage tenants
+                  <Link href={tabHref('tenants')} className="mt-2 block text-xs font-semibold text-cyan-100 hover:text-white">
+                    Tenant Control Center
                   </Link>
                 )}
                 {session.role !== 'platform_admin' && (
@@ -1041,6 +1159,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         {activeTab === 'leads' && <LeadsTab analytics={analytics} />}
         {activeTab === 'ai' && <AiTab analytics={analytics} />}
         {activeTab === 'capabilities' && <CapabilitiesTab />}
+        {activeTab === 'tenants' && session.role === 'platform_admin' && (
+          <PlatformTenantsTab tenants={platformTenants} />
+        )}
         {activeTab === 'configuration' && session.tenantId && (
           <TenantConfigurationTab tenantId={session.tenantId} detail={tenantDetail} />
         )}
