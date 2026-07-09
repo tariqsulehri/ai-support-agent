@@ -130,7 +130,7 @@ export function useAudioPlayer({
     playingRef.current = false
     setIsPlaying(false)
     onPlaybackEnd?.()
-  }, [fetchBlob, onPlaybackStart, onPlaybackEnd, onPlaybackError])
+  }, [onPlaybackStart, onPlaybackEnd, onPlaybackError])
 
   const enqueue = useCallback(
     (text: string) => {

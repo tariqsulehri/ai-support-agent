@@ -3,6 +3,14 @@ import { streamChatReply, extractSentences } from '@/lib/ai/chat'
 import { evaluateCustomerMessage } from '@/lib/ai/conversation-policy'
 import { recordUsageEvent } from '@/lib/observability/usage'
 import { requireTenantRuntime } from '@/lib/api/tenant-runtime'
+import {
+  assistantClosed,
+  displayText,
+  extractLead,
+  hasRequiredLead,
+  stripLead,
+  userWantsToEnd,
+} from '@/lib/ai/lead-tokens'
 import type { ChatMessage } from '@/lib/ai/chat'
 import type { LeadData } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
@@ -45,72 +53,8 @@ export async function POST(req: NextRequest) {
     return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
   }
 
-  const LEAD_RE = /\[LEAD:\s*\{[\s\S]*?\}\]/g
-  function stripLead(text: string): string {
-    return text.replace(LEAD_RE, '').trim()
-  }
-  function stripLeadForDisplay(text: string): string {
-    return text
-      .replace(LEAD_RE, '')
-      .replace(/\[LEAD:[\s\S]*$/g, '')
-      .trimEnd()
-  }
-  function stripEndCall(text: string): string {
-    return text.replace(/\[END_CALL\]/g, '').trim()
-  }
-  function displayText(text: string): string {
-    return stripEndCall(stripLeadForDisplay(text))
-  }
-  function extractLead(text: string): Record<string, string | null> | null {
-    const m = text.match(/\[LEAD:(\{[\s\S]*?\})\]/)
-    if (!m) return null
-    try {
-      const parsed = JSON.parse(m[1]) as Record<string, unknown>
-      return Object.fromEntries(
-        Object.entries(parsed).map(([key, value]) => {
-          if (typeof value !== 'string') return [key, value ?? null]
-          const trimmed = value.trim()
-          return [key, !trimmed || trimmed.toLowerCase() === 'null' ? null : trimmed]
-        })
-      ) as Record<string, string | null>
-    } catch { return null }
-  }
-
-  function hasRequiredLead(lead: Partial<LeadData> | null): boolean {
-    return Boolean(lead?.name && lead.email && lead.phone && lead.country)
-  }
-
   function lastUserMessage(): string {
     return [...messages].reverse().find((message) => message.role === 'user')?.content ?? ''
-  }
-
-  function userWantsToEnd(text: string): boolean {
-    const normalized = text.toLowerCase().trim()
-    return [
-      'bye',
-      'goodbye',
-      'thank you',
-      'thanks',
-      'no thank you',
-      'no. thank you',
-      "that's all",
-      'that is all',
-      'nothing else',
-      'no more',
-    ].some((phrase) => normalized.includes(phrase))
-  }
-
-  function assistantClosed(text: string): boolean {
-    const normalized = text.toLowerCase()
-    return [
-      'have a great day',
-      'have a nice day',
-      'reach out to you soon',
-      'will reach out',
-      "we'll reach out",
-      'thank you for providing your details',
-      "you're welcome",
-    ].some((phrase) => normalized.includes(phrase))
   }
 
   function policyResponse(reply: string): Response {
