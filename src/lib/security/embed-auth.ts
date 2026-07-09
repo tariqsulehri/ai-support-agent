@@ -87,17 +87,18 @@ export async function validateEmbedQuery(
 export async function getTenantFromRequest(req: NextRequest): Promise<TenantConfig> {
   const headers = headersFromRequest(req)
   const authEnabled = isEmbedAuthEnabled()
-  const explicitHeaders = {
+  const unauthenticatedHeaders = {
     tenantId: headers.tenantId,
     token: headers.token,
     apiKey: headers.apiKey,
+    parentUrl: headers.parentUrl,
   }
 
   const sessionTenant = await tenantFromEmbedSession(headers.sessionToken, headers.parentUrl)
   if (sessionTenant) return sessionTenant
 
   const tenant =
-    (await resolveTenantFromHeaders(authEnabled ? headers : explicitHeaders, { enforceToken: authEnabled })) ??
+    (await resolveTenantFromHeaders(authEnabled ? headers : unauthenticatedHeaders, { enforceToken: authEnabled })) ??
     (await getDefaultTenant())
 
   if (!tenant) {
