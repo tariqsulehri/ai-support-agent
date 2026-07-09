@@ -17,6 +17,14 @@ import {
 } from '@/lib/tenants/management'
 import { recordAuditLog } from '@/lib/observability/audit'
 import { listTenantUsageSummaries, type TenantUsageSummary } from '@/lib/observability/usage'
+import { Field, SelectField, TextArea } from '@/components/admin/form-fields'
+import { StatusBadge } from '@/components/admin/status-badge'
+import { formText as text, formatLabel, safeErrorMessage as safeMessage } from '@/lib/admin/forms'
+import {
+  TENANT_BILLING_CYCLES,
+  TENANT_SUBSCRIPTION_STATUSES,
+  TENANT_SUBSCRIPTION_TYPES,
+} from '@/lib/tenants/options'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -35,27 +43,8 @@ const tabs: Array<{ id: AdminTenantTab; label: string }> = [
   { id: 'archived', label: 'Archived' },
 ]
 
-const subscriptionStatuses = ['trial', 'active', 'past_due', 'canceled', 'expired'] as const
-const subscriptionTypes = ['free', 'starter', 'growth', 'enterprise', 'custom'] as const
-const billingCycles = ['monthly', 'yearly', 'one_time', 'custom'] as const
-
-function text(formData: FormData, key: string): string {
-  return String(formData.get(key) ?? '').trim()
-}
-
-function safeMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong.'
-}
-
 function activeTab(value: string | undefined): AdminTenantTab {
   return tabs.some((tab) => tab.id === value) ? value as AdminTenantTab : 'tenants'
-}
-
-function formatLabel(value: string): string {
-  return value
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
 }
 
 async function requirePlatformAdmin(next = '/admin/tenants') {
@@ -215,103 +204,6 @@ async function updateSubscriptionAction(formData: FormData) {
   redirect('/admin/tenants?tab=subscriptions&saved=subscription')
 }
 
-function Field({
-  label,
-  name,
-  required,
-  type = 'text',
-  placeholder,
-  defaultValue,
-  autoComplete,
-}: {
-  label: string
-  name: string
-  required?: boolean
-  type?: string
-  placeholder?: string
-  defaultValue?: string
-  autoComplete?: string
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-semibold text-slate-800">{label}</span>
-      <input
-        name={name}
-        type={type}
-        required={required}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        autoComplete={autoComplete}
-        className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-cyan-500"
-      />
-    </label>
-  )
-}
-
-function SelectField({
-  label,
-  name,
-  options,
-  defaultValue,
-}: {
-  label: string
-  name: string
-  options: readonly string[]
-  defaultValue?: string
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-semibold text-slate-800">{label}</span>
-      <select
-        name={name}
-        defaultValue={defaultValue}
-        className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-cyan-500"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>{formatLabel(option)}</option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
-function TextArea({
-  label,
-  name,
-  rows = 4,
-  placeholder,
-  defaultValue,
-}: {
-  label: string
-  name: string
-  rows?: number
-  placeholder?: string
-  defaultValue?: string
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-semibold text-slate-800">{label}</span>
-      <textarea
-        name={name}
-        rows={rows}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-        className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-cyan-500"
-      />
-    </label>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const tone =
-    status === 'active' ? 'bg-emerald-50 text-emerald-700' :
-    status === 'archived' || status === 'disabled' || status === 'canceled' || status === 'expired' ? 'bg-slate-100 text-slate-600' :
-    status === 'past_due' || status === 'suspended' ? 'bg-rose-50 text-rose-700' :
-    'bg-amber-50 text-amber-800'
-
-  return <span className={`rounded-md px-2.5 py-1 text-xs font-semibold ${tone}`}>{formatLabel(status)}</span>
-}
-
 function TenantTable({ tenants }: { tenants: ManagedTenantSummary[] }) {
   return (
     <section className="rounded-lg border border-white bg-white p-5 shadow-sm">
@@ -417,9 +309,9 @@ function CreateTenantPanel({ suggestedEmbedToken }: { suggestedEmbedToken: strin
         </div>
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-3">
-            <SelectField label="Subscription" name="subscriptionStatus" options={subscriptionStatuses} defaultValue="trial" />
-            <SelectField label="Plan Type" name="subscriptionType" options={subscriptionTypes} defaultValue="free" />
-            <SelectField label="Billing Cycle" name="billingCycle" options={billingCycles} defaultValue="monthly" />
+            <SelectField label="Subscription" name="subscriptionStatus" options={TENANT_SUBSCRIPTION_STATUSES} defaultValue="trial" />
+            <SelectField label="Plan Type" name="subscriptionType" options={TENANT_SUBSCRIPTION_TYPES} defaultValue="free" />
+            <SelectField label="Billing Cycle" name="billingCycle" options={TENANT_BILLING_CYCLES} defaultValue="monthly" />
           </div>
           <Field label="Embed Token" name="embedToken" required defaultValue={suggestedEmbedToken} autoComplete="off" />
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
@@ -455,9 +347,9 @@ function SubscriptionsPanel({ tenants }: { tenants: ManagedTenantSummary[] }) {
                 <p className="font-semibold text-slate-950">{tenant.companyName}</p>
                 <p className="mt-1 font-mono text-xs text-slate-500">{tenant.tenantId}</p>
               </div>
-              <SelectField label="Subscription" name="subscriptionStatus" options={subscriptionStatuses} defaultValue={tenant.subscriptionStatus} />
-              <SelectField label="Type" name="subscriptionType" options={subscriptionTypes} defaultValue={tenant.subscriptionType} />
-              <SelectField label="Cycle" name="billingCycle" options={billingCycles} defaultValue={tenant.billingCycle} />
+              <SelectField label="Subscription" name="subscriptionStatus" options={TENANT_SUBSCRIPTION_STATUSES} defaultValue={tenant.subscriptionStatus} />
+              <SelectField label="Type" name="subscriptionType" options={TENANT_SUBSCRIPTION_TYPES} defaultValue={tenant.subscriptionType} />
+              <SelectField label="Cycle" name="billingCycle" options={TENANT_BILLING_CYCLES} defaultValue={tenant.billingCycle} />
               <Field label="Seats" name="seats" type="number" placeholder="1" />
               <Field label="Expires" name="expiresAt" type="date" />
               <button className="h-10 rounded-md bg-cyan-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-cyan-700">

@@ -25,6 +25,10 @@ import {
 import type { AuthSession } from '@/lib/auth/types'
 import { recordAuditLog } from '@/lib/observability/audit'
 import { DATABASE_STRING_NOT_CONFIGURED, OPENAI_KEY_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
+import { CheckboxField, Field, TextArea } from '@/components/admin/form-fields'
+import { AdminPanel as Panel } from '@/components/admin/panel'
+import { StatusBadge } from '@/components/admin/status-badge'
+import { formText as text, formatLabel, safeErrorMessage as safeMessage } from '@/lib/admin/forms'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -32,21 +36,6 @@ export const runtime = 'nodejs'
 type TenantDetailPageProps = {
   params: Promise<{ tenantId: string }>
   searchParams?: Promise<{ error?: string; saved?: string; created?: string }>
-}
-
-function text(formData: FormData, key: string): string {
-  return String(formData.get(key) ?? '').trim()
-}
-
-function safeMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong.'
-}
-
-function formatLabel(value: string): string {
-  return value
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
 }
 
 function canAccessTenant(session: AuthSession, tenantId: string): boolean {
@@ -309,104 +298,6 @@ async function createTenantUserAction(formData: FormData) {
 
   revalidatePath(`/admin/tenants/${tenantId}`)
   redirect(`/admin/tenants/${tenantId}?saved=user`)
-}
-
-function Field({
-  label,
-  name,
-  defaultValue,
-  required,
-  type = 'text',
-  autoComplete,
-}: {
-  label: string
-  name: string
-  defaultValue?: string
-  required?: boolean
-  type?: string
-  autoComplete?: string
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-semibold text-slate-800">{label}</span>
-      <input
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        required={required}
-        autoComplete={autoComplete}
-        className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-cyan-500"
-      />
-    </label>
-  )
-}
-
-function TextArea({
-  label,
-  name,
-  defaultValue,
-  rows = 4,
-  placeholder,
-}: {
-  label: string
-  name: string
-  defaultValue?: string
-  rows?: number
-  placeholder?: string
-}) {
-  return (
-    <label className="block">
-      <span className="text-sm font-semibold text-slate-800">{label}</span>
-      <textarea
-        name={name}
-        defaultValue={defaultValue}
-        rows={rows}
-        placeholder={placeholder}
-        className="mt-1 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-cyan-500"
-      />
-    </label>
-  )
-}
-
-function CheckboxField({
-  label,
-  name,
-  defaultChecked,
-}: {
-  label: string
-  name: string
-  defaultChecked?: boolean
-}) {
-  return (
-    <label className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-      <input
-        name={name}
-        type="checkbox"
-        defaultChecked={defaultChecked}
-        className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-      />
-      {label}
-    </label>
-  )
-}
-
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-lg border border-white bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
-      <div className="mt-4">{children}</div>
-    </section>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const tone =
-    status === 'active' ? 'bg-emerald-50 text-emerald-700' :
-    status === 'archived' || status === 'disabled' || status === 'canceled' || status === 'expired' ? 'bg-slate-100 text-slate-600' :
-    status === 'past_due' || status === 'suspended' ? 'bg-rose-50 text-rose-700' :
-    'bg-amber-50 text-amber-800'
-
-  return <span className={`rounded-md px-2.5 py-1 text-xs font-semibold ${tone}`}>{formatLabel(status)}</span>
 }
 
 function ChecklistItem({

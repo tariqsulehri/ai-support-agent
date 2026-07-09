@@ -1,32 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getLangConfig } from '@/lib/config/language'
 import { resolveTenantTtsVoice } from '@/lib/config/voice'
-import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import { assertOpenAIKeyConfigured } from '@/lib/ai/client'
 import { recordUsageEvent } from '@/lib/observability/usage'
-import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
-import { getTenantRuntimeConfigurationMessages } from '@/lib/tenants/runtime-configuration'
+import { requireTenantRuntime } from '@/lib/api/tenant-runtime'
 export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
-    const authError = await requireEmbedApiAuth(req)
-    if (authError) return authError
-
-    const tenant = await getTenantFromRequest(req)
-    const accessError = requireTenantRuntimeAccess(tenant, 'config')
-    if (accessError) return accessError
-
-    const configurationMessages = await getTenantRuntimeConfigurationMessages(tenant)
-    if (configurationMessages.length > 0) {
-      return NextResponse.json({
-        error: 'Tenant configuration incomplete',
-        detail: configurationMessages.join(' '),
-        messages: configurationMessages,
-      }, { status: 422 })
-    }
+    const runtime = await requireTenantRuntime(req, 'config')
+    if (runtime.response) return runtime.response
+    const { tenant } = runtime
 
     await recordUsageEvent({ tenantId: tenant.id, type: 'config.request' })
     const lang   = getLangConfig(tenant.languageMode)

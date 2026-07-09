@@ -18,6 +18,11 @@ import {
   type TenantSubscriptionType,
   type TenantStatus,
 } from './db-types'
+import {
+  TENANT_BILLING_CYCLES,
+  TENANT_SUBSCRIPTION_STATUSES,
+  TENANT_SUBSCRIPTION_TYPES,
+} from './options'
 import type { EmailNotificationConfig, KBEntry } from './types'
 
 const TENANT_ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/
@@ -178,24 +183,20 @@ function generateDomainVerificationToken(): string {
   return `va-verify-${randomBytes(18).toString('base64url')}`
 }
 
-const subscriptionStatuses: TenantSubscriptionStatus[] = ['trial', 'active', 'past_due', 'canceled', 'expired']
-const subscriptionTypes: TenantSubscriptionType[] = ['free', 'starter', 'growth', 'enterprise', 'custom']
-const billingCycles: TenantBillingCycle[] = ['monthly', 'yearly', 'one_time', 'custom']
-
 function normalizeSubscriptionStatus(value: string | undefined): TenantSubscriptionStatus {
-  return subscriptionStatuses.includes(value as TenantSubscriptionStatus)
+  return TENANT_SUBSCRIPTION_STATUSES.includes(value as TenantSubscriptionStatus)
     ? value as TenantSubscriptionStatus
     : 'trial'
 }
 
 function normalizeSubscriptionType(value: string | undefined): TenantSubscriptionType {
-  return subscriptionTypes.includes(value as TenantSubscriptionType)
+  return TENANT_SUBSCRIPTION_TYPES.includes(value as TenantSubscriptionType)
     ? value as TenantSubscriptionType
     : 'free'
 }
 
 function normalizeBillingCycle(value: string | undefined): TenantBillingCycle {
-  return billingCycles.includes(value as TenantBillingCycle)
+  return TENANT_BILLING_CYCLES.includes(value as TenantBillingCycle)
     ? value as TenantBillingCycle
     : 'monthly'
 }

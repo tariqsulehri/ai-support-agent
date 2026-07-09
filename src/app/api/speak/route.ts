@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { synthesizeSpeech } from '@/lib/ai/tts'
 import { resolveTenantTtsVoice } from '@/lib/config/voice'
-import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
+import { requireEmbedApiAuth } from '@/lib/security/embed-auth'
 import { recordUsageEvent } from '@/lib/observability/usage'
-import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
-import { getTenantRuntimeConfigurationMessages } from '@/lib/tenants/runtime-configuration'
+import { requireTenantRuntime } from '@/lib/api/tenant-runtime'
 import type { SpeakRequest } from '@/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
@@ -43,20 +42,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const tenant           = await getTenantFromRequest(req)
-    const accessError = requireTenantRuntimeAccess(tenant, 'speak')
-    if (accessError) return accessError
-
-    const configurationMessages = await getTenantRuntimeConfigurationMessages(tenant, {
+    const runtime = await requireTenantRuntime(req, 'speak', (tenant) => ({
       requireOpenAI: tenant.ttsProvider === 'openai',
-    })
-    if (configurationMessages.length > 0) {
-      return NextResponse.json({
-        error: 'Tenant configuration incomplete',
-        detail: configurationMessages.join(' '),
-        messages: configurationMessages,
-      }, { status: 422 })
-    }
+    }), { skipAuth: true })
+    if (runtime.response) return runtime.response
+    const { tenant } = runtime
 
     await recordUsageEvent({
       tenantId: tenant.id,

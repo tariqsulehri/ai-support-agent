@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOpenAIClient } from '@/lib/ai/client'
-import { requireEmbedApiAuth, getTenantFromRequest } from '@/lib/security/embed-auth'
 import { sendCallSummaryEmail } from '@/lib/email/call-summary'
 import { saveCallRecord } from '@/lib/db/call-records'
 import { analyzeConversation, emptyLead, fallbackAnalysis } from '@/lib/ai/analyze-conversation'
 import { recordUsageEvent } from '@/lib/observability/usage'
-import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
-import { getTenantRuntimeConfigurationMessages } from '@/lib/tenants/runtime-configuration'
+import { requireTenantRuntime } from '@/lib/api/tenant-runtime'
 import type { CallSummary, ChatHistory, LeadData } from '@/types'
 import type { TenantConfig } from '@/lib/tenants/types'
 export { OPTIONS } from '@/lib/utils/cors'
@@ -70,21 +68,9 @@ async function finishCall({
  * Called once at the end of a call to produce a structured recap.
  */
 export async function POST(req: NextRequest) {
-  const authError = await requireEmbedApiAuth(req)
-  if (authError) return authError
-
-  const tenant = await getTenantFromRequest(req)
-  const accessError = requireTenantRuntimeAccess(tenant, 'summarize')
-  if (accessError) return accessError
-
-  const configurationMessages = await getTenantRuntimeConfigurationMessages(tenant)
-  if (configurationMessages.length > 0) {
-    return NextResponse.json({
-      error: 'Tenant configuration incomplete',
-      detail: configurationMessages.join(' '),
-      messages: configurationMessages,
-    }, { status: 422 })
-  }
+  const runtime = await requireTenantRuntime(req, 'summarize')
+  if (runtime.response) return runtime.response
+  const { tenant } = runtime
 
   let messages: ChatHistory
   let lead: LeadData = emptyLead()

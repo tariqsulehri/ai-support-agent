@@ -1,7 +1,7 @@
 # VoiceAgent: Sales Features & Use Cases
 
 **Elevator Pitch:**
-*An intelligent voice and text AI agent that answers visitor questions, qualifies leads, captures contact details, and automatically summarizes conversations—all embedded seamlessly on your website.*
+*An intelligent voice and text AI agent that answers visitor questions, qualifies leads, captures contact details, automatically summarizes conversations, and gives your team a management dashboard to track every opportunity—all embedded seamlessly on your website.*
 
 ---
 
@@ -35,6 +35,18 @@
 - **Lead history timeline** — track each visitor's journey and previous conversations
 
 **Customer Benefit:** Your team has full context before the first call—no "remind me who you are" moments. Faster follow-ups = faster closes.
+
+---
+
+### 📈 Management Dashboard & Lead Intelligence
+- **Executive overview** — see completed calls, captured leads, hot leads, pipeline readiness, and conversion-readiness score
+- **Lead status tracking** — move prospects through new, reviewing, qualified, proposal, won, and lost stages
+- **Communication history** — review summaries, key points, transcripts, lead details, sentiment, intent, category, and urgency
+- **AI-assisted recommendations** — surface next steps, risk signals, and follow-up priorities for management
+- **Search, filters, and export** — filter by date range, status, quality, urgency, or keyword, then export records to CSV
+- **Follow-up management** — assign owners, set follow-up dates, add management notes, and keep a status history
+
+**Customer Benefit:** Leadership gets a live command center for every AI-handled inquiry. Sales teams can prioritize hot leads, managers can monitor response quality, and no opportunity disappears into a chat log.
 
 ---
 
@@ -180,10 +192,56 @@
 | **Natural Conversation** | ✅ AI learns context | ❌ Rigid flows | ✅ Empathetic |
 | **Lead Capture** | ✅ Automatic | ❌ Form-based | ✅ Manual notes |
 | **Summary & Email** | ✅ Instant recap | ❌ Raw chat log | ❌ Manual email |
+| **Management Dashboard** | ✅ Built in | ❌ Usually separate | ❌ Manual reporting |
 | **Multi-Language** | ✅ Automatic | ❌ Limited | ✅ Can arrange |
 | **Installation Time** | ⚡ Minutes | ⚡ Hours | ❌ N/A |
 | **Cost Scaling** | 💰 Cheap | 💰 Cheap | 💸 Expensive |
 | **Handoff to Humans** | ✅ Smart escalation | ❌ Can't escalate | ✅ Natural |
+
+---
+
+## Dashboard Features Customers Can Expect
+
+### Leadership View
+- Completed conversation volume
+- Captured lead count and lead-capture rate
+- Hot, warm, cold, and unknown lead-quality mix
+- Pipeline readiness across qualified, proposal, and won stages
+- Decision-readiness score for quick management review
+
+### Sales & Follow-Up View
+- Lead workspace with name, email, phone, company, country, purpose, and service interest
+- Status updates with history so managers can see movement over time
+- Owner assignment, follow-up date, and management notes
+- Overdue follow-up visibility so sales teams know what needs attention first
+- Priority follow-up queue for the most important records
+
+### Conversation Intelligence
+- Conversation summaries and key points
+- Transcript preview for context and quality review
+- Intent, category, urgency, sentiment, and lead-quality classification
+- AI next-step recommendations
+- Risk signals for missed follow-ups, weak lead capture, or delivery issues
+
+### Reporting & Export Tools
+- Keyword search across name, email, phone, service, and summary
+- Filters for date range, status, quality, and urgency
+- CSV export for sales reporting, CRM import, or spreadsheet analysis
+- Distribution charts for service demand, countries, conversation intent, sentiment, and categories
+
+---
+
+## Technology Used
+
+- Node.js
+- TypeScript
+- React / Vite
+- Next.js
+- OpenAI
+- MongoDB
+- Tailwind CSS
+- Nodemailer
+- ElevenLabs
 
 ---
 

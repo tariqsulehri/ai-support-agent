@@ -10,6 +10,7 @@ import {
   type ManagedTenantDetail,
   type ManagedTenantSummary,
 } from '@/lib/tenants/management'
+import { formatLabel } from '@/lib/admin/forms'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -94,13 +95,6 @@ const technologyGroups = [
     items: ['Zod validation', 'ESLint', 'PostCSS', 'tsx CLI tools'],
   },
 ]
-
-function formatLabel(value: string): string {
-  return value
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-}
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('en', {
