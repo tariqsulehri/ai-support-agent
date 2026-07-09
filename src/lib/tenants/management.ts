@@ -580,10 +580,15 @@ export async function updateManagedTenantDatabaseUrl(tenantId: string, databaseU
   const db = await getManagementDb()
   const value = requireText(databaseUrl, 'Database URL')
 
+  let parsed: URL
   try {
-    new URL(value)
+    parsed = new URL(value)
   } catch {
     throw new Error('Database URL must be a valid URL.')
+  }
+  const dbName = decodeURIComponent(parsed.pathname.replace(/^\/+/, '').split('/')[0] ?? '').trim()
+  if (!dbName) {
+    throw new Error('Database URL must include the tenant database name in the path.')
   }
 
   return upsertTenantSecretInDb(db, {
@@ -624,6 +629,12 @@ export async function updateManagedTenantEmailNotifications(input: UpdateManaged
 
   if (input.enabled && !service && !host) {
     throw new Error('SMTP service or host is required.')
+  }
+  if (input.enabled && !input.password?.trim()) {
+    const existingPassword = await getTenantSecretMetadata(tenantId, 'smtp_password')
+    if (!existingPassword) {
+      throw new Error('SMTP password is required.')
+    }
   }
 
   const emailNotifications: EmailNotificationConfig = {

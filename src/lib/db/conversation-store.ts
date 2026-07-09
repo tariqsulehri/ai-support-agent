@@ -1,7 +1,6 @@
 import { createHash } from 'crypto'
 import { MongoClient, type Collection, type Db, type Document } from 'mongodb'
 import { env } from '@/lib/config/env'
-import { getMongoDb, isMongoConfigured } from './mongodb'
 import { getAllTenants, getTenantById } from '@/lib/tenants/registry'
 import { getDecryptedTenantSecret } from '@/lib/tenants/secrets'
 import { DATABASE_STRING_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
@@ -28,13 +27,13 @@ function cacheKey(tenantId: string, uri: string): string {
   return `${tenantId}:${uriHash}`
 }
 
-function tenantDbName(uri: string): string {
+function tenantDbName(uri: string, tenantId: string): string {
   try {
     const parsed = new URL(uri)
     const dbName = decodeURIComponent(parsed.pathname.replace(/^\/+/, '').split('/')[0] ?? '').trim()
-    return dbName || env.MONGODB_DB_NAME
+    return dbName || `tenant_${tenantId.replace(/[^a-z0-9]+/g, '_')}`
   } catch {
-    return env.MONGODB_DB_NAME
+    return `tenant_${tenantId.replace(/[^a-z0-9]+/g, '_')}`
   }
 }
 
@@ -55,13 +54,7 @@ async function getTenantConversationDb(tenantId: string): Promise<Db | null> {
   }
 
   const client = await clientPromise
-  return client.db(tenantDbName(uri))
-}
-
-async function getInternalConversationStore(): Promise<ConversationStore | null> {
-  if (!isMongoConfigured()) return null
-  const db = await getMongoDb()
-  return db ? { db, source: 'internal' } : null
+  return client.db(tenantDbName(uri, tenantId))
 }
 
 async function ensureConversationIndexes(store: ConversationStore): Promise<void> {
@@ -123,12 +116,6 @@ export async function getConversationStoresForScope(
   }
 
   const stores: ConversationStore[] = []
-  const internal = await getInternalConversationStore()
-  if (internal) {
-    await ensureConversationIndexes(internal)
-    stores.push(internal)
-  }
-
   const tenants = await getAllTenants()
   const tenantStores = await Promise.all(tenants.map(async (tenant) => {
     try {

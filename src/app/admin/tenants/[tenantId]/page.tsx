@@ -609,6 +609,9 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
               <p className="text-sm text-slate-500">
                 Current URL: {detail.databaseUrlSecret ? detail.databaseUrlSecret.maskedValue : 'Not stored. Call summaries will skip database saves until a URL is stored.'}
               </p>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Use the tenant conversation database URL here. Include the database name in the URL path.
+              </p>
               {canEditSecrets ? (
                 <form action={saveDatabaseUrlAction} className="mt-4 space-y-3">
                   <input type="hidden" name="tenantId" value={detail.tenant.tenantId} />
@@ -627,6 +630,9 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
             <Panel title="SMTP Email">
               <p className="text-sm text-slate-500">
                 Current password: {detail.smtpPasswordSecret ? detail.smtpPasswordSecret.maskedValue : 'Not stored'}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Tenant emails use only the SMTP settings saved here, not Vercel environment variables.
               </p>
               {canEditSecrets ? (
                 <form action={saveEmailNotificationsAction} className="mt-4 space-y-4">
