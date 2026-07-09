@@ -30,7 +30,7 @@ export function OverviewTab({ analytics }: { analytics: DashboardAnalytics }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard tone="cyan" label="Completed Calls" value={analytics.totalCalls} detail={`${analytics.callsWithLead} include captured lead details`} />
+        <StatCard tone="cyan" label="Conversations" value={analytics.totalCalls} detail={`${analytics.callsWithLead} include captured lead details`} />
         <StatCard tone="amber" label="Hot Leads" value={analytics.hotLeads} detail={`${percent(analytics.hotLeads, analytics.totalCalls)}% of conversations`} />
         <StatCard tone="emerald" label="Pipeline Ready" value={analytics.qualifiedPipeline} detail="Qualified, proposal, or won statuses" />
         <StatCard tone="rose" label="Readiness Score" value={`${analytics.conversionReadiness}%`} detail="Weighted lead capture and sales fit" />
@@ -42,7 +42,7 @@ export function OverviewTab({ analytics }: { analytics: DashboardAnalytics }) {
       <div className="grid gap-4 xl:grid-cols-3">
         <DonutChart title="Lead Quality Mix" items={analytics.leadQualityCounts} total={analytics.totalCalls} />
         <Distribution title="Conversation Intent" subtitle="Why visitors contacted the agent" items={analytics.intentCounts} total={analytics.totalCalls} />
-        <Distribution title="Sentiment" subtitle="Tone of completed conversations" items={analytics.sentimentCounts} total={analytics.totalCalls} />
+        <Distribution title="Sentiment" subtitle="Tone of captured conversations" items={analytics.sentimentCounts} total={analytics.totalCalls} />
       </div>
       <div className="grid gap-4 xl:grid-cols-3">
         <Distribution title="Service Demand" subtitle="Services mentioned by leads" items={analytics.serviceCounts} total={analytics.totalCalls} />
@@ -58,7 +58,7 @@ export function LeadsTab({ analytics }: { analytics: DashboardAnalytics }) {
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard tone="emerald" label="Email Sent" value={analytics.emailSent} detail={`${analytics.emailFailures} delivery failures`} />
-        <StatCard tone="cyan" label="Avg. Messages" value={analytics.averageMessages} detail="Conversation depth per completed call" />
+        <StatCard tone="cyan" label="Avg. Messages" value={analytics.averageMessages} detail="Conversation depth per record" />
         <StatCard tone="amber" label="Captured Leads" value={`${percent(analytics.callsWithLead, analytics.totalCalls)}%`} detail="Records with any contact or purpose data" />
         <StatCard tone="rose" label="Overdue Follow-Ups" value={analytics.overdueFollowUps} detail={`${analytics.openFollowUps} open follow-up commitments`} />
       </div>
@@ -88,7 +88,10 @@ export function CommunicationsTab({ calls }: { calls: DashboardCall[] }) {
                     <LeadIdentity call={call} />
                     <Badge tone={toneForQuality(call.leadQuality)}>{formatLabel(call.leadQuality)}</Badge>
                     <Badge tone={call.emailSent ? 'good' : call.emailError ? 'bad' : 'neutral'}>
-                      {call.emailSent ? 'Email sent' : call.emailError ? 'Email failed' : 'Email skipped'}
+                      {call.emailSent ? 'Email sent' : call.emailError ? 'Email failed' : call.finalizedAt ? 'Email skipped' : 'Email pending'}
+                    </Badge>
+                    <Badge tone={call.finalizedAt ? 'good' : 'warn'}>
+                      {call.finalizedAt ? 'Finalized' : 'In progress'}
                     </Badge>
                   </div>
                   <p className="mt-4 text-sm leading-6 text-slate-700">{call.summary}</p>
@@ -99,6 +102,10 @@ export function CommunicationsTab({ calls }: { calls: DashboardCall[] }) {
                     <div>
                       <dt className="font-semibold text-slate-900">Received</dt>
                       <dd>{formatDate(call.createdAt)}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-slate-900">Last Activity</dt>
+                      <dd>{formatDate(call.updatedAt)}</dd>
                     </div>
                     <div>
                       <dt className="font-semibold text-slate-900">Intent</dt>

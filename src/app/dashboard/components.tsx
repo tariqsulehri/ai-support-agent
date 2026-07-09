@@ -395,7 +395,9 @@ export function LeadDetailPanel({ call }: { call: DashboardCall | null }) {
           <div className="flex flex-wrap gap-2">
             <Badge tone={toneForQuality(call.leadQuality)}>{formatLabel(call.leadQuality)}</Badge>
             <Badge tone={call.urgency === 'high' ? 'bad' : call.urgency === 'medium' ? 'warn' : 'neutral'}>{formatLabel(call.urgency)} urgency</Badge>
-            <Badge tone={call.emailSent ? 'good' : call.emailError ? 'bad' : 'neutral'}>{call.emailSent ? 'Email sent' : call.emailError ? 'Email failed' : 'Email skipped'}</Badge>
+            <Badge tone={call.emailSent ? 'good' : call.emailError ? 'bad' : 'neutral'}>
+              {call.emailSent ? 'Email sent' : call.emailError ? 'Email failed' : call.finalizedAt ? 'Email skipped' : 'Email pending'}
+            </Badge>
           </div>
           <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
             {[
@@ -461,7 +463,7 @@ export function LeadDetailPanel({ call }: { call: DashboardCall | null }) {
 
 export function CommunicationList({ calls }: { calls: DashboardCall[] }) {
   if (calls.length === 0) {
-    return <p className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">No completed conversations found.</p>
+    return <p className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">No conversation records found.</p>
   }
 
   return (
@@ -475,6 +477,9 @@ export function CommunicationList({ calls }: { calls: DashboardCall[] }) {
                 <Badge tone={toneForQuality(call.leadQuality)}>{formatLabel(call.leadQuality)}</Badge>
                 <Badge tone={call.urgency === 'high' ? 'bad' : call.urgency === 'medium' ? 'warn' : 'neutral'}>
                   {formatLabel(call.urgency)} urgency
+                </Badge>
+                <Badge tone={call.finalizedAt ? 'good' : 'warn'}>
+                  {call.finalizedAt ? 'Finalized' : 'In progress'}
                 </Badge>
               </div>
               <p className="mt-3 text-sm leading-6 text-slate-700">{call.summary}</p>

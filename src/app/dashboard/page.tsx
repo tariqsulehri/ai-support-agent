@@ -95,7 +95,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <p className="text-sm font-semibold uppercase tracking-wide text-cyan-200">Voice Agent Intelligence</p>
                 <h1 className="mt-2 text-3xl font-semibold text-white lg:text-4xl">Management Dashboard</h1>
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-200">
-                  Review communication quality, lead status, email delivery, and decision signals from completed voice-agent conversations.
+                  Review communication quality, lead status, email delivery, and decision signals from active and finalized voice-agent conversations.
                 </p>
               </div>
               <div className="rounded-lg border border-white/15 bg-white/10 px-4 py-3 text-sm text-slate-100 shadow-inner">

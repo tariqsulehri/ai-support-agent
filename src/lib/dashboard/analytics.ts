@@ -33,6 +33,7 @@ export type DashboardCall = {
   transcript: ChatHistory
   emailSent: boolean
   emailError: string | null
+  finalizedAt: string | null
   owner: string | null
   followUpAt: string | null
   notes: string | null
@@ -123,6 +124,7 @@ type RawRecord = Document & {
   statusHistory?: Array<{ status?: string; changedAt?: Date }>
   createdAt?: Date
   updatedAt?: Date
+  finalizedAt?: Date
 }
 
 const EMPTY_ANALYTICS: DashboardAnalytics = {
@@ -212,6 +214,7 @@ function toDashboardCall(record: RawRecord): DashboardCall {
     transcript: record.transcript ?? [],
     emailSent: Boolean(record.email?.sent),
     emailError: record.email?.error ?? null,
+    finalizedAt: optionalDateString(record.finalizedAt),
     owner: record.owner?.trim() || null,
     followUpAt: optionalDateString(record.followUpAt),
     notes: record.notes?.trim() || null,
@@ -227,12 +230,12 @@ function toDashboardCall(record: RawRecord): DashboardCall {
 function withinRange(call: DashboardCall, range: string | undefined): boolean {
   if (!range || range === 'all') return true
 
-  const createdAt = new Date(call.createdAt).getTime()
+  const activityAt = new Date(call.updatedAt || call.createdAt).getTime()
   const now = Date.now()
   const days = range === 'today' ? 1 : Number(range)
   if (!Number.isFinite(days)) return true
 
-  return createdAt >= now - days * 24 * 60 * 60 * 1000
+  return activityAt >= now - days * 24 * 60 * 60 * 1000
 }
 
 function matchesSearch(call: DashboardCall, query: string | undefined): boolean {
@@ -290,7 +293,12 @@ function buildStoreQuery(
       : {}
   const createdAfter = rangeStartDate(filters.range)
 
-  if (createdAfter) query.createdAt = { $gte: createdAfter }
+  if (createdAfter) {
+    query.$or = [
+      { createdAt: { $gte: createdAfter } },
+      { updatedAt: { $gte: createdAfter } },
+    ]
+  }
   if (filters.status && filters.status !== 'all') query.status = filters.status
   if (filters.quality && filters.quality !== 'all') query['classification.leadQuality'] = filters.quality
   if (filters.urgency && filters.urgency !== 'all') query['requirement.urgency'] = filters.urgency
@@ -310,6 +318,7 @@ const DASHBOARD_RECORD_PROJECTION = {
   transcript: 1,
   status: 1,
   email: 1,
+  finalizedAt: 1,
   owner: 1,
   followUpAt: 1,
   notes: 1,
@@ -322,7 +331,7 @@ function buildRecommendations(calls: DashboardCall[], analytics: Pick<DashboardA
   'totalCalls' | 'callsWithLead' | 'hotLeads' | 'emailFailures' | 'averageMessages'
 >): string[] {
   if (calls.length === 0) {
-    return ['No completed communications are available yet. Start by validating call capture, MongoDB persistence, and email notifications end to end.']
+    return ['No communications are available yet. Start by validating call capture, MongoDB persistence, and email notifications end to end.']
   }
 
   const recommendations: string[] = []
@@ -382,14 +391,18 @@ export async function getDashboardAnalytics(
 
       return conversationCollection<RawRecord>(store)
         .find(query, { projection: DASHBOARD_RECORD_PROJECTION })
-        .sort({ createdAt: -1 })
+        .sort({ updatedAt: -1, createdAt: -1 })
         .limit(500)
         .toArray()
     }))
 
     const records = recordsByStore
       .flat()
-      .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
+      .sort((a, b) => {
+        const bTime = b.updatedAt?.getTime() ?? b.createdAt?.getTime() ?? 0
+        const aTime = a.updatedAt?.getTime() ?? a.createdAt?.getTime() ?? 0
+        return bTime - aTime
+      })
       .slice(0, 500)
 
     const allCalls = records.map(toDashboardCall)
