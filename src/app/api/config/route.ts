@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
-    const runtime = await requireTenantRuntime(req, 'config')
+    const runtime = await requireTenantRuntime(req, 'config', { requireDatabase: false })
     if (runtime.response) return runtime.response
     const { tenant } = runtime
 

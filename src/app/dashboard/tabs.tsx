@@ -415,9 +415,9 @@ export function TenantConfigurationTab({
             complete={Boolean(detail.openAiSecret)}
           />
           <ConfigurationStatus
-            label="Database URL"
-            detail={detail.databaseUrlSecret ? `Stored as ${detail.databaseUrlSecret.maskedValue}.` : 'Database string not configured.'}
-            complete={Boolean(detail.databaseUrlSecret)}
+            label="Lead Database"
+            detail={detail.databaseUrlSecret ? `Stored as ${detail.databaseUrlSecret.maskedValue}.` : 'Optional. Call summaries will skip database saves until a URL is stored.'}
+            complete={true}
           />
           <ConfigurationStatus
             label="Verified Domain"

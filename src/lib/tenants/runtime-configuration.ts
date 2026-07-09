@@ -23,10 +23,10 @@ function hasTenantOpenAIKey(tenant: TenantConfig): boolean {
   if (tenant.runtimeSecrets?.openaiApiKey?.trim()) return true
 
   if (tenant.openaiApiKeyEnv?.trim()) {
-    return Boolean(process.env[tenant.openaiApiKeyEnv]?.trim())
+    if (process.env[tenant.openaiApiKeyEnv]?.trim()) return true
   }
 
-  return false
+  return Boolean(process.env.OPENAI_API_KEY?.trim())
 }
 
 async function hasTenantDatabaseString(tenant: TenantConfig): Promise<boolean> {

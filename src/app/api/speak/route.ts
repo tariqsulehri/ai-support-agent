@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const runtime = await requireTenantRuntime(req, 'speak', (tenant) => ({
+      requireDatabase: false,
       requireOpenAI: tenant.ttsProvider === 'openai',
     }), { skipAuth: true })
     if (runtime.response) return runtime.response

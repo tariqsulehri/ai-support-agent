@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const runtime = await requireTenantRuntime(req, 'transcribe', {}, { skipAuth: true })
+    const runtime = await requireTenantRuntime(req, 'transcribe', { requireDatabase: false }, { skipAuth: true })
     if (runtime.response) return runtime.response
     const { tenant } = runtime
 

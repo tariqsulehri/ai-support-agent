@@ -24,7 +24,7 @@ import {
 } from '@/lib/tenants/management'
 import type { AuthSession } from '@/lib/auth/types'
 import { recordAuditLog } from '@/lib/observability/audit'
-import { DATABASE_STRING_NOT_CONFIGURED, OPENAI_KEY_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
+import { OPENAI_KEY_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
 import { CheckboxField, Field, TextArea } from '@/components/admin/form-fields'
 import { AdminPanel as Panel } from '@/components/admin/panel'
 import { StatusBadge } from '@/components/admin/status-badge'
@@ -350,10 +350,8 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
   const embedReady = detail.tenant.status === 'active' &&
     subscriptionReady &&
     Boolean(detail.openAiSecret) &&
-    Boolean(detail.databaseUrlSecret) &&
     verifiedDomains.length > 0
   const missingRuntimeMessages = [
-    ...(!detail.databaseUrlSecret ? [DATABASE_STRING_NOT_CONFIGURED] : []),
     ...(!detail.openAiSecret ? [OPENAI_KEY_NOT_CONFIGURED] : []),
   ]
 
@@ -431,9 +429,9 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
                   complete={subscriptionReady}
                 />
                 <ChecklistItem
-                  label="Database URL"
-                  detail={detail.databaseUrlSecret ? `Stored as ${detail.databaseUrlSecret.maskedValue}.` : DATABASE_STRING_NOT_CONFIGURED}
-                  complete={Boolean(detail.databaseUrlSecret)}
+                  label="Lead Database"
+                  detail={detail.databaseUrlSecret ? `Stored as ${detail.databaseUrlSecret.maskedValue}.` : 'Optional. Call summaries will skip database saves until a URL is stored.'}
+                  complete={true}
                 />
                 <ChecklistItem
                   label="SMTP Email"
@@ -607,7 +605,7 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
 
             <Panel title="Database URL">
               <p className="text-sm text-slate-500">
-                Current URL: {detail.databaseUrlSecret ? detail.databaseUrlSecret.maskedValue : DATABASE_STRING_NOT_CONFIGURED}
+                Current URL: {detail.databaseUrlSecret ? detail.databaseUrlSecret.maskedValue : 'Not stored. Call summaries will skip database saves until a URL is stored.'}
               </p>
               {canEditSecrets ? (
                 <form action={saveDatabaseUrlAction} className="mt-4 space-y-3">

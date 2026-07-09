@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic'
  *   { error: string }                                    — something went wrong
  */
 export async function POST(req: NextRequest) {
-  const runtime = await requireTenantRuntime(req, 'chat')
+  const runtime = await requireTenantRuntime(req, 'chat', { requireDatabase: false })
   if (runtime.response) return runtime.response
   const { tenant } = runtime
 

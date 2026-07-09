@@ -12,10 +12,7 @@ function getApiKey(tenant?: TenantConfig): string {
 
   if (tenant?.openaiApiKeyEnv) {
     const tenantKey = process.env[tenant.openaiApiKeyEnv]
-    if (!tenantKey) {
-      throw new Error(OPENAI_KEY_NOT_CONFIGURED)
-    }
-    return tenantKey
+    if (tenantKey) return tenantKey
   }
 
   if (!env.OPENAI_API_KEY) {

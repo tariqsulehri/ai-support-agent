@@ -68,7 +68,7 @@ async function finishCall({
  * Called once at the end of a call to produce a structured recap.
  */
 export async function POST(req: NextRequest) {
-  const runtime = await requireTenantRuntime(req, 'summarize')
+  const runtime = await requireTenantRuntime(req, 'summarize', { requireDatabase: false })
   if (runtime.response) return runtime.response
   const { tenant } = runtime
 
