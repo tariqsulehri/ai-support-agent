@@ -1,4 +1,4 @@
-import { conversationCollection, getConversationStoresForScope } from '@/lib/db/conversation-store'
+import { conversationCollection, getConversationStoresForScope, type ConversationStore } from '@/lib/db/conversation-store'
 import type { Document } from 'mongodb'
 import type { DashboardAccessScope } from '@/lib/auth/types'
 import type {
@@ -269,6 +269,55 @@ function applyFilters(calls: DashboardCall[], filters: DashboardFilters): Dashbo
   )
 }
 
+function rangeStartDate(range: string | undefined): Date | null {
+  if (!range || range === 'all') return null
+
+  const days = range === 'today' ? 1 : Number(range)
+  if (!Number.isFinite(days)) return null
+
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+}
+
+function buildStoreQuery(
+  store: ConversationStore,
+  filters: DashboardFilters,
+  scope: DashboardAccessScope | undefined
+): Document {
+  const query: Document = store.tenantId
+    ? { 'tenant.id': store.tenantId }
+    : scope?.kind === 'tenant'
+      ? { 'tenant.id': scope.tenantId }
+      : {}
+  const createdAfter = rangeStartDate(filters.range)
+
+  if (createdAfter) query.createdAt = { $gte: createdAfter }
+  if (filters.status && filters.status !== 'all') query.status = filters.status
+  if (filters.quality && filters.quality !== 'all') query['classification.leadQuality'] = filters.quality
+  if (filters.urgency && filters.urgency !== 'all') query['requirement.urgency'] = filters.urgency
+
+  return query
+}
+
+const DASHBOARD_RECORD_PROJECTION = {
+  tenant: 1,
+  lead: 1,
+  user: 1,
+  hasLead: 1,
+  requirement: 1,
+  classification: 1,
+  summary: 1,
+  callSummary: 1,
+  transcript: 1,
+  status: 1,
+  email: 1,
+  owner: 1,
+  followUpAt: 1,
+  notes: 1,
+  statusHistory: 1,
+  createdAt: 1,
+  updatedAt: 1,
+} as const
+
 function buildRecommendations(calls: DashboardCall[], analytics: Pick<DashboardAnalytics,
   'totalCalls' | 'callsWithLead' | 'hotLeads' | 'emailFailures' | 'averageMessages'
 >): string[] {
@@ -329,14 +378,10 @@ export async function getDashboardAnalytics(
     if (stores.length === 0) return EMPTY_ANALYTICS
 
     const recordsByStore = await Promise.all(stores.map(async (store) => {
-      const query = store.tenantId
-        ? { 'tenant.id': store.tenantId }
-        : options.scope?.kind === 'tenant'
-          ? { 'tenant.id': options.scope.tenantId }
-          : {}
+      const query = buildStoreQuery(store, filters, options.scope)
 
       return conversationCollection<RawRecord>(store)
-        .find(query)
+        .find(query, { projection: DASHBOARD_RECORD_PROJECTION })
         .sort({ createdAt: -1 })
         .limit(500)
         .toArray()

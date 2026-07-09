@@ -72,6 +72,9 @@ async function ensureConversationIndexes(store: ConversationStore): Promise<void
   const collection = store.db.collection(env.MONGODB_CALLS_COLLECTION)
   await Promise.all([
     collection.createIndex({ 'tenant.id': 1, createdAt: -1 }),
+    collection.createIndex({ 'tenant.id': 1, status: 1, createdAt: -1 }),
+    collection.createIndex({ 'tenant.id': 1, 'classification.leadQuality': 1, createdAt: -1 }),
+    collection.createIndex({ 'tenant.id': 1, 'requirement.urgency': 1, createdAt: -1 }),
     collection.createIndex({ status: 1, updatedAt: -1 }),
     collection.createIndex({ createdAt: -1 }),
   ])
