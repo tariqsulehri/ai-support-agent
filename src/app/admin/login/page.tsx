@@ -1,6 +1,6 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getVerifiedSession } from '@/lib/auth/session'
-import Link from 'next/link'
 
 type LoginPageProps = {
   searchParams?: Promise<{ error?: string; next?: string }>
@@ -21,14 +21,32 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
     : 'Invalid super admin email or password.'
 
   return (
-    <main className="min-h-dvh bg-slate-950 px-4 py-10 text-slate-950">
-      <div className="mx-auto grid min-h-[calc(100dvh-5rem)] w-full max-w-md place-items-center">
-        <section className="w-full rounded-lg bg-white p-6 shadow-2xl">
-          <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Super Admin Portal</p>
-            <h1 className="mt-2 text-2xl font-semibold text-slate-950">Platform sign in</h1>
+    <main className="min-h-dvh bg-[#f6f8fb] px-4 py-10 text-slate-950">
+      <div className="mx-auto grid min-h-[calc(100dvh-5rem)] w-full max-w-5xl overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.16)] lg:grid-cols-[1fr_430px]">
+        <section className="flex min-h-[560px] flex-col justify-between bg-slate-950 p-8 text-white">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">Super Admin Portal</p>
+            <h1 className="mt-4 max-w-xl text-4xl font-semibold leading-tight">Platform operations, tenant control, and rollout governance.</h1>
+            <p className="mt-4 max-w-lg text-sm leading-6 text-slate-300">
+              Use the super admin account for platform-wide access only. Tenant users have a separate workspace login.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            {['Tenants', 'Subscriptions', 'Domains'].map((item) => (
+              <div key={item} className="rounded-md border border-white/10 bg-white/5 px-4 py-3">
+                <p className="text-sm font-semibold text-white">{item}</p>
+                <p className="mt-1 text-xs text-slate-400">Platform level</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="flex flex-col justify-center p-6 sm:p-8">
+          <div className="mb-7">
+            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Restricted Access</p>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Sign in as super admin</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Use the super admin email and password to manage tenants, subscriptions, domains, and platform settings.
+              Enter the platform administrator credentials to continue.
             </p>
           </div>
 

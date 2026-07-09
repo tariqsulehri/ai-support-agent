@@ -206,14 +206,16 @@ async function updateSubscriptionAction(formData: FormData) {
 
 function TenantTable({ tenants }: { tenants: ManagedTenantSummary[] }) {
   return (
-    <section className="rounded-lg border border-white bg-white p-5 shadow-sm">
+    <section className="overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] ring-1 ring-slate-900/5">
+      <div className="h-1 bg-[linear-gradient(90deg,#0891b2,#10b981,#f59e0b)]" />
+      <div className="p-5">
       <div className="mb-4">
         <h2 className="text-lg font-semibold">Registered Tenants</h2>
         <p className="mt-1 text-sm text-slate-500">{tenants.length} tenant accounts configured.</p>
       </div>
-      <div className="overflow-hidden rounded-lg border border-slate-200">
+      <div className="overflow-hidden rounded-lg border border-slate-200/80">
         <table className="w-full min-w-[920px] text-left text-sm">
-          <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50/90 text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3">Tenant</th>
               <th className="px-4 py-3">Domains</th>
@@ -230,7 +232,7 @@ function TenantTable({ tenants }: { tenants: ManagedTenantSummary[] }) {
               </tr>
             ) : (
               tenants.map((tenant) => (
-                <tr key={tenant.tenantId}>
+                <tr key={tenant.tenantId} className="transition hover:bg-cyan-50/30">
                   <td className="px-4 py-3">
                     <p className="font-semibold text-slate-950">{tenant.companyName}</p>
                     <p className="mt-1 font-mono text-xs text-slate-500">{tenant.tenantId}</p>
@@ -252,7 +254,7 @@ function TenantTable({ tenants }: { tenants: ManagedTenantSummary[] }) {
                   <td className="px-4 py-3"><StatusBadge status={tenant.status} /></td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <Link href={`/admin/tenants/${tenant.tenantId}`} className="rounded-md bg-cyan-600 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-700">
+                      <Link href={`/admin/tenants/${tenant.tenantId}`} className="rounded-md bg-cyan-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-cyan-700">
                         Manage
                       </Link>
                       {tenant.status === 'active' ? (
@@ -286,13 +288,16 @@ function TenantTable({ tenants }: { tenants: ManagedTenantSummary[] }) {
           </tbody>
         </table>
       </div>
+      </div>
     </section>
   )
 }
 
 function CreateTenantPanel({ suggestedEmbedToken }: { suggestedEmbedToken: string }) {
   return (
-    <section className="rounded-lg border border-white bg-white p-5 shadow-sm">
+    <section className="overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] ring-1 ring-slate-900/5">
+      <div className="h-1 bg-[linear-gradient(90deg,#0891b2,#10b981,#f59e0b)]" />
+      <div className="p-5">
       <h2 className="text-lg font-semibold">Create Tenant</h2>
       <p className="mt-1 text-sm leading-6 text-slate-500">
         Creates the tenant, admin login, allowed domains, subscription, and initial embed token. Tenant secrets are added by tenant admins.
@@ -314,7 +319,7 @@ function CreateTenantPanel({ suggestedEmbedToken }: { suggestedEmbedToken: strin
             <SelectField label="Billing Cycle" name="billingCycle" options={TENANT_BILLING_CYCLES} defaultValue="monthly" />
           </div>
           <Field label="Embed Token" name="embedToken" required defaultValue={suggestedEmbedToken} autoComplete="off" />
-          <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+          <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 p-4">
             <p className="mb-3 text-sm font-semibold text-slate-800">Tenant Admin Login</p>
             <div className="space-y-4">
               <Field label="Admin Name" name="adminName" placeholder="Tenant Admin" />
@@ -322,18 +327,21 @@ function CreateTenantPanel({ suggestedEmbedToken }: { suggestedEmbedToken: strin
               <Field label="Admin Password" name="adminPassword" type="password" placeholder="Minimum 4 chars in development" autoComplete="new-password" />
             </div>
           </div>
-          <button className="h-11 w-full rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+          <button className="h-11 w-full rounded-md bg-cyan-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-cyan-700">
             Create Tenant
           </button>
         </div>
       </form>
+      </div>
     </section>
   )
 }
 
 function SubscriptionsPanel({ tenants }: { tenants: ManagedTenantSummary[] }) {
   return (
-    <section className="rounded-lg border border-white bg-white p-5 shadow-sm">
+    <section className="overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] ring-1 ring-slate-900/5">
+      <div className="h-1 bg-[linear-gradient(90deg,#0891b2,#10b981,#f59e0b)]" />
+      <div className="p-5">
       <h2 className="text-lg font-semibold">Tenant Subscriptions</h2>
       <p className="mt-1 text-sm text-slate-500">Set subscription status, plan type, billing cycle, seats, and expiry.</p>
       <div className="mt-5 space-y-3">
@@ -341,7 +349,7 @@ function SubscriptionsPanel({ tenants }: { tenants: ManagedTenantSummary[] }) {
           <p className="rounded-md border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">No tenants available.</p>
         ) : (
           tenants.map((tenant) => (
-            <form key={tenant.tenantId} action={updateSubscriptionAction} className="grid gap-3 rounded-lg border border-slate-100 bg-slate-50 p-4 lg:grid-cols-[1.2fr_repeat(5,1fr)_auto] lg:items-end">
+            <form key={tenant.tenantId} action={updateSubscriptionAction} className="grid gap-3 rounded-lg border border-slate-200/80 bg-slate-50/80 p-4 lg:grid-cols-[1.2fr_repeat(5,1fr)_auto] lg:items-end">
               <input type="hidden" name="tenantId" value={tenant.tenantId} />
               <div>
                 <p className="font-semibold text-slate-950">{tenant.companyName}</p>
@@ -359,13 +367,16 @@ function SubscriptionsPanel({ tenants }: { tenants: ManagedTenantSummary[] }) {
           ))
         )}
       </div>
+      </div>
     </section>
   )
 }
 
 function ArchivedPanel({ tenants }: { tenants: ManagedTenantSummary[] }) {
   return (
-    <section className="rounded-lg border border-white bg-white p-5 shadow-sm">
+    <section className="overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] ring-1 ring-slate-900/5">
+      <div className="h-1 bg-[linear-gradient(90deg,#64748b,#0891b2,#10b981)]" />
+      <div className="p-5">
       <h2 className="text-lg font-semibold">Archived Tenants</h2>
       <p className="mt-1 text-sm text-slate-500">Archived tenants are blocked from runtime usage until activated again.</p>
       <div className="mt-5 space-y-3">
@@ -373,7 +384,7 @@ function ArchivedPanel({ tenants }: { tenants: ManagedTenantSummary[] }) {
           <p className="rounded-md border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">No archived tenants.</p>
         ) : (
           tenants.map((tenant) => (
-            <div key={tenant.tenantId} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-100 bg-slate-50 p-4">
+            <div key={tenant.tenantId} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200/80 bg-slate-50/80 p-4">
               <div>
                 <p className="font-semibold text-slate-950">{tenant.companyName}</p>
                 <p className="mt-1 font-mono text-xs text-slate-500">{tenant.tenantId}</p>
@@ -392,6 +403,7 @@ function ArchivedPanel({ tenants }: { tenants: ManagedTenantSummary[] }) {
             </div>
           ))
         )}
+      </div>
       </div>
     </section>
   )
@@ -415,14 +427,16 @@ function UsagePanel({
   ]
 
   return (
-    <section className="rounded-lg border border-white bg-white p-5 shadow-sm">
+    <section className="overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] ring-1 ring-slate-900/5">
+      <div className="h-1 bg-[linear-gradient(90deg,#0891b2,#10b981,#f59e0b)]" />
+      <div className="p-5">
       <h2 className="text-lg font-semibold">Tenant Usage Counters</h2>
       <p className="mt-1 text-sm text-slate-500">
         Aggregate totals only. Detailed usage event inserts are not stored.
       </p>
-      <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
+      <div className="mt-5 overflow-hidden rounded-lg border border-slate-200/80">
         <table className="w-full min-w-[980px] text-left text-sm">
-          <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50/90 text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3">Tenant</th>
               <th className="px-4 py-3">Total</th>
@@ -440,7 +454,7 @@ function UsagePanel({
             ) : tenants.map((tenant) => {
               const usage = usageByTenant.get(tenant.tenantId)
               return (
-                <tr key={tenant.tenantId}>
+                <tr key={tenant.tenantId} className="transition hover:bg-cyan-50/30">
                   <td className="px-4 py-3">
                     <p className="font-semibold text-slate-950">{tenant.companyName}</p>
                     <p className="mt-1 font-mono text-xs text-slate-500">{tenant.tenantId}</p>
@@ -457,6 +471,7 @@ function UsagePanel({
             })}
           </tbody>
         </table>
+      </div>
       </div>
     </section>
   )
@@ -477,21 +492,23 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
   const usageByTenant = new Map(usageSummaries.map((summary) => [summary.tenantId, summary]))
 
   return (
-    <main className="min-h-dvh bg-slate-100 px-4 py-8 text-slate-950">
+    <main className="min-h-dvh bg-[#f6f8fb] px-4 py-8 text-slate-950">
       <div className="mx-auto w-full max-w-7xl">
-        <header className="mb-6 rounded-lg bg-slate-950 px-6 py-5 text-white shadow-xl">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+        <header className="mb-5 overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.10)] ring-1 ring-slate-900/5">
+          <div className="h-1 bg-[linear-gradient(90deg,#0891b2,#10b981,#f59e0b)]" />
+          <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-5">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-200">Platform Admin</p>
-              <h1 className="mt-1 text-3xl font-semibold">Tenant Management</h1>
+              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Platform Admin</p>
+              <h1 className="mt-1 text-3xl font-semibold text-slate-950">Tenant Management</h1>
+              <p className="mt-2 text-sm text-slate-500">Control tenant access, runtime readiness, subscriptions, and deployment settings.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href="/dashboard" className="rounded-md border border-white/20 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10">
+              <Link href="/dashboard" className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
                 Dashboard
               </Link>
               <form action="/api/admin/auth/logout" method="post">
                 <input type="hidden" name="next" value="/admin/login" />
-                <button className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-100">
+                <button className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
                   Sign out
                 </button>
               </form>
@@ -499,14 +516,29 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
           </div>
         </header>
 
-        <nav className="mb-5 flex flex-wrap gap-2 rounded-lg border border-white bg-white p-2 shadow-sm" aria-label="Tenant admin tabs">
+        <section className="mb-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-white/80 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Active tenants</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950">{activeTenants.length}</p>
+          </div>
+          <div className="rounded-lg border border-white/80 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Archived</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950">{archivedTenants.length}</p>
+          </div>
+          <div className="rounded-lg border border-white/80 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">OpenAI ready</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950">{activeTenants.filter((tenant) => tenant.hasOpenAiKey).length}</p>
+          </div>
+        </section>
+
+        <nav className="mb-5 flex flex-wrap gap-2 rounded-lg border border-white/80 bg-white/90 p-2 shadow-sm ring-1 ring-slate-900/5" aria-label="Tenant admin tabs">
           {tabs.map((tab) => {
             const selected = selectedTab === tab.id
             return (
               <Link
                 key={tab.id}
                 href={`/admin/tenants?tab=${tab.id}`}
-                className={`rounded-md px-4 py-2 text-sm font-semibold ${selected ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                className={`rounded-md px-4 py-2 text-sm font-semibold transition ${selected ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:bg-cyan-50 hover:text-cyan-800'}`}
               >
                 {tab.label}
               </Link>

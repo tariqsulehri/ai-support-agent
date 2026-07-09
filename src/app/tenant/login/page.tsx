@@ -21,14 +21,32 @@ export default async function TenantLoginPage({ searchParams }: LoginPageProps) 
     : 'Invalid tenant email or password.'
 
   return (
-    <main className="min-h-dvh bg-slate-100 px-4 py-10 text-slate-950">
-      <div className="mx-auto grid min-h-[calc(100dvh-5rem)] w-full max-w-md place-items-center">
-        <section className="w-full rounded-lg border border-white/75 bg-white p-6 shadow-2xl">
-          <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Tenant Workspace</p>
-            <h1 className="mt-2 text-2xl font-semibold text-slate-950">Tenant sign in</h1>
+    <main className="min-h-dvh bg-[#f6f8fb] px-4 py-10 text-slate-950">
+      <div className="mx-auto grid min-h-[calc(100dvh-5rem)] w-full max-w-5xl overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)] lg:grid-cols-[1fr_430px]">
+        <section className="flex min-h-[560px] flex-col justify-between bg-[linear-gradient(135deg,#0f766e,#0891b2)] p-8 text-white">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100">Tenant Workspace</p>
+            <h1 className="mt-4 max-w-xl text-4xl font-semibold leading-tight">Manage your agent, leads, email, and workspace settings.</h1>
+            <p className="mt-4 max-w-lg text-sm leading-6 text-cyan-50">
+              Tenant owner and admin accounts use this portal for their own dashboard and configuration.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            {['Dashboard', 'Configuration', 'Lead Activity'].map((item) => (
+              <div key={item} className="rounded-md border border-white/20 bg-white/10 px-4 py-3">
+                <p className="text-sm font-semibold text-white">{item}</p>
+                <p className="mt-1 text-xs text-cyan-50">Tenant level</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="flex flex-col justify-center p-6 sm:p-8">
+          <div className="mb-7">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Workspace Access</p>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Sign in as tenant</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Use your tenant owner or tenant admin email and password to manage your agent dashboard and configuration.
+              Enter your tenant owner or tenant admin credentials to continue.
             </p>
           </div>
 
