@@ -8,13 +8,26 @@ export function isEmbedAuthEnabled(): boolean {
   return env.EMBED_AUTH_ENABLED === 'true'
 }
 
+function searchParamFromUrl(value: string | null | undefined, key: string): string | undefined {
+  if (!value) return undefined
+
+  try {
+    return new URL(value).searchParams.get(key)?.trim() || undefined
+  } catch {
+    return undefined
+  }
+}
+
 function headersFromRequest(req: NextRequest) {
+  const referer = req.headers.get('referer') ?? undefined
+  const parentUrl = (req.headers.get('x-embed-parent') ?? referer) ?? undefined
+
   return {
-    tenantId:     req.headers.get('x-embed-tenant')  ?? undefined,
-    token:        req.headers.get('x-embed-token')   ?? undefined,
-    sessionToken: req.headers.get('x-embed-session') ?? undefined,
+    tenantId:     req.headers.get('x-embed-tenant')  ?? searchParamFromUrl(referer, 'tenant'),
+    token:        req.headers.get('x-embed-token')   ?? searchParamFromUrl(referer, 'token'),
+    sessionToken: req.headers.get('x-embed-session') ?? searchParamFromUrl(referer, 'session'),
     apiKey:       req.headers.get('x-api-key')        ?? undefined,
-    parentUrl:    (req.headers.get('x-embed-parent') ?? req.headers.get('referer')) ?? undefined,
+    parentUrl,
   }
 }
 
