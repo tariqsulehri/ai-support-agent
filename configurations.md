@@ -32,6 +32,14 @@ https://voiceagent-aiscripto.vercel.app/admin/tenants/ai-scripto
 
 Use this page to configure the `ai-scripto` tenant settings, including OpenAI key, optional lead database URL, SMTP email, domains, embed token, agent profile, services, and knowledge base.
 
+Database target:
+
+```text
+MongoDB database name: voiceagent
+```
+
+Use the `voiceagent` database for Ai-scripto tenant conversation storage.
+
 ## Public Voice Agent
 
 Public voice agent page:
