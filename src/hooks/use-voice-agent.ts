@@ -201,6 +201,7 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
   const embedHeadersRef = useRef<Record<string, string>>({})
   const greetingRef = useRef<string | null>(null)
   const sessionIdRef = useRef(0)
+  const conversationIdRef = useRef(uid())
 
   // Keep voice in a ref so async callbacks always read the latest value
   const voiceRef = useRef<OpenAIVoice>('nova')
@@ -267,6 +268,25 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
     return uiMessages.length > historyRef.current.length
       ? uiMessages
       : [...historyRef.current]
+  }
+
+  function saveConversationSnapshot(messages: ChatHistory): void {
+    if (messages.filter((message) => message.content !== '__GREET__').length === 0) return
+
+    fetch(tenantScopedApiPath('/api/conversation'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...embedHeadersRef.current,
+      },
+      body: JSON.stringify({
+        conversationId: conversationIdRef.current,
+        messages,
+        lead: leadRef.current,
+      }),
+    }).catch((err) => {
+      console.error('[conversation snapshot]', err)
+    })
   }
 
   // ── Audio recorder ───────────────────────────────────────────────────────────
@@ -383,6 +403,7 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
 
     dispatch({ type: 'TRANSCRIBED', text: userText })
     historyRef.current.push({ role: 'user', content: userText })
+    saveConversationSnapshot([...historyRef.current])
 
     try {
       await streamChat(historyRef.current, dispatch)
@@ -451,6 +472,7 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
           result = { fullText, endCall }
           dispatchFn?.({ type: 'REPLY_COMPLETE', fullText, endCall })
           historyRef.current.push({ role: 'assistant', content: fullText })
+          saveConversationSnapshot(finalMessagesWithUiSnapshot(fullText))
           if (endCall) {
             const lead = leadRef.current
             const finalMessages = finalMessagesWithUiSnapshot(fullText)
@@ -462,7 +484,11 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
                 'Content-Type': 'application/json',
                 ...embedHeadersRef.current,
               },
-              body:    JSON.stringify({ messages: finalMessages, lead }),
+              body:    JSON.stringify({
+                conversationId: conversationIdRef.current,
+                messages: finalMessages,
+                lead,
+              }),
             })
               .then((r) => readJsonResponse<CallSummary>(r, '/api/summarize'))
               .then((data: CallSummary) => {
@@ -517,6 +543,7 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
 
     dispatch({ type: 'TRANSCRIBED', text })
     historyRef.current.push({ role: 'user', content: text })
+    saveConversationSnapshot([...historyRef.current])
     streamChat(historyRef.current, dispatch).catch((err) => {
       dispatch({ type: 'ERROR', message: err instanceof Error ? err.message : 'Chat failed. Please try again.' })
     })
@@ -572,6 +599,7 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
 
   const startNewChat = useCallback(() => {
     sessionIdRef.current += 1
+    conversationIdRef.current = uid()
     historyRef.current = []
     leadRef.current = EMPTY_LEAD
     stopAll()

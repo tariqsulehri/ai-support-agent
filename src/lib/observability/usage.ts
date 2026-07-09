@@ -11,6 +11,7 @@ export type UsageEventType =
   | 'chat.request'
   | 'transcription.request'
   | 'tts.request'
+  | 'conversation.snapshot'
   | 'conversation.completed'
 
 export type TenantUsageSummary = {

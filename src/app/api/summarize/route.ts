@@ -18,11 +18,13 @@ function hasEmail(value: string | null | undefined): boolean {
 
 async function finishCall({
   tenant,
+  conversationId,
   lead,
   summary,
   messages,
 }: {
   tenant: TenantConfig
+  conversationId?: string
   lead: LeadData
   summary: CallSummary
   messages: ChatHistory
@@ -30,6 +32,7 @@ async function finishCall({
   const email = await sendCallSummaryEmail({ tenant, lead, summary, messages })
   const database = await saveCallRecord({
     tenant,
+    conversationId,
     lead,
     summary,
     messages,
@@ -73,9 +76,11 @@ export async function POST(req: NextRequest) {
   const { tenant } = runtime
 
   let messages: ChatHistory
+  let conversationId: string | undefined
   let lead: LeadData = emptyLead()
   try {
     const body = await req.json()
+    conversationId = typeof body.conversationId === 'string' ? body.conversationId.trim() || undefined : undefined
     messages = body.messages
     if (body.lead && typeof body.lead === 'object') {
       lead = { ...emptyLead(), ...body.lead }
@@ -102,6 +107,7 @@ export async function POST(req: NextRequest) {
     const enrichedSummary: CallSummary = { ...briefSummary, analysis }
     const { email, database } = await finishCall({
       tenant,
+      conversationId,
       lead: analysis.user,
       summary: enrichedSummary,
       messages,
@@ -149,6 +155,7 @@ Return only valid JSON matching this shape: { "summary": "...", "keyPoints": [".
     const enrichedSummary: CallSummary = { ...summary, analysis }
     const { email, database } = await finishCall({
       tenant,
+      conversationId,
       lead: analysis.user,
       summary: enrichedSummary,
       messages,

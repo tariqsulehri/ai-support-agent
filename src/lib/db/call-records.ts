@@ -8,11 +8,19 @@ import type { DashboardAccessScope } from '@/lib/auth/types'
 
 export interface SaveCallRecordInput {
   tenant: TenantConfig
+  conversationId?: string
   lead: LeadData
   summary: CallSummary
   messages: ChatHistory
   email?: SendCallSummaryEmailResult
   analysis?: ConversationAnalysis
+}
+
+export interface SaveConversationSnapshotInput {
+  tenant: TenantConfig
+  conversationId: string
+  lead: LeadData
+  messages: ChatHistory
 }
 
 export interface SaveCallRecordResult {
@@ -41,49 +49,135 @@ function scopedRecordQuery(id: string, scope?: DashboardAccessScope): Document {
   return query
 }
 
+function conversationRecord(input: SaveCallRecordInput, now: Date): Document {
+  return {
+    ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    tenant: {
+      id: input.tenant.id,
+      companyName: input.tenant.companyName,
+      agentName: input.tenant.agentName,
+    },
+    user: input.analysis?.user ?? input.lead,
+    lead: input.analysis?.user ?? input.lead,
+    hasLead: hasLeadData(input.lead),
+    requirement: input.analysis?.requirement ?? null,
+    classification: input.analysis?.classification ?? null,
+    summary: {
+      text: input.summary.summary,
+      keyPoints: input.summary.keyPoints,
+    },
+    callSummary: {
+      summary: input.summary.summary,
+      keyPoints: input.summary.keyPoints,
+      nextSteps: input.analysis?.nextSteps ?? [],
+    },
+    transcript: input.messages.filter((message) => message.content !== '__GREET__'),
+    status: 'new',
+    statusHistory: [{ status: 'new', changedAt: now }],
+    owner: null,
+    followUpAt: null,
+    notes: null,
+    source: {
+      mode: input.messages.some((message) => message.role === 'user') ? 'conversation' : 'unknown',
+      language: input.tenant.languageMode,
+    },
+    email: input.email ?? null,
+    finalizedAt: now,
+    createdAt: now,
+    updatedAt: now,
+  }
+}
+
 export async function saveCallRecord(input: SaveCallRecordInput): Promise<SaveCallRecordResult> {
   try {
     const store = await getConversationStoreForTenant(input.tenant)
     if (!store) return { saved: false, error: DATABASE_STRING_NOT_CONFIGURED }
 
     const now = new Date()
-    const result: InsertOneResult<Document> = await conversationCollection(store)
-      .insertOne({
-        tenant: {
-          id: input.tenant.id,
-          companyName: input.tenant.companyName,
-          agentName: input.tenant.agentName,
-        },
-        user: input.analysis?.user ?? input.lead,
-        lead: input.analysis?.user ?? input.lead,
-        hasLead: hasLeadData(input.lead),
-        requirement: input.analysis?.requirement ?? null,
-        classification: input.analysis?.classification ?? null,
-        summary: {
-          text: input.summary.summary,
-          keyPoints: input.summary.keyPoints,
-        },
-        callSummary: {
-          summary: input.summary.summary,
-          keyPoints: input.summary.keyPoints,
-          nextSteps: input.analysis?.nextSteps ?? [],
-        },
-        transcript: input.messages.filter((message) => message.content !== '__GREET__'),
-        status: 'new',
-        statusHistory: [{ status: 'new', changedAt: now }],
-        owner: null,
-        followUpAt: null,
-        notes: null,
-        source: {
-          mode: input.messages.some((message) => message.role === 'user') ? 'conversation' : 'unknown',
-          language: input.tenant.languageMode,
-        },
-        email: input.email ?? null,
-        createdAt: now,
-        updatedAt: now,
-      })
+    const doc = conversationRecord(input, now)
+
+    if (input.conversationId) {
+      await conversationCollection(store).updateOne(
+        { 'tenant.id': input.tenant.id, conversationId: input.conversationId },
+        { $set: doc },
+        { upsert: true }
+      )
+      const saved = await conversationCollection(store).findOne(
+        { 'tenant.id': input.tenant.id, conversationId: input.conversationId },
+        { projection: { _id: 1 } }
+      )
+      return { saved: true, id: saved?._id?.toString() }
+    }
+
+    const result: InsertOneResult<Document> = await conversationCollection(store).insertOne(doc)
 
     return { saved: true, id: result.insertedId.toString() }
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    console.error('[mongodb]', error)
+    return { saved: false, error }
+  }
+}
+
+export async function saveConversationSnapshot(input: SaveConversationSnapshotInput): Promise<SaveCallRecordResult> {
+  if (!input.conversationId.trim()) return { saved: false, error: 'Conversation id is required.' }
+
+  try {
+    const store = await getConversationStoreForTenant(input.tenant)
+    if (!store) return { saved: false, error: DATABASE_STRING_NOT_CONFIGURED }
+
+    const now = new Date()
+    const transcript = input.messages.filter((message) => message.content !== '__GREET__')
+    await conversationCollection(store).updateOne(
+      {
+        'tenant.id': input.tenant.id,
+        conversationId: input.conversationId,
+        finalizedAt: { $exists: false },
+      },
+      {
+        $setOnInsert: {
+          conversationId: input.conversationId,
+          tenant: {
+            id: input.tenant.id,
+            companyName: input.tenant.companyName,
+            agentName: input.tenant.agentName,
+          },
+          status: 'new',
+          statusHistory: [{ status: 'new', changedAt: now }],
+          owner: null,
+          followUpAt: null,
+          notes: null,
+          email: null,
+          summary: {
+            text: 'Conversation in progress.',
+            keyPoints: [],
+          },
+          callSummary: {
+            summary: 'Conversation in progress.',
+            keyPoints: [],
+            nextSteps: [],
+          },
+          createdAt: now,
+        },
+        $set: {
+          user: input.lead,
+          lead: input.lead,
+          hasLead: hasLeadData(input.lead),
+          transcript,
+          source: {
+            mode: transcript.some((message) => message.role === 'user') ? 'conversation' : 'unknown',
+            language: input.tenant.languageMode,
+          },
+          updatedAt: now,
+        },
+      },
+      { upsert: true }
+    )
+    const saved = await conversationCollection(store).findOne(
+      { 'tenant.id': input.tenant.id, conversationId: input.conversationId },
+      { projection: { _id: 1 } }
+    )
+    return { saved: Boolean(saved), id: saved?._id?.toString() }
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
     console.error('[mongodb]', error)
