@@ -49,3 +49,5 @@ https://voiceagent-aiscripto.vercel.app/voice?tenant=ai-scripto&token=testToken1
 ```
 
 Use this URL to test or open the Ai-scripto voice agent directly. The bare `/voice` path may fall back to the default tenant, so include the tenant and token parameters for Ai-scripto.
+
+For this deployment, the default tenant is also `ai-scripto`, so missing tenant context should still resolve to Ai-scripto.
