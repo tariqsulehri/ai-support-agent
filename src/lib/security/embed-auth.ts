@@ -21,11 +21,12 @@ function searchParamFromUrl(value: string | null | undefined, key: string): stri
 function headersFromRequest(req: NextRequest) {
   const referer = req.headers.get('referer') ?? undefined
   const parentUrl = (req.headers.get('x-embed-parent') ?? referer) ?? undefined
+  const query = req.nextUrl.searchParams
 
   return {
-    tenantId:     req.headers.get('x-embed-tenant')  ?? searchParamFromUrl(referer, 'tenant'),
-    token:        req.headers.get('x-embed-token')   ?? searchParamFromUrl(referer, 'token'),
-    sessionToken: req.headers.get('x-embed-session') ?? searchParamFromUrl(referer, 'session'),
+    tenantId:     req.headers.get('x-embed-tenant')  ?? query.get('tenant')?.trim()  ?? searchParamFromUrl(referer, 'tenant'),
+    token:        req.headers.get('x-embed-token')   ?? query.get('token')?.trim()   ?? searchParamFromUrl(referer, 'token'),
+    sessionToken: req.headers.get('x-embed-session') ?? query.get('session')?.trim() ?? searchParamFromUrl(referer, 'session'),
     apiKey:       req.headers.get('x-api-key')        ?? undefined,
     parentUrl,
   }

@@ -247,6 +247,35 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
   stopAllRef.current = stopAll
   enqueueRef.current = enqueue
 
+  function tenantScopedApiPath(path: string): string {
+    const tenant = embedHeadersRef.current['x-embed-tenant']
+    if (!tenant) return path
+
+    const url = new URL(path, window.location.origin)
+    url.searchParams.set('tenant', tenant)
+    return `${url.pathname}${url.search}`
+  }
+
+  function transcriptToChatHistory(messages: Message[]): ChatHistory {
+    return messages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    }))
+  }
+
+  function finalMessagesWithUiSnapshot(lastAssistantText: string): ChatHistory {
+    const uiMessages = transcriptToChatHistory(stateRef.current.transcript)
+    const cleanedLastAssistant = lastAssistantText.trim()
+
+    if (cleanedLastAssistant && uiMessages.at(-1)?.content !== cleanedLastAssistant) {
+      uiMessages.push({ role: 'assistant', content: cleanedLastAssistant })
+    }
+
+    return uiMessages.length > historyRef.current.length
+      ? uiMessages
+      : [...historyRef.current]
+  }
+
   // ── Audio recorder ───────────────────────────────────────────────────────────
   const { isRecording, hasSpeech, start: startRec, stop: stopRec } = useAudioRecorder({
     onAudioReady: async (blob, hadSpeech) => {
@@ -341,7 +370,7 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
 
     let userText: string
     try {
-      const res  = await fetch('/api/transcribe', {
+      const res  = await fetch(tenantScopedApiPath('/api/transcribe'), {
         method: 'POST',
         headers: embedHeadersRef.current,
         body: form,
@@ -374,7 +403,7 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
     messages: ChatHistory,
     dispatchFn: typeof dispatch | null
   ): Promise<{ fullText: string; endCall: boolean } | null> {
-    const res = await fetch('/api/chat', {
+    const res = await fetch(tenantScopedApiPath('/api/chat'), {
       method:  'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -431,16 +460,17 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
           historyRef.current.push({ role: 'assistant', content: fullText })
           if (endCall) {
             const lead = leadRef.current
+            const finalMessages = finalMessagesWithUiSnapshot(fullText)
             const summarySessionId = sessionIdRef.current
             // Generate summary in background — don't block the farewell
             console.log('[Call Report] finalizing call, dispatchFn available:', !!dispatchFn, 'sessionId:', summarySessionId)
-            fetch('/api/summarize', {
+            fetch(tenantScopedApiPath('/api/summarize'), {
               method:  'POST',
               headers: {
                 'Content-Type': 'application/json',
                 ...embedHeadersRef.current,
               },
-              body:    JSON.stringify({ messages: historyRef.current, lead }),
+              body:    JSON.stringify({ messages: finalMessages, lead }),
             })
               .then((r) => readJsonResponse<CallSummary>(r, '/api/summarize'))
               .then((data: CallSummary) => {
