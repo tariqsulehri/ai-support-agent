@@ -282,11 +282,15 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
       try {
         const cfg = await fetch('/api/config', {
           headers,
-        }).then((r) => readJsonResponse<ConfigResponse & {
-          greeting?: string | null
-          agentName?: string
-          companyName?: string
-        }>(r, '/api/config'))
+        }).then((r) => readJsonResponse<ConfigResponse>(r, '/api/config'))
+        if (!cancelled && cfg.tenantId) {
+          const pinnedHeaders = {
+            ...headers,
+            'x-embed-tenant': cfg.tenantId,
+          }
+          embedHeadersRef.current = pinnedHeaders
+          setEmbedHeaders(pinnedHeaders)
+        }
         if (!cancelled && cfg.voice)       handleSetVoice(cfg.voice as OpenAIVoice)
         if (!cancelled && cfg.language)    setLang(cfg.language)
         if (!cancelled && cfg.agentName)   setAgent(cfg.agentName)

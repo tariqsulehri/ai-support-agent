@@ -120,9 +120,13 @@ export type VoiceAgentAction =
 
 // ── API Payloads ───────────────────────────────────────────────────────────────
 export interface ConfigResponse {
+  tenantId?: string
   language: string
   ttsProvider: string
   voice: string
+  greeting?: string | null
+  agentName?: string
+  companyName?: string
 }
 
 export interface TranscribeResponse {

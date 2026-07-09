@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
     assertOpenAIKeyConfigured(tenant)
 
     return NextResponse.json({
+      tenantId:    tenant.id,
       language:    lang.name,
       ttsProvider: tenant.ttsProvider,
       voice:       resolveTenantTtsVoice(tenant),
