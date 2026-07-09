@@ -58,7 +58,7 @@ function resolveActiveTab(
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await getVerifiedSession()
-  if (!session) redirect('/admin/login?next=/dashboard')
+  if (!session) redirect('/tenant/login?next=/dashboard')
 
   const resolvedSearchParams = await searchParams
   const tabs = session.role === 'platform_admin'
@@ -111,6 +111,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   </Link>
                 )}
                 <form action="/api/admin/auth/logout" method="post" className="mt-2">
+                  <input type="hidden" name="next" value={session.role === 'platform_admin' ? '/admin/login' : '/tenant/login'} />
                   <button className="text-xs font-semibold text-cyan-100 hover:text-white">
                     Sign out {session.name}
                   </button>

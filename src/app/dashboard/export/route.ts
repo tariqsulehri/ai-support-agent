@@ -13,7 +13,7 @@ function csvValue(value: string | number | null | undefined): string {
 export async function GET(req: NextRequest) {
   const session = await getVerifiedSession()
   if (!session) {
-    return NextResponse.redirect(new URL('/admin/login?next=/dashboard/export', req.url))
+    return NextResponse.redirect(new URL('/tenant/login?next=/dashboard/export', req.url))
   }
 
   const searchParams = req.nextUrl.searchParams

@@ -6,7 +6,9 @@ export function middleware(req: NextRequest) {
   if (hasSessionCookie) return NextResponse.next()
 
   const url = req.nextUrl.clone()
-  url.pathname = '/admin/login'
+  url.pathname = req.nextUrl.pathname === '/admin/tenants' || req.nextUrl.pathname === '/admin/tenants/'
+    ? '/admin/login'
+    : '/tenant/login'
   url.search = ''
   url.searchParams.set('next', req.nextUrl.pathname + req.nextUrl.search)
   return NextResponse.redirect(url)

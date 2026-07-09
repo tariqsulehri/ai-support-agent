@@ -54,14 +54,14 @@ function canManageTenantSecrets(session: AuthSession, tenantId: string): boolean
 
 async function requireTenantManager(tenantId: string): Promise<AuthSession> {
   const session = await getVerifiedSession()
-  if (!session) redirect(`/admin/login?next=/admin/tenants/${tenantId}`)
+  if (!session) redirect(`/tenant/login?next=/admin/tenants/${tenantId}`)
   if (!canManageTenant(session, tenantId)) redirect('/dashboard')
   return session
 }
 
 async function requireTenantSecretManager(tenantId: string): Promise<AuthSession> {
   const session = await getVerifiedSession()
-  if (!session) redirect(`/admin/login?next=/admin/tenants/${tenantId}`)
+  if (!session) redirect(`/tenant/login?next=/admin/tenants/${tenantId}`)
   if (!canManageTenantSecrets(session, tenantId)) redirect('/dashboard')
   return session
 }
@@ -325,7 +325,7 @@ function ChecklistItem({
 export default async function TenantDetailPage({ params, searchParams }: TenantDetailPageProps) {
   const { tenantId } = await params
   const session = await getVerifiedSession()
-  if (!session) redirect(`/admin/login?next=/admin/tenants/${tenantId}`)
+  if (!session) redirect(`/tenant/login?next=/admin/tenants/${tenantId}`)
   if (!canAccessTenant(session, tenantId)) redirect('/dashboard')
 
   const [detail, pageParams, headerStore] = await Promise.all([
@@ -375,6 +375,7 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
                 Dashboard
               </Link>
               <form action="/api/admin/auth/logout" method="post">
+                <input type="hidden" name="next" value={session.role === 'platform_admin' ? '/admin/login' : '/tenant/login'} />
                 <button className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-100">
                   Sign out
                 </button>

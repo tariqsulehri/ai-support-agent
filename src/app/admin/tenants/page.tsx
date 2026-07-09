@@ -490,6 +490,7 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
                 Dashboard
               </Link>
               <form action="/api/admin/auth/logout" method="post">
+                <input type="hidden" name="next" value="/admin/login" />
                 <button className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-100">
                   Sign out
                 </button>
