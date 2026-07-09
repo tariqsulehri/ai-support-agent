@@ -139,6 +139,7 @@ export async function GET(req: NextRequest) {
 
         url.searchParams.set("tenant", tenant);
         url.searchParams.set("session", session);
+        url.searchParams.set("v", String(Date.now()));
         if (token) url.searchParams.set("token", token);
 
         const primaryColor = detectPrimaryColor();
@@ -176,7 +177,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(js, {
         headers: {
             "Content-Type": "application/javascript",
-            "Cache-Control": "public, max-age=86400"
+            "Cache-Control": "no-store, max-age=0, must-revalidate"
         }
     });
 }

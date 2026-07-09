@@ -31,6 +31,16 @@ export function toneForQuality(value: string): 'neutral' | 'good' | 'warn' | 'ba
   return 'neutral'
 }
 
+export function isConversationFinalized(call: DashboardCall): boolean {
+  return Boolean(call.finalizedAt || call.emailSent || call.emailError)
+}
+
+export function emailStatusLabel(call: DashboardCall): string {
+  if (call.emailSent) return 'Email sent'
+  if (call.emailError) return 'Email failed'
+  return isConversationFinalized(call) ? 'Email skipped' : 'Email pending'
+}
+
 export function Badge({
   children,
   tone = 'neutral',
@@ -395,9 +405,7 @@ export function LeadDetailPanel({ call }: { call: DashboardCall | null }) {
           <div className="flex flex-wrap gap-2">
             <Badge tone={toneForQuality(call.leadQuality)}>{formatLabel(call.leadQuality)}</Badge>
             <Badge tone={call.urgency === 'high' ? 'bad' : call.urgency === 'medium' ? 'warn' : 'neutral'}>{formatLabel(call.urgency)} urgency</Badge>
-            <Badge tone={call.emailSent ? 'good' : call.emailError ? 'bad' : 'neutral'}>
-              {call.emailSent ? 'Email sent' : call.emailError ? 'Email failed' : call.finalizedAt ? 'Email skipped' : 'Email pending'}
-            </Badge>
+            <Badge tone={call.emailSent ? 'good' : call.emailError ? 'bad' : 'neutral'}>{emailStatusLabel(call)}</Badge>
           </div>
           <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
             {[
@@ -478,8 +486,8 @@ export function CommunicationList({ calls }: { calls: DashboardCall[] }) {
                 <Badge tone={call.urgency === 'high' ? 'bad' : call.urgency === 'medium' ? 'warn' : 'neutral'}>
                   {formatLabel(call.urgency)} urgency
                 </Badge>
-                <Badge tone={call.finalizedAt ? 'good' : 'warn'}>
-                  {call.finalizedAt ? 'Finalized' : 'In progress'}
+                <Badge tone={isConversationFinalized(call) ? 'good' : 'warn'}>
+                  {isConversationFinalized(call) ? 'Finalized' : 'In progress'}
                 </Badge>
               </div>
               <p className="mt-3 text-sm leading-6 text-slate-700">{call.summary}</p>

@@ -26,6 +26,7 @@ type ApiErrorBody = {
 const CHAT_READ_TIMEOUT_MS = 25_000
 const BOOT_TIMEOUT_MS = 8_000
 const MIN_TRANSCRIBABLE_AUDIO_BYTES = 4_000
+const MAX_KEEPALIVE_BODY_BYTES = 60_000
 
 function readWithTimeout(
   reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -41,6 +42,10 @@ function readWithTimeout(
       .catch(reject)
       .finally(() => window.clearTimeout(timeout))
   })
+}
+
+function keepaliveForBody(body: string): Pick<RequestInit, 'keepalive'> {
+  return body.length <= MAX_KEEPALIVE_BODY_BYTES ? { keepalive: true } : {}
 }
 
 async function readJsonResponse<T>(res: Response, endpoint: string): Promise<T> {
@@ -273,17 +278,20 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
   function saveConversationSnapshot(messages: ChatHistory): void {
     if (messages.filter((message) => message.content !== '__GREET__').length === 0) return
 
+    const body = JSON.stringify({
+      conversationId: conversationIdRef.current,
+      messages,
+      lead: leadRef.current,
+    })
+
     fetch(tenantScopedApiPath('/api/conversation'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...embedHeadersRef.current,
       },
-      body: JSON.stringify({
-        conversationId: conversationIdRef.current,
-        messages,
-        lead: leadRef.current,
-      }),
+      body,
+      ...keepaliveForBody(body),
     }).catch((err) => {
       console.error('[conversation snapshot]', err)
     })
@@ -477,6 +485,11 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
             const lead = leadRef.current
             const finalMessages = finalMessagesWithUiSnapshot(fullText)
             const summarySessionId = sessionIdRef.current
+            const body = JSON.stringify({
+              conversationId: conversationIdRef.current,
+              messages: finalMessages,
+              lead,
+            })
             // Generate summary in background — don't block the farewell
             fetch(tenantScopedApiPath('/api/summarize'), {
               method:  'POST',
@@ -484,11 +497,8 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
                 'Content-Type': 'application/json',
                 ...embedHeadersRef.current,
               },
-              body:    JSON.stringify({
-                conversationId: conversationIdRef.current,
-                messages: finalMessages,
-                lead,
-              }),
+              body,
+              ...keepaliveForBody(body),
             })
               .then((r) => readJsonResponse<CallSummary>(r, '/api/summarize'))
               .then((data: CallSummary) => {

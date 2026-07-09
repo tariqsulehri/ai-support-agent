@@ -14,6 +14,7 @@ import {
   CommunicationList,
   Distribution,
   DonutChart,
+  emailStatusLabel,
   LeadDetailPanel,
   LeadIdentity,
   Panel,
@@ -22,6 +23,7 @@ import {
   StatCard,
   TranscriptPreview,
   formatDate,
+  isConversationFinalized,
   percent,
   toneForQuality,
 } from './components'
@@ -88,10 +90,10 @@ export function CommunicationsTab({ calls }: { calls: DashboardCall[] }) {
                     <LeadIdentity call={call} />
                     <Badge tone={toneForQuality(call.leadQuality)}>{formatLabel(call.leadQuality)}</Badge>
                     <Badge tone={call.emailSent ? 'good' : call.emailError ? 'bad' : 'neutral'}>
-                      {call.emailSent ? 'Email sent' : call.emailError ? 'Email failed' : call.finalizedAt ? 'Email skipped' : 'Email pending'}
+                      {emailStatusLabel(call)}
                     </Badge>
-                    <Badge tone={call.finalizedAt ? 'good' : 'warn'}>
-                      {call.finalizedAt ? 'Finalized' : 'In progress'}
+                    <Badge tone={isConversationFinalized(call) ? 'good' : 'warn'}>
+                      {isConversationFinalized(call) ? 'Finalized' : 'In progress'}
                     </Badge>
                   </div>
                   <p className="mt-4 text-sm leading-6 text-slate-700">{call.summary}</p>
