@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef } from 'react'
 import { useVoiceAgent } from '@/hooks/use-voice-agent'
 import { TranscriptPanel }              from './transcript-panel'
 import { MicButton }                    from './mic-button'
@@ -29,11 +29,6 @@ export function VoiceAgent({ tenantId, token, sessionToken, onClose }: VoiceAgen
     agentName, companyName,
     setVoice, stopPlayback, pressMic, releaseMic, sendText, startNewChat,
   } = useVoiceAgent({ tenantId, token, sessionToken })
-
-  // Debug: log state changes
-  useEffect(() => {
-    console.log('[VoiceAgent] state change - phase:', phase, 'transcript length:', transcript.length, 'callSummary:', !!callSummary)
-  }, [phase, transcript.length, callSummary])
 
   const initials = getInitials(agentName || 'CS')
   const isOnline = phase !== 'connecting' && phase !== 'error' && phase !== 'ended'

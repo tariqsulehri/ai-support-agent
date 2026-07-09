@@ -76,23 +76,18 @@ async function readErrorText(res: Response, endpoint: string): Promise<string> {
 function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentState {
   switch (action.type) {
     case 'RESET':
-      console.log('[reducer] RESET')
       return { ...initialState }
 
     case 'CONNECTED':
-      console.log('[reducer] CONNECTED, phase -> idle')
       return { ...state, phase: 'idle' }
 
     case 'START_LISTENING':
-      console.log('[reducer] START_LISTENING')
       return { ...state, phase: 'listening', error: null }
 
     case 'STOP_LISTENING':
-      console.log('[reducer] STOP_LISTENING')
       return { ...state, phase: 'transcribing' }
 
     case 'TRANSCRIBED': {
-      console.log('[reducer] TRANSCRIBED')
       const msg: Message = { id: uid(), role: 'user', content: action.text }
       return {
         ...state,
@@ -106,7 +101,6 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
       return { ...state, partialReply: removeVisibleLeadMarkers(state.partialReply + action.token) }
 
     case 'REPLY_COMPLETE': {
-      console.log('[reducer] REPLY_COMPLETE, endCall:', action.endCall, 'phase ->', action.endCall ? 'ended' : 'idle')
       const msg: Message = {
         id: uid(),
         role: 'assistant',
@@ -124,7 +118,6 @@ function reducer(state: VoiceAgentState, action: VoiceAgentAction): VoiceAgentSt
       return { ...state, leadData: { ...state.leadData, ...action.lead } }
 
     case 'CALL_SUMMARY':
-      console.log('[reducer] CALL_SUMMARY received:', action.summary)
       return { ...state, callSummary: action.summary }
 
     case 'START_SPEAKING':
@@ -463,7 +456,6 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
             const finalMessages = finalMessagesWithUiSnapshot(fullText)
             const summarySessionId = sessionIdRef.current
             // Generate summary in background — don't block the farewell
-            console.log('[Call Report] finalizing call, dispatchFn available:', !!dispatchFn, 'sessionId:', summarySessionId)
             fetch(tenantScopedApiPath('/api/summarize'), {
               method:  'POST',
               headers: {
@@ -474,27 +466,18 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
             })
               .then((r) => readJsonResponse<CallSummary>(r, '/api/summarize'))
               .then((data: CallSummary) => {
-                console.log('[Call Report] summary received, sessionId:', summarySessionId, 'current:', sessionIdRef.current)
                 if (summarySessionId !== sessionIdRef.current) {
-                  console.log('[Call Report] session mismatch, ignoring')
                   return
                 }
-                console.log('[Call Report] dispatching CALL_SUMMARY', data)
                 try {
                   dispatchFn?.({ type: 'CALL_SUMMARY', summary: data })
-                  console.log('[Call Report] dispatch successful')
                 } catch (e) {
                   console.error('[Call Report] dispatch failed:', e)
                 }
-                console.log(
-                  '[Call Report]',
-                  JSON.stringify({ lead, ...data }, null, 2)
-                )
               })
               .catch((err) => {
                 console.error('[Call Report] summary error:', err)
                 if (summarySessionId !== sessionIdRef.current) {
-                  console.log('[Call Report] session mismatch in error, ignoring')
                   return
                 }
                 console.error('[summarize]', err)
@@ -618,9 +601,7 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
   useEffect(() => {
     if (state.phase !== 'ended' || !state.callSummary) return
 
-    console.log('[auto-restart] summary ready, waiting 1.5s')
     const timer = window.setTimeout(() => {
-      console.log('[auto-restart] calling startNewChat')
       startNewChat()
     }, 1500)
 
