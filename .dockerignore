@@ -1,0 +1,8 @@
+node_modules
+.next
+.git
+.vercel
+deployment
+*.log
+.env
+.env.local
