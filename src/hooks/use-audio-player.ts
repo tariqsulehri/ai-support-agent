@@ -27,6 +27,13 @@ function isAbortError(err: unknown): boolean {
   return typeof err === 'string' && /abort|aborted|canceled|cancelled/i.test(err)
 }
 
+function isAutoplayBlocked(err: unknown): boolean {
+  if (!err) return false
+  if (err instanceof DOMException && err.name === 'NotAllowedError') return true
+  const msg = err instanceof Error ? err.message : String(err)
+  return /notallowed|allowed|interact|gesture|play\(\)/i.test(msg)
+}
+
 /** A queued sentence whose audio is fetched eagerly, before its turn to play. */
 interface SpeechJob {
   text: string
@@ -151,6 +158,25 @@ export function useAudioPlayer({
 
         audio.src = url
         audio.play().catch((err) => {
+          if (isAutoplayBlocked(err)) {
+            // Autoplay blocked by browser policy prior to user interaction.
+            // Listen for the user's first click or touch, then immediately play this audio.
+            const unlockAndPlay = () => {
+              window.removeEventListener('click', unlockAndPlay, true)
+              window.removeEventListener('pointerdown', unlockAndPlay, true)
+              window.removeEventListener('keydown', unlockAndPlay, true)
+              window.removeEventListener('touchstart', unlockAndPlay, true)
+              if (!abortRef.current && currentAudio.current === audio) {
+                audio.play().catch(() => finish())
+              }
+            }
+            window.addEventListener('click', unlockAndPlay, { capture: true, once: true, passive: true })
+            window.addEventListener('pointerdown', unlockAndPlay, { capture: true, once: true, passive: true })
+            window.addEventListener('keydown', unlockAndPlay, { capture: true, once: true, passive: true })
+            window.addEventListener('touchstart', unlockAndPlay, { capture: true, once: true, passive: true })
+            return
+          }
+
           if (!abortRef.current && !isAbortError(err)) {
             playbackError = err instanceof Error ? err.message : String(err)
           }

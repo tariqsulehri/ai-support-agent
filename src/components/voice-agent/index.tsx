@@ -28,6 +28,7 @@ export function VoiceAgent({ tenantId, token, sessionToken, onClose }: VoiceAgen
     language, voice, leadData, callSummary,
     agentName, companyName,
     setVoice, stopPlayback, pressMic, releaseMic, sendText, startNewChat,
+    playMessage,
   } = useVoiceAgent({ tenantId, token, sessionToken })
 
   const initials = getInitials(agentName || 'CS')
@@ -115,6 +116,7 @@ export function VoiceAgent({ tenantId, token, sessionToken, onClose }: VoiceAgen
           lead={leadData}
           callSummary={callSummary}
           onStartNewChat={startNewChat}
+          onPlayMessage={playMessage}
         />
 
         {/* ── Input bar ───────────────────────────────────────────────────── */}

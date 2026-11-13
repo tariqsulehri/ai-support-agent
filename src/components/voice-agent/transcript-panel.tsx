@@ -13,6 +13,7 @@ interface Props {
   lead:          LeadData
   callSummary:   CallSummary | null
   onStartNewChat: () => void
+  onPlayMessage?: (text: string) => void
 }
 
 export function TranscriptPanel({
@@ -23,6 +24,7 @@ export function TranscriptPanel({
   lead,
   callSummary,
   onStartNewChat,
+  onPlayMessage,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -56,6 +58,7 @@ export function TranscriptPanel({
             content={msg.content}
             agentInitials={agentInitials}
             showMeta={showMeta}
+            onPlay={onPlayMessage}
           />
         )
       })}
@@ -185,9 +188,10 @@ interface BubbleProps {
   agentInitials: string
   showMeta:      boolean
   streaming?:    boolean
+  onPlay?:       (text: string) => void
 }
 
-function MessageBubble({ role, content, agentInitials, showMeta, streaming }: BubbleProps) {
+function MessageBubble({ role, content, agentInitials, showMeta, streaming, onPlay }: BubbleProps) {
   const isAgent = role === 'assistant'
 
   if (isAgent) {
@@ -208,6 +212,20 @@ function MessageBubble({ role, content, agentInitials, showMeta, streaming }: Bu
                                animate-pulse_dot align-middle rounded-sm" />
             )}
           </div>
+          {onPlay && !streaming && (
+            <button
+              type="button"
+              onClick={() => onPlay(content)}
+              title="Listen to message"
+              aria-label="Listen to message"
+              className="self-start inline-flex items-center gap-1.5 text-[11px] text-ms-muted hover:text-ms-teal transition-colors px-1.5 py-0.5 rounded hover:bg-white/60 mt-0.5"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.083-1.64.242-2.426.234-.847 1.058-1.354 1.938-1.354h2.24z" />
+              </svg>
+              <span>Listen</span>
+            </button>
+          )}
         </div>
       </div>
     )
