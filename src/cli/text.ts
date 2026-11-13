@@ -13,7 +13,7 @@ interface TenantConfig {
   knowledgeBase?: { topic: string; content: string }[];
 }
 
-const DEFAULT_TENANT_ID = "tkxel";
+const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID || "ai-scripto";
 
 function loadTenant(id?: string): TenantConfig {
   const file = path.resolve(__dirname, "../data/tenants.json");

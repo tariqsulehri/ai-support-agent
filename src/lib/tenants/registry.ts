@@ -1,4 +1,5 @@
 import type { TenantConfig } from './types'
+import { env } from '@/lib/config/env'
 import {
   getDbAllTenants,
   getDbDefaultTenant,
@@ -17,7 +18,7 @@ import {
   resolveJsonTenantFromHeaders,
 } from './json-registry'
 
-const DEFAULT_TENANT_ID = 'ai-scripto'
+const DEFAULT_TENANT_ID = env.DEFAULT_TENANT_ID || 'ai-scripto'
 
 function logJsonFallback(reason: string, context: Record<string, string | undefined> = {}): void {
   console.info('[tenants] using json fallback', { reason, ...context })

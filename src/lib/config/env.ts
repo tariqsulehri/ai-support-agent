@@ -21,6 +21,9 @@ const envSchema = z.object({
   // Embed security
   EMBED_AUTH_ENABLED: z.enum(['true', 'false']).default('false'),
 
+  // Default fallback tenant (used when no tenant is specified in URL query or headers)
+  DEFAULT_TENANT_ID: z.string().default('ai-scripto'),
+
   // MongoDB persistence for completed conversations
   MONGODB_URI: z.string().optional(),
   MONGODB_DB_NAME: z.string().default('voiceagent'),
