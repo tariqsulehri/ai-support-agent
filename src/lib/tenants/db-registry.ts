@@ -74,14 +74,15 @@ async function getTenantDb(): Promise<Db | null> {
 
 async function buildTenantBundle(db: Db, tenant: TenantRecord): Promise<TenantBundle | null> {
   const c = collections(db)
+  const lookupIds = Array.from(new Set([tenant.tenantId, tenant.slug].filter(Boolean)))
   const [settings, domains, embedKeys] = await Promise.all([
-    c.settings.findOne({ tenantId: tenant.tenantId }),
+    c.settings.findOne({ tenantId: { $in: lookupIds } }),
     c.domains.find({
-      tenantId: tenant.tenantId,
+      tenantId: { $in: lookupIds },
       status: 'active',
       verificationStatus: 'verified',
     }).toArray(),
-    c.embedKeys.find({ tenantId: tenant.tenantId, status: 'active' }).toArray(),
+    c.embedKeys.find({ tenantId: { $in: lookupIds }, status: 'active' }).toArray(),
   ])
 
   if (!settings) {
@@ -244,11 +245,25 @@ export async function getDbAllTenants(): Promise<TenantConfig[]> {
     .sort({ createdAt: 1 })
     .toArray()
 
-  const configs = await Promise.all(
-    activeTenants.map(async (tenant) => resultFromBundle(await buildTenantBundle(db, tenant), 'database').tenant)
+  const configs = await Promise.allSettled(
+    activeTenants.map(async (tenant) => {
+      try {
+        const bundle = await buildTenantBundle(db, tenant)
+        return resultFromBundle(bundle, 'database').tenant
+      } catch (err) {
+        console.warn('[tenants:db] Failed to build tenant bundle, skipping tenant', {
+          tenantId: tenant.tenantId,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        return null
+      }
+    })
   )
 
-  return configs.filter((tenant): tenant is TenantConfig => Boolean(tenant))
+  return configs
+    .filter((r): r is PromiseFulfilledResult<TenantConfig | null> => r.status === 'fulfilled')
+    .map((r) => r.value)
+    .filter((tenant): tenant is TenantConfig => Boolean(tenant))
 }
 
 export async function validateDbTenantToken(tenantId: string, token: string | undefined): Promise<TenantLookupResult> {

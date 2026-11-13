@@ -266,26 +266,39 @@ export async function listManagedTenants(): Promise<ManagedTenantSummary[]> {
   const c = collections(db)
   const tenants = await c.tenants.find({}).sort({ createdAt: 1 }).toArray()
 
-  return Promise.all(tenants.map(async (tenant) => {
-    const [domains, openAiSecret] = await Promise.all([
-      c.domains.find({ tenantId: tenant.tenantId, status: 'active' }).sort({ origin: 1 }).toArray(),
-      getTenantSecretMetadata(tenant.tenantId, 'openai_api_key'),
-    ])
+  const summaries = await Promise.allSettled(tenants.map(async (tenant) => {
+    try {
+      const [domains, openAiSecret] = await Promise.all([
+        c.domains.find({ tenantId: tenant.tenantId, status: 'active' }).sort({ origin: 1 }).toArray(),
+        getTenantSecretMetadata(tenant.tenantId, 'openai_api_key'),
+      ])
 
-    const subscription = tenant.subscription
+      const subscription = tenant.subscription
 
-    return {
-      tenantId: tenant.tenantId,
-      companyName: tenant.companyName,
-      status: tenant.status,
-      subscriptionStatus: subscription?.status ?? 'trial',
-      subscriptionType: subscription?.type ?? 'free',
-      billingCycle: subscription?.billingCycle ?? 'monthly',
-      domains: domains.map((domain) => domain.origin),
-      updatedAt: tenant.updatedAt,
-      hasOpenAiKey: Boolean(openAiSecret),
+      return {
+        tenantId: tenant.tenantId,
+        companyName: tenant.companyName,
+        status: tenant.status,
+        subscriptionStatus: subscription?.status ?? 'trial',
+        subscriptionType: subscription?.type ?? 'free',
+        billingCycle: subscription?.billingCycle ?? 'monthly',
+        domains: domains.map((domain) => domain.origin),
+        updatedAt: tenant.updatedAt,
+        hasOpenAiKey: Boolean(openAiSecret),
+      }
+    } catch (err) {
+      console.warn('[tenants:management] Failed to summarize tenant, skipping', {
+        tenantId: tenant.tenantId,
+        error: err instanceof Error ? err.message : String(err),
+      })
+      return null
     }
   }))
+
+  return summaries
+    .filter((r): r is PromiseFulfilledResult<ManagedTenantSummary | null> => r.status === 'fulfilled')
+    .map((r) => r.value)
+    .filter((s): s is ManagedTenantSummary => Boolean(s))
 }
 
 export async function getManagedTenantDetail(tenantId: string): Promise<ManagedTenantDetail | null> {

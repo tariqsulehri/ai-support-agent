@@ -1,6 +1,7 @@
 import { createHash } from 'crypto'
 import { MongoClient, type Collection, type Db, type Document } from 'mongodb'
 import { env } from '@/lib/config/env'
+import { getMongoDb, isMongoConfigured } from './mongodb'
 import { getAllTenants, getTenantById } from '@/lib/tenants/registry'
 import { getDecryptedTenantSecret } from '@/lib/tenants/secrets'
 import { DATABASE_STRING_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
@@ -47,14 +48,27 @@ async function getTenantConversationDb(tenantId: string): Promise<Db | null> {
   if (!clientPromise) {
     clientPromise = MongoClient.connect(uri, {
       appName: `voiceagent-tenant-${tenantId}`,
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 2000,
+      connectTimeoutMS: 2000,
     })
     clients.set(key, clientPromise)
   }
 
   const client = await clientPromise
   return client.db(tenantDbName(uri, tenantId))
+}
+
+async function getInternalConversationStore(): Promise<ConversationStore | null> {
+  if (!isMongoConfigured()) return null
+  try {
+    const db = await getMongoDb()
+    return db ? { db, source: 'internal' } : null
+  } catch (err) {
+    console.warn('[conversation-store] internal platform store unavailable', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
 }
 
 async function ensureConversationIndexes(store: ConversationStore): Promise<void> {
@@ -91,11 +105,21 @@ export async function getConversationStoreForTenant(
       return store
     }
   } catch (error) {
-    console.warn('[conversation-store] tenant database unavailable', {
+    console.warn('[conversation-store] tenant database unavailable, attempting platform store fallback', {
       tenantId: tenant.id,
       error: error instanceof Error ? error.message : String(error),
     })
-    return null
+  }
+
+  // Graceful fallback to internal platform store so tenant's records are not lost
+  const fallback = await getInternalConversationStore()
+  if (fallback) {
+    try {
+      await ensureConversationIndexes(fallback)
+      return fallback
+    } catch {
+      return fallback
+    }
   }
 
   console.warn('[conversation-store] tenant database string missing', {
@@ -116,11 +140,33 @@ export async function getConversationStoresForScope(
   }
 
   const stores: ConversationStore[] = []
+  const seenDatabases = new Set<string>()
+
+  // Always include the platform database so records in the primary DB are never omitted
+  const internal = await getInternalConversationStore()
+  if (internal) {
+    try {
+      await ensureConversationIndexes(internal)
+      stores.push(internal)
+      seenDatabases.add(internal.db.databaseName)
+    } catch (err) {
+      console.warn('[conversation-store] failed to initialize internal store indexes', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+      stores.push(internal)
+      seenDatabases.add(internal.db.databaseName)
+    }
+  }
+
   const tenants = await getAllTenants()
-  const tenantStores = await Promise.all(tenants.map(async (tenant) => {
+  const tenantStores = await Promise.allSettled(tenants.map(async (tenant) => {
     try {
       const tenantDb = await getTenantConversationDb(tenant.id)
       if (!tenantDb) return null
+
+      // Deduplicate if the tenant points to the same database as the platform store
+      if (seenDatabases.has(tenantDb.databaseName)) return null
+
       const store = { tenantId: tenant.id, db: tenantDb, source: 'tenant' as const }
       await ensureConversationIndexes(store)
       return store
@@ -133,8 +179,11 @@ export async function getConversationStoresForScope(
     }
   }))
 
-  for (const store of tenantStores) {
-    if (store) stores.push(store)
+  for (const result of tenantStores) {
+    if (result.status === 'fulfilled' && result.value) {
+      stores.push(result.value)
+      seenDatabases.add(result.value.db.databaseName)
+    }
   }
 
   return stores

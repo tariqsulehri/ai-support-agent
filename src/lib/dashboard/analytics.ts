@@ -173,12 +173,20 @@ function hasLead(lead: LeadData): boolean {
   return Object.values(lead).some((value) => Boolean(value?.trim()))
 }
 
-function dateString(value: Date | undefined): string {
-  return (value ?? new Date(0)).toISOString()
+function safeDate(value: unknown): Date | null {
+  if (!value) return null
+  const d = value instanceof Date ? value : new Date(String(value))
+  return Number.isNaN(d.getTime()) ? null : d
 }
 
-function optionalDateString(value: Date | null | undefined): string | null {
-  return value ? value.toISOString() : null
+function dateString(value: unknown): string {
+  const d = safeDate(value)
+  return (d ?? new Date(0)).toISOString()
+}
+
+function optionalDateString(value: unknown): string | null {
+  const d = safeDate(value)
+  return d ? d.toISOString() : null
 }
 
 function increment(map: Map<string, number>, label: string | null | undefined): void {
@@ -409,30 +417,50 @@ export async function getDashboardAnalytics(
     const stores = await getConversationStoresForScope(options.scope)
     if (stores.length === 0) return EMPTY_ANALYTICS
 
-    const recordsByStore = await Promise.all(stores.map(async (store) => {
-      const historyRange = filters.range && filters.range !== 'all' &&
-        (filters.range === 'today' || Number(filters.range) < 180)
-        ? '180'
-        : filters.range
-      const query = buildStoreQuery(store, { ...filters, range: historyRange }, options.scope)
+    const recordsByStore = await Promise.allSettled(stores.map(async (store) => {
+      try {
+        const historyRange = filters.range && filters.range !== 'all' &&
+          (filters.range === 'today' || Number(filters.range) < 180)
+          ? '180'
+          : filters.range
+        const query = buildStoreQuery(store, { ...filters, range: historyRange }, options.scope)
 
-      return conversationCollection<RawRecord>(store)
-        .find(query, { projection: DASHBOARD_RECORD_PROJECTION })
-        .sort({ updatedAt: -1, createdAt: -1 })
-        .limit(500)
-        .toArray()
+        return await conversationCollection<RawRecord>(store)
+          .find(query, { projection: DASHBOARD_RECORD_PROJECTION })
+          .sort({ updatedAt: -1, createdAt: -1 })
+          .limit(500)
+          .toArray()
+      } catch (err) {
+        console.warn('[dashboard] Failed to read conversations from store, skipping', {
+          tenantId: store.tenantId ?? 'platform',
+          source: store.source,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        return []
+      }
     }))
 
     const records = recordsByStore
-      .flat()
+      .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
       .sort((a, b) => {
-        const bTime = b.updatedAt?.getTime() ?? b.createdAt?.getTime() ?? 0
-        const aTime = a.updatedAt?.getTime() ?? a.createdAt?.getTime() ?? 0
+        const bTime = (b?.updatedAt instanceof Date ? b.updatedAt.getTime() : new Date(b?.updatedAt || b?.createdAt || 0).getTime())
+        const aTime = (a?.updatedAt instanceof Date ? a.updatedAt.getTime() : new Date(a?.updatedAt || a?.createdAt || 0).getTime())
         return bTime - aTime
       })
       .slice(0, 500)
 
-    const allCalls = records.map(toDashboardCall)
+    const allCalls: DashboardCall[] = []
+    for (const record of records) {
+      try {
+        allCalls.push(toDashboardCall(record))
+      } catch (err) {
+        console.warn('[dashboard] Skipped malformed conversation record', {
+          id: record._id ? String(record._id) : 'unknown',
+          tenantId: record.tenant?.id,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      }
+    }
     const calls = applyFilters(allCalls, filters)
     const trendCalls = allCalls.filter((call) => matchesSearch(call, filters.q))
     const totalCalls = calls.length
