@@ -15,7 +15,7 @@ const envSchema = z.object({
   AUTH_SECRET: z.string().optional(),
 
   // ElevenLabs — only required when a tenant uses ttsProvider: "elevenlabs"
-  ELEVENLABS_API_KEY:  z.string().optional(),
+  ELEVENLABS_API_KEY: z.string().optional(),
   ELEVENLABS_VOICE_ID: z.string().default('pNInz6obpgDQGcFmaJgB'),
 
   // Embed security

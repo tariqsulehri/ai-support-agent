@@ -236,12 +236,21 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
       if (/abort|aborted|canceled|cancelled/i.test(message)) {
         return
       }
+
+      // Autoplay blocked by browser policy prior to user interaction is standard browser behavior.
+      // Transition cleanly to idle (Online) so the agent is ready for the user to speak or type.
+      if (/notallowed|allowed|interact|gesture|play\(\)/i.test(message)) {
+        console.info(
+          '[voice playback] Browser autoplay policy prevented automated speech prior to user interaction. Agent is online and awaiting user gesture.'
+        )
+        dispatch({ type: 'SPEAKING_DONE' })
+        return
+      }
+
       console.error('[voice playback]', message)
       dispatch({
         type: 'ERROR',
-        message: /notallowed|allowed|interact|gesture|play\(\)/i.test(message)
-          ? 'Audio playback was blocked by the browser. Tap the mic or send a message, then try again.'
-          : `Voice playback failed: ${message}`,
+        message: `Voice playback failed: ${message}`,
       })
     },
   })
@@ -590,7 +599,7 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
       stopRec()
       return
     }
-    if (phase === 'idle') {
+    if (phase === 'idle' || phase === 'error') {
       startListening()
     }
   }, [interruptAndListen, isRecording, startListening, stopRec, stopAll])

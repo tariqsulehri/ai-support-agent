@@ -45,3 +45,4 @@ export async function bootstrapDefaultTenantOpenAIKey(): Promise<string | null> 
 
   return bootstrapPromise
 }
+
