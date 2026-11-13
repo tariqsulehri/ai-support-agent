@@ -24,7 +24,7 @@ type ApiErrorBody = {
 }
 
 const CHAT_READ_TIMEOUT_MS = 25_000
-const BOOT_TIMEOUT_MS = 8_000
+const BOOT_TIMEOUT_MS = 15_000
 const MIN_TRANSCRIBABLE_AUDIO_BYTES = 4_000
 const MAX_KEEPALIVE_BODY_BYTES = 60_000
 
@@ -232,6 +232,10 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
     onPlaybackStart: () => dispatch({ type: 'START_SPEAKING' }),
     onPlaybackEnd:   () => dispatch({ type: 'SPEAKING_DONE' }),
     onPlaybackError: (message) => {
+      // Normal interruptions, cancellations, or aborts are expected and should not trigger app errors
+      if (/abort|aborted|canceled|cancelled/i.test(message)) {
+        return
+      }
       console.error('[voice playback]', message)
       dispatch({
         type: 'ERROR',

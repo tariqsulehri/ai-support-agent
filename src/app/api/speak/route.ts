@@ -9,7 +9,7 @@ export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
 
-const TTS_TIMEOUT_MS = 12_000
+const TTS_TIMEOUT_MS = 30_000
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {

@@ -15,8 +15,17 @@ interface UseAudioPlayerReturn {
   stopAll:    () => void
 }
 
-const TTS_FETCH_TIMEOUT_MS = 12_000
+const TTS_FETCH_TIMEOUT_MS = 30_000
 const AUDIO_PLAYBACK_TIMEOUT_MS = 45_000
+
+function isAbortError(err: unknown): boolean {
+  if (!err) return false
+  if (err instanceof DOMException && err.name === 'AbortError') return true
+  if (err instanceof Error) {
+    return /abort|aborted|canceled|cancelled/i.test(err.message) || err.name === 'AbortError'
+  }
+  return typeof err === 'string' && /abort|aborted|canceled|cancelled/i.test(err)
+}
 
 /** A queued sentence whose audio is fetched eagerly, before its turn to play. */
 interface SpeechJob {
@@ -45,12 +54,16 @@ export function useAudioPlayer({
   const playingRef    = useRef(false)
   const currentAudio  = useRef<HTMLAudioElement | null>(null)
   const abortRef      = useRef(false)
+  const inFlightControllersRef = useRef<Set<AbortController>>(new Set())
   const requestHeadersRef = useRef<Record<string, string>>(requestHeaders ?? {})
   requestHeadersRef.current = requestHeaders ?? {}
 
   const fetchBlob = useCallback(async (text: string): Promise<Blob> => {
     const controller = new AbortController()
-    const timeout = window.setTimeout(() => controller.abort(), TTS_FETCH_TIMEOUT_MS)
+    inFlightControllersRef.current.add(controller)
+    const timeout = window.setTimeout(() => {
+      controller.abort(new Error('TTS synthesis fetch timed out'))
+    }, TTS_FETCH_TIMEOUT_MS)
 
     try {
       const res = await fetch('/api/speak', {
@@ -66,6 +79,7 @@ export function useAudioPlayer({
       return await res.blob()
     } finally {
       window.clearTimeout(timeout)
+      inFlightControllersRef.current.delete(controller)
     }
   }, [])
 
@@ -87,6 +101,10 @@ export function useAudioPlayer({
         // Already in flight since enqueue — usually resolved by now.
         blob = await job.blob
       } catch (err) {
+        // If playback was aborted or cancelled, ignore silently
+        if (abortRef.current || isAbortError(err)) {
+          continue
+        }
         onPlaybackError?.(err instanceof Error ? err.message : String(err))
         continue
       }
@@ -119,12 +137,16 @@ export function useAudioPlayer({
         audio.onerror = finish
 
         audio.play().catch((err) => {
-          playbackError = err instanceof Error ? err.message : String(err)
+          if (!abortRef.current && !isAbortError(err)) {
+            playbackError = err instanceof Error ? err.message : String(err)
+          }
           finish()
         })
       })
 
-      if (playbackError) onPlaybackError?.(playbackError)
+      if (playbackError && !abortRef.current && !isAbortError(playbackError)) {
+        onPlaybackError?.(playbackError)
+      }
     }
 
     playingRef.current = false
@@ -148,6 +170,16 @@ export function useAudioPlayer({
   const stopAll = useCallback(() => {
     abortRef.current = true
     queueRef.current = []
+
+    // Abort all in-flight fetch requests
+    for (const controller of inFlightControllersRef.current) {
+      try {
+        controller.abort(new Error('Audio playback stopped'))
+      } catch {
+        // ignore
+      }
+    }
+    inFlightControllersRef.current.clear()
 
     if (currentAudio.current) {
       currentAudio.current.pause()
