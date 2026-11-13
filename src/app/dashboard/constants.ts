@@ -19,15 +19,16 @@ export const tenantConfigurationTab = { id: 'configuration', label: 'Configurati
 export const platformTenantTab = { id: 'tenants', label: 'Tenants' } as const
 
 export const statusOptions: LeadStatus[] = ['new', 'reviewing', 'qualified', 'proposal', 'won', 'lost']
-export const chartColors = ['#0891b2', '#059669', '#f59e0b', '#d946ef', '#f43f5e', '#6366f1']
-export const barClasses = ['bg-cyan-500', 'bg-emerald-500', 'bg-amber-500', 'bg-fuchsia-500', 'bg-rose-500', 'bg-indigo-500']
+export const chartColors = ['#194ad9', '#6e19eb', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#3b82f6']
+export const barClasses = ['bg-[#194ad9]', 'bg-[#6e19eb]', 'bg-cyan-500', 'bg-emerald-500', 'bg-amber-500', 'bg-fuchsia-500', 'bg-blue-500']
 export const softClasses = [
+  'border-blue-100 bg-blue-50 text-[#194ad9]',
+  'border-purple-100 bg-purple-50 text-[#6e19eb]',
   'border-cyan-100 bg-cyan-50 text-cyan-800',
   'border-emerald-100 bg-emerald-50 text-emerald-800',
   'border-amber-100 bg-amber-50 text-amber-900',
   'border-fuchsia-100 bg-fuchsia-50 text-fuchsia-800',
-  'border-rose-100 bg-rose-50 text-rose-800',
-  'border-indigo-100 bg-indigo-50 text-indigo-800',
+  'border-blue-100 bg-blue-50 text-blue-800',
 ]
 
 export const capabilityCards = [

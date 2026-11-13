@@ -73,6 +73,7 @@ export type DashboardAnalytics = {
   recentCalls: DashboardCall[]
   statusCounts: CountItem[]
   leadQualityCounts: CountItem[]
+  monthlyCallVolume: CountItem[]
   intentCounts: CountItem[]
   urgencyCounts: CountItem[]
   sentimentCounts: CountItem[]
@@ -145,6 +146,7 @@ const EMPTY_ANALYTICS: DashboardAnalytics = {
   recentCalls: [],
   statusCounts: [],
   leadQualityCounts: [],
+  monthlyCallVolume: [],
   intentCounts: [],
   urgencyCounts: [],
   sentimentCounts: [],
@@ -189,6 +191,27 @@ function rankedItems(map: Map<string, number>, limit = 8): CountItem[] {
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
     .slice(0, limit)
+}
+
+function monthlyCallVolume(calls: DashboardCall[], now = new Date()): CountItem[] {
+  const months = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1)
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth(),
+      label: new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric' }).format(date),
+      count: 0,
+    }
+  })
+  const byMonth = new Map(months.map((month) => [`${month.year}-${month.month}`, month]))
+
+  for (const call of calls) {
+    const createdAt = new Date(call.createdAt)
+    const bucket = byMonth.get(`${createdAt.getFullYear()}-${createdAt.getMonth()}`)
+    if (bucket) bucket.count += 1
+  }
+
+  return months.map(({ label, count }) => ({ label, count }))
 }
 
 function toDashboardCall(record: RawRecord): DashboardCall {
@@ -387,7 +410,11 @@ export async function getDashboardAnalytics(
     if (stores.length === 0) return EMPTY_ANALYTICS
 
     const recordsByStore = await Promise.all(stores.map(async (store) => {
-      const query = buildStoreQuery(store, filters, options.scope)
+      const historyRange = filters.range && filters.range !== 'all' &&
+        (filters.range === 'today' || Number(filters.range) < 180)
+        ? '180'
+        : filters.range
+      const query = buildStoreQuery(store, { ...filters, range: historyRange }, options.scope)
 
       return conversationCollection<RawRecord>(store)
         .find(query, { projection: DASHBOARD_RECORD_PROJECTION })
@@ -407,6 +434,7 @@ export async function getDashboardAnalytics(
 
     const allCalls = records.map(toDashboardCall)
     const calls = applyFilters(allCalls, filters)
+    const trendCalls = allCalls.filter((call) => matchesSearch(call, filters.q))
     const totalCalls = calls.length
     const statusMap = new Map<string, number>()
     const qualityMap = new Map<string, number>()
@@ -467,6 +495,7 @@ export async function getDashboardAnalytics(
       recentCalls: calls.slice(0, 30),
       statusCounts: rankedItems(statusMap),
       leadQualityCounts: rankedItems(qualityMap),
+      monthlyCallVolume: monthlyCallVolume(trendCalls),
       intentCounts: rankedItems(intentMap),
       urgencyCounts: rankedItems(urgencyMap),
       sentimentCounts: rankedItems(sentimentMap),

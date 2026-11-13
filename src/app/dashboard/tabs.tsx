@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { formatLabel } from '@/lib/admin/forms'
 import type { DashboardAnalytics, DashboardCall } from '@/lib/dashboard/analytics'
 import type { ManagedTenantDetail, ManagedTenantSummary } from '@/lib/tenants/management'
+import { GlossyBarChart, GlossyDonutChart, MonthlyCallVolumeChart } from '@/components/admin/3d-charts'
 import {
   barClasses,
   capabilityCards,
@@ -37,16 +38,38 @@ export function OverviewTab({ analytics }: { analytics: DashboardAnalytics }) {
         <StatCard tone="emerald" label="Pipeline Ready" value={analytics.qualifiedPipeline} detail="Qualified, proposal, or won statuses" />
         <StatCard tone="rose" label="Readiness Score" value={`${analytics.conversionReadiness}%`} detail="Weighted lead capture and sales fit" />
       </div>
-      <div className="grid gap-4 xl:grid-cols-[1fr_1.45fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.25fr_1fr]">
+        <MonthlyCallVolumeChart
+          items={analytics.monthlyCallVolume.map((item) => ({
+            label: item.label,
+            value: item.count,
+            color: '#194ad9',
+          }))}
+        />
+        <DonutChart
+          title="Lead Quality Mix"
+          subtitle="AI lead qualification distribution"
+          items={analytics.leadQualityCounts}
+          total={analytics.totalCalls}
+          unit="leads"
+          infoTooltip="Distribution of analyzed visitor conversations categorized by lead qualification quality"
+          showInsight={true}
+        />
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
         <ProgressRing value={analytics.conversionReadiness} />
-        <PipelineFunnel items={analytics.statusCounts} total={analytics.totalCalls} />
+        <DonutChart
+          title="Pipeline Status"
+          subtitle="Lead records grouped by sales stage"
+          items={analytics.statusCounts}
+          total={analytics.totalCalls}
+          unit="calls"
+          infoTooltip="Completed conversations grouped by their current lead pipeline status."
+        />
       </div>
-      <div className="grid gap-4 xl:grid-cols-3">
-        <DonutChart title="Lead Quality Mix" items={analytics.leadQualityCounts} total={analytics.totalCalls} />
+      <div className="grid gap-4 xl:grid-cols-2">
         <Distribution title="Conversation Intent" subtitle="Why visitors contacted the agent" items={analytics.intentCounts} total={analytics.totalCalls} />
-        <Distribution title="Sentiment" subtitle="Tone of captured conversations" items={analytics.sentimentCounts} total={analytics.totalCalls} />
-      </div>
-      <div className="grid gap-4 xl:grid-cols-3">
+        <Distribution title="Sentiment" subtitle="Tone of completed conversations" items={analytics.sentimentCounts} total={analytics.totalCalls} />
         <Distribution title="Service Demand" subtitle="Services mentioned by leads" items={analytics.serviceCounts} total={analytics.totalCalls} />
         <Distribution title="Categories" subtitle="AI classification by request type" items={analytics.categoryCounts} total={analytics.totalCalls} />
         <Distribution title="Countries" subtitle="Lead geography" items={analytics.topCountries} total={analytics.totalCalls} />
@@ -143,7 +166,7 @@ export function AiTab({ analytics }: { analytics: DashboardAnalytics }) {
         <h2 className="text-lg font-semibold text-slate-950">AI Assisted Recommendations</h2>
         <div className="mt-4 space-y-3">
           {analytics.aiRecommendations.map((item) => (
-            <p key={item} className="rounded-md border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm leading-6 text-slate-800">
+            <p key={item} className="rounded-md border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm leading-6 text-cyan-950">
               {item}
             </p>
           ))}
@@ -153,7 +176,7 @@ export function AiTab({ analytics }: { analytics: DashboardAnalytics }) {
         <h2 className="text-lg font-semibold text-slate-950">Risk Signals</h2>
         <div className="mt-4 space-y-3">
           {analytics.riskSignals.map((item) => (
-            <p key={item} className="rounded-md border border-rose-100 bg-rose-50 px-4 py-3 text-sm leading-6 text-slate-800">
+            <p key={item} className="rounded-md border border-rose-100 bg-rose-50 px-4 py-3 text-sm leading-6 text-rose-950">
               {item}
             </p>
           ))}
@@ -256,9 +279,8 @@ function ConfigurationStatus({
           <p className="text-sm font-semibold text-slate-950">{label}</p>
           <p className="mt-1 break-words text-sm leading-5 text-slate-500">{detail}</p>
         </div>
-        <span className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold ${
-          complete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'
-        }`}>
+        <span className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold ${complete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'
+          }`}>
           {complete ? 'Ready' : 'Required'}
         </span>
       </div>
@@ -270,6 +292,8 @@ export function PlatformTenantsTab({ tenants }: { tenants: ManagedTenantSummary[
   const activeTenants = tenants.filter((tenant) => tenant.status === 'active').length
   const disabledTenants = tenants.filter((tenant) => tenant.status === 'disabled').length
   const missingKeys = tenants.filter((tenant) => !tenant.hasOpenAiKey).length
+  const archivedTenants = tenants.filter((tenant) => tenant.status === 'archived').length
+  const readyTenants = tenants.filter((tenant) => tenant.hasOpenAiKey).length
 
   return (
     <div className="space-y-6">
@@ -305,6 +329,31 @@ export function PlatformTenantsTab({ tenants }: { tenants: ManagedTenantSummary[
           <StatCard label="Missing OpenAI Key" value={missingKeys} detail="Tenants needing API setup" tone="rose" />
         </div>
       </Panel>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <GlossyDonutChart
+          title="Tenant Status"
+          subtitle="Registered tenant operating distribution"
+          total={tenants.length}
+          unit="tenants"
+          infoTooltip="Distribution of multi-tenant accounts by current system status"
+          items={[
+            { label: 'Active', value: activeTenants, color: '#10b981' },
+            { label: 'Disabled', value: disabledTenants, color: '#f59e0b' },
+            { label: 'Archived', value: archivedTenants, color: '#64748b' },
+          ]}
+        />
+        <GlossyBarChart
+          title="Tenant Setup Readiness"
+          totalLabel={`${tenants.length} tenants`}
+          total={tenants.length}
+          infoTooltip="Tenants with OpenAI credentials configured compared with tenants still missing a key."
+          items={[
+            { label: 'OpenAI key configured', value: readyTenants, color: '#194ad9' },
+            { label: 'OpenAI key missing', value: missingKeys, color: '#ea580c' },
+          ]}
+        />
+      </div>
 
       <Panel className="overflow-hidden">
         <div className="border-b border-slate-100 px-5 py-4">

@@ -27,6 +27,7 @@ import { recordAuditLog } from '@/lib/observability/audit'
 import { OPENAI_KEY_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
 import { CheckboxField, Field, TextArea } from '@/components/admin/form-fields'
 import { AdminPanel as Panel } from '@/components/admin/panel'
+import { GlossyDonutChart } from '@/components/admin/3d-charts'
 import { StatusBadge } from '@/components/admin/status-badge'
 import { formText as text, formatLabel, safeErrorMessage as safeMessage } from '@/lib/admin/forms'
 
@@ -351,6 +352,13 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
     subscriptionReady &&
     Boolean(detail.openAiSecret) &&
     verifiedDomains.length > 0
+  const setupRequirements = [
+    detail.domains.length > 0,
+    verifiedDomains.length > 0,
+    Boolean(detail.openAiSecret),
+    subscriptionReady,
+  ]
+  const setupComplete = setupRequirements.filter(Boolean).length
   const missingRuntimeMessages = [
     ...(!detail.openAiSecret ? [OPENAI_KEY_NOT_CONFIGURED] : []),
   ]
@@ -405,6 +413,20 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
             {missingRuntimeMessages.join(' ')}
           </div>
         )}
+
+        <div className="mb-6 max-w-xl">
+          <GlossyDonutChart
+            title="Tenant Setup Progress"
+            infoTooltip="Completed setup requirements compared with the full tenant setup checklist."
+            total={setupRequirements.length}
+            unit="requirements"
+            size={164}
+            items={[
+              { label: 'Ready', value: setupComplete, color: '#10b981' },
+              { label: 'Needs setup', value: setupRequirements.length - setupComplete, color: '#e85934' },
+            ]}
+          />
+        </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6">

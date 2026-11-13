@@ -8,11 +8,11 @@
   /* ── Primary brand color (RGB channels, no rgb() wrapper)
      Override via ?primaryColor=#hex on the /voice embed URL,
      or via postMessage { type: 'voice-agent:theme', colors: { primary: '#hex' } }
-     Defaults: amber #F9B01E */
-  --va-primary:    249 176 30;   /* #F9B01E */
-  --va-primary-dk: 223 160 26;   /* #DFA01A */
-  --va-primary-lt: 254 249 236;  /* #FEF9EC */
-  --va-primary-md: 253 240 200;  /* #FDF0C8 */
+     Defaults: AIScripto Royal Blue #194ad9 */
+  --va-primary:    25 74 217;   /* #194ad9 */
+  --va-primary-dk: 19 60 180;   /* darker #133cb4 */
+  --va-primary-lt: 238 242 255;  /* soft tint */
+  --va-primary-md: 219 229 254;  /* medium tint */
 }
 
 html, body {
@@ -41,3 +41,61 @@ html, body {
 
 /* ── Message fade-in ─────────────────────────────────────────────────────── */
 .msg-enter { animation: fade-up 0.2s ease-out forwards; }
+
+/* Donut chart geometry and dimensional data marks used across dashboards. */
+.glossy-donut-scene {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin-inline: auto;
+}
+.glossy-donut {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+.glossy-donut-face {
+  border-radius: 50%;
+  filter: drop-shadow(0 6px 12px rgba(15, 23, 42, 0.12));
+}
+.glossy-donut-hole {
+  position: absolute;
+  inset: 26%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.08);
+  pointer-events: none;
+}
+.glossy-bar-track {
+  position: relative;
+  height: 15px;
+  overflow: visible;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #e2e8f0, #f1f5f9 45%, #e2e8f0);
+  box-shadow: inset 0 2px 4px rgba(15,23,42,.14), 0 1px 0 #fff;
+}
+.glossy-bar-face {
+  position: relative;
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--bar-color) 78%, white), var(--bar-color) 52%, color-mix(in srgb, var(--bar-color) 80%, #000));
+  box-shadow: inset 0 2px 3px rgba(255,255,255,.8), inset 0 -2px 4px rgba(0,0,0,.25), 0 4px 12px color-mix(in srgb, var(--bar-color) 35%, transparent);
+}
+.glossy-bar-face::after {
+  content: "";
+  position: absolute;
+  inset: 1px 3px auto;
+  height: 40%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255,255,255,.85), rgba(255,255,255,.2));
+}

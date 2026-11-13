@@ -16,6 +16,10 @@ https://voiceagent-aiscripto.vercel.app/admin/tenants
 
 Use this area to manage tenants, subscriptions, domains, embed setup, and platform-level configuration.
 
+### Tenant secret encryption
+
+Saving tenant-owned secrets, including a tenant Database URL, requires the server environment variable `PLATFORM_ENCRYPTION_KEY`. Set it to a stable, randomly generated secret with at least 32 characters. For local development, place it in `.env.local`; for the deployed site, add it to the hosting provider's server environment settings and redeploy. Keep the same key across restarts and deployments: changing or losing it makes existing encrypted tenant secrets unreadable.
+
 ## Ai-scripto Tenant Admin
 
 Tenant login page:

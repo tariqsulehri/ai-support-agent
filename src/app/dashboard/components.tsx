@@ -2,10 +2,9 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { formatLabel } from '@/lib/admin/forms'
 import type { DashboardCall, DashboardFilters } from '@/lib/dashboard/analytics'
+import { GlossyBarChart, GlossyDonutChart } from '@/components/admin/3d-charts'
 import {
-  barClasses,
   chartColors,
-  softClasses,
   statusOptions,
   type CountItem,
 } from './constants'
@@ -88,21 +87,39 @@ export function StatCard({
   tone: 'cyan' | 'emerald' | 'amber' | 'rose'
 }) {
   const tones = {
-    cyan: 'from-cyan-500 to-blue-600',
-    emerald: 'from-emerald-500 to-teal-600',
-    amber: 'from-amber-400 to-orange-500',
-    rose: 'from-rose-500 to-fuchsia-600',
+    cyan: {
+      bar: 'from-[#194ad9] via-[#2563eb] to-[#38bdf8]',
+      icon: 'from-[#194ad9] to-[#3b82f6]',
+      shadow: 'shadow-[0_8px_16px_-4px_rgba(25,74,217,0.45)]',
+    },
+    emerald: {
+      bar: 'from-[#059669] via-[#10b981] to-[#34d399]',
+      icon: 'from-[#059669] to-[#10b981]',
+      shadow: 'shadow-[0_8px_16px_-4px_rgba(16,185,129,0.45)]',
+    },
+    amber: {
+      bar: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]',
+      icon: 'from-[#d97706] to-[#f59e0b]',
+      shadow: 'shadow-[0_8px_16px_-4px_rgba(245,158,11,0.45)]',
+    },
+    rose: {
+      bar: 'from-[#6e19eb] via-[#9333ea] to-[#ec4899]',
+      icon: 'from-[#6e19eb] to-[#9333ea]',
+      shadow: 'shadow-[0_8px_16px_-4px_rgba(110,25,235,0.45)]',
+    },
   }
 
+  const current = tones[tone]
+
   return (
-    <div className="relative overflow-hidden rounded-lg border border-white/75 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
-      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${tones[tone]}`} />
-      <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${tones[tone]} text-sm font-black text-white shadow-lg`}>
+    <div className="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
+      <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${current.bar}`} />
+      <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${current.icon} ${current.shadow} text-base font-black text-white`}>
         {label.slice(0, 1)}
       </div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-2 text-4xl font-semibold text-slate-950">{value}</p>
-      <p className="mt-2 text-sm leading-5 text-slate-600">{detail}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="mt-2 text-4xl font-extrabold text-slate-950 tracking-tight">{value}</p>
+      <p className="mt-2 text-sm leading-5 text-slate-600 font-medium">{detail}</p>
     </div>
   )
 }
@@ -119,74 +136,52 @@ export function Distribution({
   total: number
 }) {
   return (
-    <Panel className="p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-base font-semibold text-slate-950">{title}</h2>
-          {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
-        </div>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{items.length} groups</span>
-      </div>
-      <div className="mt-5 space-y-4">
-        {items.length === 0 ? (
-          <p className="text-sm text-slate-500">No data yet.</p>
-        ) : (
-          items.map((item, index) => (
-            <div key={item.label}>
-              <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium text-slate-700">{formatLabel(item.label)}</span>
-                <span className="font-semibold text-slate-950">{item.count}</span>
-              </div>
-              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-3 rounded-full ${barClasses[index % barClasses.length]}`}
-                  style={{ width: `${Math.max(percent(item.count, total), 5)}%` }}
-                />
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </Panel>
+    <GlossyBarChart
+      title={title}
+      subtitle={subtitle}
+      totalLabel={`${items.length} groups`}
+      total={total}
+      variant="distribution"
+      items={items.map((item, index) => ({
+        label: formatLabel(item.label),
+        value: item.count,
+        color: chartColors[index % chartColors.length],
+      }))}
+    />
   )
 }
 
-export function DonutChart({ title, items, total }: { title: string; items: CountItem[]; total: number }) {
-  const visible = items.slice(0, 6)
-  const segments = visible.length ? visible : [{ label: 'No data', count: 1 }]
-  let cursor = 0
-  const gradient = segments
-    .map((item, index) => {
-      const size = percent(item.count, total || 1)
-      const start = cursor
-      cursor += size
-      return `${chartColors[index % chartColors.length]} ${start}% ${Math.max(cursor, start + 1)}%`
-    })
-    .join(', ')
-
+export function DonutChart({
+  title,
+  subtitle,
+  items,
+  total,
+  unit = 'records',
+  infoTooltip,
+  showInsight = true,
+}: {
+  title: string
+  subtitle?: string
+  items: CountItem[]
+  total: number
+  unit?: string
+  infoTooltip?: string
+  showInsight?: boolean
+}) {
   return (
-    <Panel className="p-5">
-      <h2 className="text-base font-semibold text-slate-950">{title}</h2>
-      <div className="mt-5 grid items-center gap-5 sm:grid-cols-[150px_1fr]">
-        <div className="grid h-36 w-36 place-items-center rounded-full shadow-inner" style={{ background: `conic-gradient(${gradient})` }}>
-          <div className="grid h-20 w-20 place-items-center rounded-full bg-white text-center shadow">
-            <span className="text-xl font-semibold text-slate-950">{total}</span>
-          </div>
-        </div>
-        <div className="space-y-2">
-          {visible.length === 0 ? (
-            <p className="text-sm text-slate-500">No data yet.</p>
-          ) : (
-            visible.map((item, index) => (
-              <div key={item.label} className={`flex items-center justify-between rounded-md border px-3 py-2 text-sm ${softClasses[index % softClasses.length]}`}>
-                <span className="font-semibold">{formatLabel(item.label)}</span>
-                <span>{percent(item.count, total)}%</span>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </Panel>
+    <GlossyDonutChart
+      title={title}
+      subtitle={subtitle}
+      total={total}
+      unit={unit}
+      infoTooltip={infoTooltip}
+      showInsight={showInsight}
+      items={items.slice(0, 6).map((item, index) => ({
+        label: formatLabel(item.label),
+        value: item.count,
+        color: chartColors[index % chartColors.length],
+      }))}
+    />
   )
 }
 
@@ -194,25 +189,23 @@ export function ProgressRing({ value }: { value: number }) {
   const safeValue = Math.min(Math.max(value, 0), 100)
 
   return (
-    <Panel className="p-5">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-        <div
-          className="grid h-32 w-32 shrink-0 place-items-center rounded-full"
-          style={{ background: `conic-gradient(#0891b2 ${safeValue * 3.6}deg, #e2e8f0 0deg)` }}
-        >
-          <div className="grid h-24 w-24 place-items-center rounded-full bg-white">
-            <span className="text-3xl font-semibold text-slate-950">{safeValue}%</span>
-          </div>
-        </div>
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-cyan-700">Executive Signal</p>
-          <h2 className="mt-2 text-xl font-semibold text-slate-950">Decision readiness</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Weighted view of lead capture, hot-lead volume, and movement into qualified or proposal stages.
-          </p>
-        </div>
-      </div>
-    </Panel>
+    <div className="grid gap-4">
+      <GlossyDonutChart
+        title="Decision Readiness"
+        total={100}
+        unit="score"
+        centerValue={`${safeValue}%`}
+        infoTooltip="A weighted view of lead capture, hot-lead volume, and movement into qualified or proposal stages."
+        size={164}
+        items={[
+          { label: 'Ready', value: safeValue, color: '#194ad9' },
+          { label: 'Remaining', value: 100 - safeValue, color: '#e2e8f0' },
+        ]}
+      />
+      <p className="px-1 text-sm leading-6 text-slate-600">
+        Weighted view of lead capture, hot-lead volume, and movement into qualified or proposal stages.
+      </p>
+    </div>
   )
 }
 
@@ -223,25 +216,17 @@ export function PipelineFunnel({ items, total }: { items: CountItem[]; total: nu
   }))
 
   return (
-    <Panel className="p-5">
-      <h2 className="text-base font-semibold text-slate-950">Lead Pipeline Funnel</h2>
-      <div className="mt-5 space-y-3">
-        {ordered.map((item, index) => (
-          <div key={item.label} className="grid gap-2 sm:grid-cols-[92px_1fr_42px] sm:items-center">
-            <span className="text-sm font-semibold text-slate-700">{formatLabel(item.label)}</span>
-            <div className="h-9 overflow-hidden rounded-md bg-slate-100">
-              <div
-                className={`flex h-9 items-center justify-end rounded-md px-3 text-xs font-bold text-white ${barClasses[index % barClasses.length]}`}
-                style={{ width: `${Math.max(percent(item.count, total), item.count ? 12 : 0)}%` }}
-              >
-                {item.count > 0 ? `${percent(item.count, total)}%` : ''}
-              </div>
-            </div>
-            <span className="text-sm font-semibold text-slate-950">{item.count}</span>
-          </div>
-        ))}
-      </div>
-    </Panel>
+    <GlossyBarChart
+      title="Lead Pipeline Funnel"
+      infoTooltip="Lead counts by pipeline status, shown as a share of all completed calls."
+      total={total}
+      variant="funnel"
+      items={ordered.map((item, index) => ({
+        label: formatLabel(item.label),
+        value: item.count,
+        color: chartColors[index % chartColors.length],
+      }))}
+    />
   )
 }
 

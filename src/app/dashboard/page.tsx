@@ -135,11 +135,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 key={tab.id}
                 href={dashboardTabHref(tab.id, filters)}
                 prefetch={false}
-                className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
-                  selected
+                className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${selected
                     ? 'border-cyan-600 bg-cyan-600 text-white shadow-md'
                     : 'border-transparent bg-transparent text-slate-700 hover:bg-white hover:text-cyan-700'
-                }`}
+                  }`}
               >
                 {tab.label}
               </Link>

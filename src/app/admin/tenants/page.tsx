@@ -19,6 +19,7 @@ import { recordAuditLog } from '@/lib/observability/audit'
 import { listTenantUsageSummaries, type TenantUsageSummary } from '@/lib/observability/usage'
 import { Field, SelectField, TextArea } from '@/components/admin/form-fields'
 import { StatusBadge } from '@/components/admin/status-badge'
+import { GlossyBarChart, GlossyDonutChart } from '@/components/admin/3d-charts'
 import { formText as text, formatLabel, safeErrorMessage as safeMessage } from '@/lib/admin/forms'
 import {
   TENANT_BILLING_CYCLES,
@@ -41,6 +42,16 @@ const tabs: Array<{ id: AdminTenantTab; label: string }> = [
   { id: 'subscriptions', label: 'Subscriptions' },
   { id: 'usage', label: 'Usage' },
   { id: 'archived', label: 'Archived' },
+]
+
+const usageChartLabels: Array<[keyof TenantUsageSummary['counters'], string]> = [
+  ['embed_session_created', 'Embed Sessions'],
+  ['embed_session_denied', 'Denied Sessions'],
+  ['config_request', 'Config'],
+  ['chat_request', 'Chat'],
+  ['transcription_request', 'Transcription'],
+  ['tts_request', 'TTS'],
+  ['conversation_completed', 'Completed Calls'],
 ]
 
 function activeTab(value: string | undefined): AdminTenantTab {
@@ -416,16 +427,6 @@ function UsagePanel({
   tenants: ManagedTenantSummary[]
   usageByTenant: Map<string, TenantUsageSummary>
 }) {
-  const labels: Array<[keyof TenantUsageSummary['counters'], string]> = [
-    ['embed_session_created', 'Embed Sessions'],
-    ['embed_session_denied', 'Denied Sessions'],
-    ['config_request', 'Config'],
-    ['chat_request', 'Chat'],
-    ['transcription_request', 'Transcription'],
-    ['tts_request', 'TTS'],
-    ['conversation_completed', 'Completed Calls'],
-  ]
-
   return (
     <section className="overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] ring-1 ring-slate-900/5">
       <div className="h-1 bg-[linear-gradient(90deg,#0891b2,#10b981,#f59e0b)]" />
@@ -440,7 +441,7 @@ function UsagePanel({
             <tr>
               <th className="px-4 py-3">Tenant</th>
               <th className="px-4 py-3">Total</th>
-              {labels.map(([, label]) => (
+              {usageChartLabels.map(([, label]) => (
                 <th key={label} className="px-4 py-3">{label}</th>
               ))}
               <th className="px-4 py-3">Last Seen</th>
@@ -449,7 +450,7 @@ function UsagePanel({
           <tbody className="divide-y divide-slate-100 bg-white">
             {tenants.length === 0 ? (
               <tr>
-                <td colSpan={labels.length + 3} className="px-4 py-8 text-center text-slate-500">No tenants available.</td>
+                <td colSpan={usageChartLabels.length + 3} className="px-4 py-8 text-center text-slate-500">No tenants available.</td>
               </tr>
             ) : tenants.map((tenant) => {
               const usage = usageByTenant.get(tenant.tenantId)
@@ -460,7 +461,7 @@ function UsagePanel({
                     <p className="mt-1 font-mono text-xs text-slate-500">{tenant.tenantId}</p>
                   </td>
                   <td className="px-4 py-3 font-semibold text-slate-950">{usage?.total ?? 0}</td>
-                  {labels.map(([key, label]) => (
+                  {usageChartLabels.map(([key, label]) => (
                     <td key={label} className="px-4 py-3 text-slate-700">{usage?.counters?.[key] ?? 0}</td>
                   ))}
                   <td className="px-4 py-3 text-slate-500">
@@ -490,6 +491,11 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
   const activeTenants = tenants.filter((tenant) => tenant.status !== 'archived')
   const archivedTenants = tenants.filter((tenant) => tenant.status === 'archived')
   const usageByTenant = new Map(usageSummaries.map((summary) => [summary.tenantId, summary]))
+  const aggregateUsage = usageChartLabels.map(([key, label], index) => ({
+    label,
+    value: usageSummaries.reduce((sum, summary) => sum + (summary.counters[key] ?? 0), 0),
+    color: ['#194ad9', '#6e19eb', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#3b82f6'][index],
+  }))
 
   return (
     <main className="min-h-dvh bg-[#f6f8fb] px-4 py-8 text-slate-950">
@@ -531,6 +537,25 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
           </div>
         </section>
 
+        <section className="mb-5 grid gap-4 xl:grid-cols-2" aria-label="Platform metrics">
+          <GlossyDonutChart
+            title="Tenant Status"
+            infoTooltip="Registered tenant accounts grouped by active, disabled, and archived status."
+            total={tenants.length}
+            items={[
+              { label: 'Active', value: tenants.filter((tenant) => tenant.status === 'active').length, color: '#10b981' },
+              { label: 'Disabled', value: tenants.filter((tenant) => tenant.status === 'disabled').length, color: '#f59e0b' },
+              { label: 'Archived', value: archivedTenants.length, color: '#64748b' },
+            ]}
+          />
+          <GlossyBarChart
+            title="Platform Usage"
+            totalLabel={`${usageSummaries.length} tenants`}
+            infoTooltip="Aggregated platform activity across registered tenants."
+            items={aggregateUsage}
+          />
+        </section>
+
         <nav className="mb-5 flex flex-wrap gap-2 rounded-lg border border-white/80 bg-white/90 p-2 shadow-sm ring-1 ring-slate-900/5" aria-label="Tenant admin tabs">
           {tabs.map((tab) => {
             const selected = selectedTab === tab.id
@@ -538,7 +563,7 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
               <Link
                 key={tab.id}
                 href={`/admin/tenants?tab=${tab.id}`}
-                className={`rounded-md px-4 py-2 text-sm font-semibold transition ${selected ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:bg-cyan-50 hover:text-cyan-800'}`}
+                className={`rounded-md px-4 py-2 text-sm font-semibold transition ${selected ? 'bg-cyan-600 text-white shadow-sm' : 'text-cyan-900 hover:bg-cyan-50 hover:text-cyan-950'}`}
               >
                 {tab.label}
               </Link>

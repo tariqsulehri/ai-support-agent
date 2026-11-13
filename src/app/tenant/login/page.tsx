@@ -23,7 +23,7 @@ export default async function TenantLoginPage({ searchParams }: LoginPageProps) 
   return (
     <main className="min-h-dvh bg-[#f6f8fb] px-4 py-10 text-slate-950">
       <div className="mx-auto grid min-h-[calc(100dvh-5rem)] w-full max-w-5xl overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.12)] lg:grid-cols-[1fr_430px]">
-        <section className="flex min-h-[560px] flex-col justify-between bg-[linear-gradient(135deg,#0f766e,#0891b2)] p-8 text-white">
+        <section className="flex min-h-[560px] flex-col justify-between bg-[linear-gradient(135deg,#194ad9,#2563eb)] p-8 text-white">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100">Tenant Workspace</p>
             <h1 className="mt-4 max-w-xl text-4xl font-semibold leading-tight">Manage your agent, leads, email, and workspace settings.</h1>
