@@ -115,7 +115,7 @@ export function useAudioPlayer({
       let playbackError: string | null = null
 
       await new Promise<void>((resolve) => {
-        const audio = new Audio(url)
+        const audio = new Audio()
         currentAudio.current = audio
         let settled = false
 
@@ -123,19 +123,33 @@ export function useAudioPlayer({
           if (settled) return
           settled = true
           window.clearTimeout(timeout)
-          URL.revokeObjectURL(url)
           currentAudio.current = null
+          audio.onended = null
+          audio.onerror = null
+          audio.pause()
+          audio.removeAttribute('src')
+          audio.load()
+
+          // Allow the browser media pipeline time to release the blob before revocation
+          window.setTimeout(() => {
+            try {
+              URL.revokeObjectURL(url)
+            } catch {
+              // ignore
+            }
+          }, 10_000)
+
           resolve()
         }
 
         const timeout = window.setTimeout(() => {
-          audio.pause()
           finish()
         }, AUDIO_PLAYBACK_TIMEOUT_MS)
 
         audio.onended = finish
         audio.onerror = finish
 
+        audio.src = url
         audio.play().catch((err) => {
           if (!abortRef.current && !isAbortError(err)) {
             playbackError = err instanceof Error ? err.message : String(err)
@@ -182,8 +196,13 @@ export function useAudioPlayer({
     inFlightControllersRef.current.clear()
 
     if (currentAudio.current) {
-      currentAudio.current.pause()
+      const audio = currentAudio.current
       currentAudio.current = null
+      audio.onended = null
+      audio.onerror = null
+      audio.pause()
+      audio.removeAttribute('src')
+      audio.load()
     }
 
     playingRef.current = false

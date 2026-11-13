@@ -366,7 +366,29 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
           dispatch({ type: 'REPLY_COMPLETE', fullText: greetingText, endCall: false })
           historyRef.current.push({ role: 'assistant', content: greetingText })
           dispatch({ type: 'CONNECTED' })
-          enqueue(greetingText)
+
+          // In browsers with strict autoplay policies, avoid calling audio.play()
+          // before the user has made an initial interaction with the document.
+          const hasUserInteracted =
+            typeof navigator !== 'undefined' &&
+            'userActivation' in navigator &&
+            Boolean(navigator.userActivation?.hasBeenActive)
+
+          if (hasUserInteracted) {
+            enqueue(greetingText)
+          } else {
+            const playOnFirstInteraction = () => {
+              window.removeEventListener('click', playOnFirstInteraction)
+              window.removeEventListener('keydown', playOnFirstInteraction)
+              window.removeEventListener('touchstart', playOnFirstInteraction)
+              if (!cancelled && stateRef.current.phase === 'idle') {
+                enqueue(greetingText)
+              }
+            }
+            window.addEventListener('click', playOnFirstInteraction, { once: true, passive: true })
+            window.addEventListener('keydown', playOnFirstInteraction, { once: true, passive: true })
+            window.addEventListener('touchstart', playOnFirstInteraction, { once: true, passive: true })
+          }
         } else {
           const greeting = await streamChat([{ role: 'user', content: '__GREET__' }], cancelled ? null : dispatch)
           if (greeting?.fullText) greetingRef.current = greeting.fullText
