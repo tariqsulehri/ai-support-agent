@@ -123,13 +123,20 @@ export async function getDecryptedTenantSecretFromDb(
 
   if (!record) return null
 
-  return decryptSecret({
-    ciphertext: record.ciphertext,
-    iv: record.iv,
-    authTag: record.authTag,
-    algorithm: record.algorithm,
-    keyVersion: record.keyVersion,
-  })
+  try {
+    return decryptSecret({
+      ciphertext: record.ciphertext,
+      iv: record.iv,
+      authTag: record.authTag,
+      algorithm: record.algorithm,
+      keyVersion: record.keyVersion,
+    })
+  } catch (err) {
+    console.warn(`[tenant-secrets] Failed to decrypt ${kind} for tenant ${tenantId}`, {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
 }
 
 export async function getDecryptedTenantSecret(

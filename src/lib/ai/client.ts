@@ -6,19 +6,28 @@ import type { TenantConfig } from '@/lib/tenants/types'
 const clients = new Map<string, OpenAI>()
 
 function getApiKey(tenant?: TenantConfig): string {
-  if (tenant?.runtimeSecrets?.openaiApiKey) {
-    return tenant.runtimeSecrets.openaiApiKey
+  // If a tenant is provided, the API key must be derived from tenant information stored in the database
+  if (tenant) {
+    if (tenant.runtimeSecrets?.openaiApiKey?.trim()) {
+      return tenant.runtimeSecrets.openaiApiKey.trim()
+    }
+
+    if (tenant.openaiApiKeyEnv?.trim()) {
+      const tenantKey = process.env[tenant.openaiApiKeyEnv.trim()]?.trim()
+      if (tenantKey) return tenantKey
+    }
+
+    throw new Error(
+      `OpenAI API key not configured for tenant "${tenant.companyName || tenant.id}". The key must be stored in the tenant database.`
+    )
   }
 
-  if (tenant?.openaiApiKeyEnv) {
-    const tenantKey = process.env[tenant.openaiApiKeyEnv]
-    if (tenantKey) return tenantKey
+  // System fallback when no tenant context is provided (e.g., platform scripts)
+  if (env.OPENAI_API_KEY?.trim()) {
+    return env.OPENAI_API_KEY.trim()
   }
 
-  if (!env.OPENAI_API_KEY) {
-    throw new Error(OPENAI_KEY_NOT_CONFIGURED)
-  }
-  return env.OPENAI_API_KEY
+  throw new Error(OPENAI_KEY_NOT_CONFIGURED)
 }
 
 /**

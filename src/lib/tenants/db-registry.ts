@@ -93,7 +93,12 @@ async function buildTenantBundle(db: Db, tenant: TenantRecord): Promise<TenantBu
   let openaiApiKey: string | undefined
   let smtpPassword: string | undefined
   try {
-    openaiApiKey = await getDecryptedTenantSecretFromDb(db, tenant.tenantId, 'openai_api_key') ?? undefined
+    openaiApiKey =
+      (await getDecryptedTenantSecretFromDb(db, tenant.tenantId, 'openai_api_key')) ??
+      (tenant.slug && tenant.slug !== tenant.tenantId
+        ? await getDecryptedTenantSecretFromDb(db, tenant.slug, 'openai_api_key')
+        : undefined) ??
+      undefined
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.warn('[tenants:db] tenant OpenAI secret could not be decrypted', {
@@ -102,7 +107,12 @@ async function buildTenantBundle(db: Db, tenant: TenantRecord): Promise<TenantBu
     })
   }
   try {
-    smtpPassword = await getDecryptedTenantSecretFromDb(db, tenant.tenantId, 'smtp_password') ?? undefined
+    smtpPassword =
+      (await getDecryptedTenantSecretFromDb(db, tenant.tenantId, 'smtp_password')) ??
+      (tenant.slug && tenant.slug !== tenant.tenantId
+        ? await getDecryptedTenantSecretFromDb(db, tenant.slug, 'smtp_password')
+        : undefined) ??
+      undefined
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.warn('[tenants:db] tenant SMTP secret could not be decrypted', {

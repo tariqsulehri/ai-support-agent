@@ -26,7 +26,7 @@ function hasTenantOpenAIKey(tenant: TenantConfig): boolean {
     if (process.env[tenant.openaiApiKeyEnv]?.trim()) return true
   }
 
-  return Boolean(process.env.OPENAI_API_KEY?.trim())
+  return false
 }
 
 async function hasTenantDatabaseString(tenant: TenantConfig): Promise<boolean> {
