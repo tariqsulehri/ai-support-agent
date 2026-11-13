@@ -1,27 +1,22 @@
 import "dotenv/config";
-import OpenAI from "openai";
 import * as readline from "readline";
 import * as path from "path";
 import * as fs from "fs";
-
-// ── Tenant loader (CLI-side, relative imports only) ───────────────────────────
-interface TenantConfig {
-  id: string; agentName: string; companyName: string;
-  languageMode: string; supportedLanguages?: string[];
-  tone: string; ttsProvider: string; ttsVoice: string;
-  services: string[]; customInstructions?: string;
-  knowledgeBase?: { topic: string; content: string }[];
-}
+import { getTenantById, getDefaultTenant } from "../lib/tenants/registry";
+import { getOpenAIClient } from "../lib/ai/client";
+import type { TenantConfig } from "../lib/tenants/types";
 
 const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID || "ai-scripto";
 
-function loadTenant(id?: string): TenantConfig {
+async function loadCliTenant(id?: string): Promise<TenantConfig> {
+  const dbTenant = id ? await getTenantById(id) : await getDefaultTenant();
+  if (dbTenant) return dbTenant;
+
   const file = path.resolve(__dirname, "../data/tenants.json");
   const tenants: TenantConfig[] = JSON.parse(fs.readFileSync(file, "utf8"));
   if (!tenants.length) throw new Error("tenants.json is empty");
-  if (!id) return tenants.find(t => t.id === DEFAULT_TENANT_ID) ?? tenants[0];
-  const found = tenants.find(t => t.id === id);
-  if (!found) throw new Error(`Tenant "${id}" not found in tenants.json`);
+  const found = id ? tenants.find(t => t.id === id) : tenants.find(t => t.id === DEFAULT_TENANT_ID) ?? tenants[0];
+  if (!found) throw new Error(`Tenant "${id}" not found`);
   return found;
 }
 
@@ -35,9 +30,9 @@ function buildSystemPrompt(c: TenantConfig): string {
 
   return `
 You are ${c.agentName}, a representative of ${c.companyName}.
-Detect the user's language and respond in the same language. Tone: ${c.tone}.
+Detect the user's language and respond in the same language. Tone: ${c.tone ?? 'professional'}.
 
-${c.companyName} provides: ${c.services.map(s => `\n- ${s}`).join("")}
+${c.companyName} provides: ${(c.services ?? []).map(s => `\n- ${s}`).join("")}
 
 ${kb}
 
@@ -50,14 +45,13 @@ When user is done and you have name+email+phone+country, respond with [END_CALL]
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-const tenantId = process.argv[2] ?? process.env.TENANT_ID;
-const tenant   = loadTenant(tenantId);
-
-const openai = new OpenAI();
-
 type Message = { role: "system" | "user" | "assistant"; content: string };
 
 async function runTextAgent(): Promise<void> {
+  const requestedId = process.argv[2] ?? process.env.TENANT_ID;
+  const tenant      = await loadCliTenant(requestedId);
+  const openai      = getOpenAIClient(tenant);
+
   const SYSTEM_PROMPT = buildSystemPrompt(tenant);
   const messages: Message[] = [{ role: "system", content: SYSTEM_PROMPT }];
 

@@ -4,26 +4,21 @@ import { spawn, execSync } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-
-
-// ── Tenant loader (CLI-side, relative imports only) ───────────────────────────
-interface TenantConfig {
-  id: string; agentName: string; companyName: string;
-  languageMode: string; supportedLanguages?: string[];
-  tone: string; ttsProvider: string; ttsVoice: string;
-  services: string[]; customInstructions?: string;
-  knowledgeBase?: { topic: string; content: string }[];
-}
+import { getTenantById, getDefaultTenant } from "../lib/tenants/registry";
+import { getOpenAIClient } from "../lib/ai/client";
+import type { TenantConfig } from "../lib/tenants/types";
 
 const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID || "ai-scripto";
 
-function loadTenant(id?: string): TenantConfig {
+async function loadCliTenant(id?: string): Promise<TenantConfig> {
+  const dbTenant = id ? await getTenantById(id) : await getDefaultTenant();
+  if (dbTenant) return dbTenant;
+
   const file = path.resolve(__dirname, "../data/tenants.json");
   const tenants: TenantConfig[] = JSON.parse(fs.readFileSync(file, "utf8"));
   if (!tenants.length) throw new Error("tenants.json is empty");
-  if (!id) return tenants.find(t => t.id === DEFAULT_TENANT_ID) ?? tenants[0];
-  const found = tenants.find(t => t.id === id);
-  if (!found) throw new Error(`Tenant "${id}" not found in tenants.json`);
+  const found = id ? tenants.find(t => t.id === id) : tenants.find(t => t.id === DEFAULT_TENANT_ID) ?? tenants[0];
+  if (!found) throw new Error(`Tenant "${id}" not found`);
   return found;
 }
 
@@ -37,9 +32,9 @@ function buildSystemPrompt(c: TenantConfig): string {
 
   return `
 You are ${c.agentName}, a representative of ${c.companyName}.
-Detect the user's language and respond in the same language. Tone: ${c.tone}.
+Detect the user's language and respond in the same language. Tone: ${c.tone ?? 'professional'}.
 
-${c.companyName} provides: ${c.services.map(s => `\n- ${s}`).join("")}
+${c.companyName} provides: ${(c.services ?? []).map(s => `\n- ${s}`).join("")}
 
 ${kb}
 
@@ -64,10 +59,9 @@ function getWhisperCode(language: string): string {
 }
 
 // ── TTS (macOS afplay) ────────────────────────────────────────────────────────
-async function speakText(text: string, tenant: TenantConfig): Promise<void> {
+async function speakText(text: string, tenant: TenantConfig, openai: OpenAI): Promise<void> {
   if (!text.trim()) return;
 
-  const openai   = new OpenAI();
   const tmpFile  = path.join(os.tmpdir(), `va_tts_${Date.now()}.mp3`);
   const voice    = (tenant.ttsVoice ?? "nova") as
     "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer";
@@ -119,8 +113,7 @@ function checkSox(): void {
 }
 
 // ── Transcribe ────────────────────────────────────────────────────────────────
-async function transcribe(audioPath: string, whisperCode?: string): Promise<string> {
-  const openai = new OpenAI();
+async function transcribe(audioPath: string, openai: OpenAI, whisperCode?: string): Promise<string> {
   const result = await openai.audio.transcriptions.create({
     file:  fs.createReadStream(audioPath),
     model: "whisper-1",
@@ -130,14 +123,15 @@ async function transcribe(audioPath: string, whisperCode?: string): Promise<stri
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-const tenantId   = process.argv[2] ?? process.env.TENANT_ID;
-const tenant     = loadTenant(tenantId);
-const whisperCode = tenant.languageMode === 'auto' ? undefined : getWhisperCode(tenant.languageMode);
-
 type Message = { role: "system" | "user" | "assistant"; content: string };
 
 async function runVoiceAgent(): Promise<void> {
   checkSox();
+
+  const requestedId = process.argv[2] ?? process.env.TENANT_ID;
+  const tenant      = await loadCliTenant(requestedId);
+  const openai      = getOpenAIClient(tenant);
+  const whisperCode = tenant.languageMode === 'auto' ? undefined : getWhisperCode(tenant.languageMode);
 
   const SYSTEM_PROMPT = buildSystemPrompt(tenant);
   const messages: Message[] = [{ role: "system", content: SYSTEM_PROMPT }];
@@ -156,7 +150,7 @@ async function runVoiceAgent(): Promise<void> {
   process.stdout.write("Connecting...   \r");
   let greeting = "";
   try {
-    const res = await new OpenAI().chat.completions.create({
+    const res = await openai.chat.completions.create({
       model: "gpt-4o-mini", max_tokens: 80, temperature: 0.4,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
@@ -172,7 +166,7 @@ async function runVoiceAgent(): Promise<void> {
   process.stdout.write("                \r");
   console.log(`${tenant.agentName}: ${greeting}\n`);
   messages.push({ role: "assistant", content: greeting });
-  await speakText(greeting, tenant);
+  await speakText(greeting, tenant, openai);
   await new Promise(r => setTimeout(r, 300));
 
   while (true) {
@@ -195,7 +189,7 @@ async function runVoiceAgent(): Promise<void> {
 
     let userText = "";
     try {
-      userText = await transcribe(audioPath, whisperCode);
+      userText = await transcribe(audioPath, openai, whisperCode);
     } catch (err) {
       console.error("\n[ERROR] Transcription failed:", err);
       fs.unlink(audioPath, () => {});
@@ -211,7 +205,7 @@ async function runVoiceAgent(): Promise<void> {
     process.stdout.write("Thinking...     \r");
     let replyText = "";
     try {
-      const completion = await new OpenAI().chat.completions.create({
+      const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini", max_tokens: 200, temperature: 0.6, messages,
       });
       replyText = completion.choices[0].message.content ?? "";
@@ -224,7 +218,7 @@ async function runVoiceAgent(): Promise<void> {
     if (replyText.startsWith("[END_CALL]")) {
       const bye = replyText.replace("[END_CALL]", "").trim();
       console.log(`${tenant.agentName}: ${bye}\n`);
-      await speakText(bye, tenant);
+      await speakText(bye, tenant, openai);
       process.exit(0);
     }
 
@@ -232,7 +226,7 @@ async function runVoiceAgent(): Promise<void> {
     console.log(`${tenant.agentName}: ${replyText}\n`);
 
     try {
-      await speakText(replyText, tenant);
+      await speakText(replyText, tenant, openai);
     } catch (err) {
       console.error("[WARNING] TTS failed:", err);
     }
