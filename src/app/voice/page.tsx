@@ -1,4 +1,5 @@
 import { isEmbedAuthEnabled, validateEmbedQuery } from '@/lib/security/embed-auth'
+import { getDefaultTenant } from '@/lib/tenants/registry'
 import { VoiceAgentWidget } from '@/components/voice-agent/widget'
 import { ThemeProvider, type ThemeColors } from '@/components/voice-agent/theme-provider'
 
@@ -45,9 +46,11 @@ function buildThemeStyle(primary: string, dk: string, lt: string, md: string): s
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default async function VoicePage({ searchParams }: VoicePageProps) {
-  const params = (await searchParams) ?? {}
-  const tenantId    = typeof params.tenant       === 'string' ? params.tenant       : undefined
-  const token       = typeof params.token        === 'string' ? params.token        : undefined
+  const params          = (await searchParams) ?? {}
+  const requestedTenant = typeof params.tenant === 'string' ? params.tenant : undefined
+  const defaultTenant   = !requestedTenant ? await getDefaultTenant() : null
+  const tenantId        = requestedTenant ?? defaultTenant?.id ?? 'ai-scripto'
+  const token           = typeof params.token        === 'string' ? params.token        : undefined
   const sessionToken = typeof params.session     === 'string' ? params.session      : undefined
   const modeParam = typeof params.mode === 'string' ? params.mode : undefined
   const launcherParam = typeof params.launcher === 'string' ? params.launcher : undefined
