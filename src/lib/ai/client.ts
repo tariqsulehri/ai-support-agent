@@ -17,12 +17,24 @@ function getApiKey(tenant?: TenantConfig): string {
       if (tenantKey) return tenantKey
     }
 
+    const defaultTenantId = process.env.DEFAULT_TENANT_ID?.trim() || 'ai-scripto'
+    if (
+      tenant.id === defaultTenantId &&
+      process.env.OPENAI_API_KEY?.trim()
+    ) {
+      return process.env.OPENAI_API_KEY.trim()
+    }
+
     throw new Error(
       `OpenAI API key not configured for tenant "${tenant.companyName || tenant.id}". The key must be stored in the tenant database.`
     )
   }
 
   // System fallback when no tenant context is provided (e.g., platform scripts)
+  if (process.env.OPENAI_API_KEY?.trim()) {
+    return process.env.OPENAI_API_KEY.trim()
+  }
+
   if (env.OPENAI_API_KEY?.trim()) {
     return env.OPENAI_API_KEY.trim()
   }
@@ -47,4 +59,16 @@ export function getOpenAIClient(tenant?: TenantConfig): OpenAI {
 
 export function assertOpenAIKeyConfigured(tenant?: TenantConfig): void {
   getApiKey(tenant)
+}
+
+/**
+ * Ensures the default tenant OpenAI key is bootstrapped from the database into the
+ * environment if not already present, then returns an OpenAI client.
+ */
+export async function ensureOpenAIClient(tenant?: TenantConfig): Promise<OpenAI> {
+  if (!process.env.OPENAI_API_KEY?.trim() && !tenant?.runtimeSecrets?.openaiApiKey?.trim()) {
+    const { bootstrapDefaultTenantOpenAIKey } = await import('@/lib/tenants/bootstrap')
+    await bootstrapDefaultTenantOpenAIKey()
+  }
+  return getOpenAIClient(tenant)
 }

@@ -59,7 +59,12 @@ export async function getTenantByDomain(url: string): Promise<TenantConfig | nul
 
 export async function getDefaultTenant(): Promise<TenantConfig | null> {
   const tenant = await getDbDefaultTenant(DEFAULT_TENANT_ID)
-  if (tenant) return tenant
+  if (tenant) {
+    if (tenant.runtimeSecrets?.openaiApiKey && !process.env.OPENAI_API_KEY) {
+      process.env.OPENAI_API_KEY = tenant.runtimeSecrets.openaiApiKey
+    }
+    return tenant
+  }
 
   const fallback = getJsonDefaultTenant(DEFAULT_TENANT_ID)
   if (fallback) logJsonFallback('default tenant not found in database')

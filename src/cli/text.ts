@@ -48,6 +48,9 @@ When user is done and you have name+email+phone+country, respond with [END_CALL]
 type Message = { role: "system" | "user" | "assistant"; content: string };
 
 async function runTextAgent(): Promise<void> {
+  const { bootstrapDefaultTenantOpenAIKey } = await import("../lib/tenants/bootstrap");
+  await bootstrapDefaultTenantOpenAIKey();
+
   const requestedId = process.argv[2] ?? process.env.TENANT_ID;
   const tenant      = await loadCliTenant(requestedId);
   const openai      = getOpenAIClient(tenant);

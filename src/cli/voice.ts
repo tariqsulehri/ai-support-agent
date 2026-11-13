@@ -128,6 +128,9 @@ type Message = { role: "system" | "user" | "assistant"; content: string };
 async function runVoiceAgent(): Promise<void> {
   checkSox();
 
+  const { bootstrapDefaultTenantOpenAIKey } = await import("../lib/tenants/bootstrap");
+  await bootstrapDefaultTenantOpenAIKey();
+
   const requestedId = process.argv[2] ?? process.env.TENANT_ID;
   const tenant      = await loadCliTenant(requestedId);
   const openai      = getOpenAIClient(tenant);
