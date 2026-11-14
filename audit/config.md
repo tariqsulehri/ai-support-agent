@@ -16,7 +16,7 @@ Fields follow `kit/config.template.md`.
 | `COMPLIANCE` | None formally declared. The product handles **personal customer data**: voice audio, transcripts, names, phone numbers, emails, customer requirements. Use GDPR/PECA-style principles as the yardstick (data minimisation, retention, purpose, processor disclosure, tenant data isolation). |
 | `OUTPUT_DIR` | `/Users/tk-lpt-1088/development/node/VoiceAgent/audit/results/ai-support-agent` (gitignored; never commit reports) |
 | `PREVIOUS_RUN` | none yet. After the first run, put its folder here. |
-| `GENERATE_STACK_DRAFT` | `false` (modules exist: `nextjs`, `react`, `mongodb-mongoose`, `llm-voice-providers`, `docker-cicd`) |
+| `GENERATE_STACK_DRAFT` | `false` (modules exist: `nextjs`, `react`, `mongodb-native`, `llm-voice-providers`, `docker-cicd`) |
 | `TEAM_SIZE` | 1 (the owner) |
 | `RELEASE_CADENCE` | as needed; image built on VM and pushed to Docker Hub, or deployed to Vercel |
 | `CONFIDENTIALITY` | Confidential. Reports describe weaknesses, encryption schemas, and tenant names. |
