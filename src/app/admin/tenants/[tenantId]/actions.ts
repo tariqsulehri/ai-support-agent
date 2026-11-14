@@ -29,8 +29,9 @@ function canManageTenant(session: AuthSession, tenantId: string): boolean {
 }
 
 function canManageTenantSecrets(session: AuthSession, tenantId: string): boolean {
-  return session.tenantId === tenantId &&
-    (session.role === 'tenant_owner' || session.role === 'tenant_admin')
+  return session.role === 'platform_admin' ||
+    (session.tenantId === tenantId &&
+    (session.role === 'tenant_owner' || session.role === 'tenant_admin'))
 }
 
 async function requireTenantManager(tenantId: string): Promise<AuthSession> {
@@ -276,3 +277,4 @@ export async function createTenantUserAction(formData: FormData) {
   revalidatePath(`/admin/tenants/${tenantId}`)
   redirect(`/admin/tenants/${tenantId}?tab=team&saved=user`)
 }
+

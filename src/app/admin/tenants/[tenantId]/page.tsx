@@ -31,8 +31,9 @@ function canManageTenant(session: AuthSession, tenantId: string): boolean {
 
 function canManageTenantSecrets(session: AuthSession, tenantId: string): boolean {
   return (
-    session.tenantId === tenantId &&
-    (session.role === 'tenant_owner' || session.role === 'tenant_admin')
+    session.role === 'platform_admin' ||
+    (session.tenantId === tenantId &&
+      (session.role === 'tenant_owner' || session.role === 'tenant_admin'))
   )
 }
 
@@ -48,7 +49,7 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
     headers(),
   ])
 
-  if (!detail) redirect('/admin/tenants')
+  if (!detail) redirect(session.role === 'platform_admin' ? '/admin/tenants' : '/dashboard')
 
   const baseUrl =
     process.env.AGENT_BASE_URL?.trim() ||

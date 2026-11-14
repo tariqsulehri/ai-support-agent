@@ -130,10 +130,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <nav className="mb-6 flex flex-wrap gap-2 rounded-lg border border-white/75 bg-white/80 p-2 shadow-[0_10px_35px_rgba(15,23,42,0.08)] backdrop-blur" aria-label="Dashboard tabs">
           {tabs.map((tab) => {
             const selected = activeTab === tab.id
+            const href = tab.id === 'configuration' && session.tenantId
+              ? `/admin/tenants/${session.tenantId}`
+              : dashboardTabHref(tab.id, filters)
             return (
               <Link
                 key={tab.id}
-                href={dashboardTabHref(tab.id, filters)}
+                href={href}
                 prefetch={false}
                 className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${selected
                     ? 'border-cyan-600 bg-cyan-600 text-white shadow-md'
