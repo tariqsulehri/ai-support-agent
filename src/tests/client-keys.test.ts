@@ -10,6 +10,7 @@ import {
   createEmbedSessionToken,
   verifyEmbedSessionToken,
 } from '../lib/security/embed-session'
+import { embedSnippet } from '../lib/tenants/management'
 
 describe('Encrypted Client API Key (Server-Only Decryption & Authentic Tenant ID)', () => {
   const tenantId = 'vital-steer-technologies'
@@ -124,5 +125,32 @@ describe('Encrypted Client API Key (Server-Only Decryption & Authentic Tenant ID
     assert.equal(verified?.tenantId, 'vital-steer-technologies')
     assert.equal(verified?.origin, 'https://vitalsteertechnologies.com')
     assert.ok((verified?.exp ?? 0) > Math.floor(Date.now() / 1000))
+  })
+
+  it('renders embedSnippet with client-api-key HTML attribute', () => {
+    const key = mintClientApiKey(tenantId)
+    const snippet = embedSnippet({
+      baseUrl: 'https://agent.example.com',
+      tenantId,
+      clientKey: key,
+    })
+
+    assert.ok(snippet.includes('client-api-key="vack_live_'))
+    assert.ok(snippet.includes('https://agent.example.com/agent.js'))
+    assert.ok(!snippet.includes('data-client-key='), 'must use client-api-key')
+  })
+
+  it('supports key renewal producing a fresh valid key with distinct IV and tag', () => {
+    const originalKey = mintClientApiKey(tenantId)
+    const renewedKey = mintClientApiKey(tenantId)
+
+    assert.notEqual(originalKey, renewedKey)
+    const origPayload = decryptClientApiKey(originalKey)
+    const renewedPayload = decryptClientApiKey(renewedKey)
+
+    assert.ok(origPayload)
+    assert.ok(renewedPayload)
+    assert.equal(origPayload.tid, tenantId)
+    assert.equal(renewedPayload.tid, tenantId)
   })
 })

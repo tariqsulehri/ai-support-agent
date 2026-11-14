@@ -17,6 +17,7 @@ export type AuditAction =
   | 'tenant.domain_verified'
   | 'tenant.secret_updated'
   | 'tenant.embed_token_rotated'
+  | 'tenant.client_api_key_renewed'
   | 'tenant.user_created'
 
 type AuditActor = {

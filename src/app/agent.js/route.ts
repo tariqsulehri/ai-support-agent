@@ -17,12 +17,15 @@ export async function GET(req: NextRequest) {
 
   const tenant = script.getAttribute("data-tenant");
   const token = script.getAttribute("data-token");
-  const clientKey = script.getAttribute("data-client-key") || script.getAttribute("data-api-key");
+  const clientKey = script.getAttribute("client-api-key") ||
+    script.getAttribute("data-client-api-key") ||
+    script.getAttribute("data-client-key") ||
+    script.getAttribute("data-api-key");
   const width = script.getAttribute("data-width") || "420px";
   const height = script.getAttribute("data-height") || "680px";
 
   if (!tenant && !clientKey) {
-    console.error("AI Agent: Missing data-tenant or data-client-key");
+    console.error("AI Agent: Missing client-api-key or data-tenant attribute on script tag");
     return;
   }
 

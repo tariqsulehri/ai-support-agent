@@ -35,6 +35,8 @@ export interface TenantRuntimeSubscription {
 export interface TenantConfig {
   // ── Identity & Auth ──────────────────────────────────────────────────────────
   id: string
+  clientApiKey?: string    // Server-minted encrypted client API key (vack_live_...)
+  clientApiKeyCreatedAt?: Date
   token?: string           // paired with x-embed-tenant header
   apiKeys?: string[]       // standalone x-api-key auth
   allowedDomains?: string[] // domain-based implicit auth (no token needed)

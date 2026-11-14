@@ -6,6 +6,8 @@ export function tenantBundleToConfig(bundle: TenantBundle): TenantConfig {
 
   return {
     id: tenant.tenantId,
+    clientApiKey: tenant.clientApiKey,
+    clientApiKeyCreatedAt: tenant.clientApiKeyCreatedAt,
     allowedDomains: domains.map((domain) => domain.origin),
     openaiApiKeyEnv: settings.openaiApiKeyEnv,
     runtimeSecrets: bundle.runtimeSecrets,

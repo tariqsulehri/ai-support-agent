@@ -22,6 +22,8 @@ export interface TenantRecord {
   slug: string
   companyName: string
   status: TenantStatus
+  clientApiKey?: string
+  clientApiKeyCreatedAt?: Date
   subscription?: TenantSubscriptionRecord
   archivedAt?: Date
   createdAt: Date
@@ -65,6 +67,8 @@ export interface TenantEmbedKeyRecord {
   tenantId: string
   tokenHash?: string
   apiKeyHashes: string[]
+  clientApiKey?: string
+  clientApiKeyCreatedAt?: Date
   status: TenantStatus
   createdAt: Date
   updatedAt: Date

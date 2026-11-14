@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
 
   const rawKey = body.clientKey?.trim() ||
     body.clientApiKey?.trim() ||
+    (body as Record<string, string | undefined>)['client-api-key']?.trim() ||
     req.headers.get('x-api-key')?.trim()
 
   let authenticatedTenantId: string | undefined
@@ -60,6 +61,10 @@ export async function POST(req: NextRequest) {
   const tenant = await getTenantById(tenantId)
   if (!tenant) {
     return json({ error: 'Tenant not found' }, { status: 404 })
+  }
+
+  if (rawKey && tenant.clientApiKey && rawKey !== tenant.clientApiKey) {
+    return json({ error: 'Revoked client API key: A newer API key has been issued for this tenant' }, { status: 401 })
   }
 
   if (isEmbedAuthEnabled()) {

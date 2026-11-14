@@ -324,6 +324,17 @@ export async function getManagedTenantDetail(tenantId: string): Promise<ManagedT
 
   if (!settings) throw new Error(`Tenant ${normalizedTenantId} is missing agent settings.`)
 
+  if (!tenant.clientApiKey) {
+    const generatedKey = mintClientApiKey(normalizedTenantId)
+    const now = new Date()
+    await c.tenants.updateOne(
+      { tenantId: normalizedTenantId },
+      { $set: { clientApiKey: generatedKey, clientApiKeyCreatedAt: now, updatedAt: now } }
+    )
+    tenant.clientApiKey = generatedKey
+    tenant.clientApiKeyCreatedAt = now
+  }
+
   return { tenant, settings, domains, users, openAiSecret, databaseUrlSecret, smtpPasswordSecret }
 }
 
@@ -338,12 +349,15 @@ export async function createManagedTenant(input: CreateManagedTenantInput): Prom
   const existing = await c.tenants.findOne({ tenantId })
   if (existing) throw new Error(`Tenant ${tenantId} already exists.`)
 
+  const clientApiKey = mintClientApiKey(tenantId)
   const tenant: TenantRecord = {
     tenantId,
     publicId: `tenant_${tenantId}`,
     slug: tenantId,
     companyName,
     status: 'active',
+    clientApiKey,
+    clientApiKeyCreatedAt: now,
     subscription: {
       status: normalizeSubscriptionStatus(input.subscriptionStatus),
       type: normalizeSubscriptionType(input.subscriptionType),
@@ -733,6 +747,42 @@ export async function createManagedTenantUser(input: {
   })
 }
 
+export async function renewManagedTenantClientApiKey(tenantId: string): Promise<string> {
+  const db = await getManagementDb()
+  const c = collections(db)
+  const now = new Date()
+  const normalizedTenantId = assertTenantId(tenantId)
+  const tenant = await c.tenants.findOne({ tenantId: normalizedTenantId })
+  if (!tenant) throw new Error(`Tenant ${normalizedTenantId} not found.`)
+
+  const newKey = mintClientApiKey(normalizedTenantId)
+
+  await Promise.all([
+    c.tenants.updateOne(
+      { tenantId: normalizedTenantId },
+      {
+        $set: {
+          clientApiKey: newKey,
+          clientApiKeyCreatedAt: now,
+          updatedAt: now,
+        },
+      }
+    ),
+    c.embedKeys.updateMany(
+      { tenantId: normalizedTenantId, status: 'active' },
+      {
+        $set: {
+          clientApiKey: newKey,
+          clientApiKeyCreatedAt: now,
+          updatedAt: now,
+        },
+      }
+    ),
+  ])
+
+  return newKey
+}
+
 export function generateClientApiKey(tenantId: string): string {
   return mintClientApiKey(tenantId)
 }
@@ -743,7 +793,10 @@ export function embedSnippet(input: {
   tokenPlaceholder?: string
   clientKey?: string
 }): string {
+  const cleanBaseUrl = input.baseUrl.replace(/\/+$/, '')
+  if (input.clientKey) {
+    return `<script \n  src="${cleanBaseUrl}/agent.js" \n  client-api-key="${input.clientKey}"\n  defer>\n</script>`
+  }
   const tokenAttribute = input.tokenPlaceholder ? ` data-token="${input.tokenPlaceholder}"` : ''
-  const clientKeyAttribute = input.clientKey ? ` data-client-key="${input.clientKey}"` : ''
-  return `<script src="${input.baseUrl.replace(/\/$/, '')}/agent.js" data-tenant="${input.tenantId}"${tokenAttribute}${clientKeyAttribute}></script>`
+  return `<script \n  src="${cleanBaseUrl}/agent.js" \n  data-tenant="${input.tenantId}"${tokenAttribute}\n  defer>\n</script>`
 }
