@@ -273,14 +273,19 @@ function ConfigurationStatus({
   complete: boolean
 }) {
   return (
-    <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+    <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-950">{label}</p>
-          <p className="mt-1 break-words text-sm leading-5 text-slate-500">{detail}</p>
+          <p className="text-xs font-bold text-slate-900 uppercase tracking-wider">{label}</p>
+          <p className="mt-1 break-words text-xs leading-relaxed text-slate-600">{detail}</p>
         </div>
-        <span className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold ${complete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'
-          }`}>
+        <span
+          className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+            complete
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-amber-200 bg-amber-50 text-amber-800'
+          }`}
+        >
           {complete ? 'Ready' : 'Required'}
         </span>
       </div>
@@ -362,14 +367,14 @@ export function PlatformTenantsTab({ tenants }: { tenants: ManagedTenantSummary[
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50/80 text-xs font-semibold text-slate-700 tracking-wide border-b border-slate-200">
               <tr>
-                <th className="px-5 py-3">Tenant</th>
-                <th className="px-5 py-3">Domains</th>
-                <th className="px-5 py-3">Subscription</th>
-                <th className="px-5 py-3">OpenAI Key</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3" />
+                <th className="px-5 py-3 text-left">Tenant ⇅</th>
+                <th className="px-5 py-3 text-left">Allowed Domains</th>
+                <th className="px-5 py-3 text-left">Subscription</th>
+                <th className="px-5 py-3 text-left">OpenAI Key</th>
+                <th className="px-5 py-3 text-left">Status ⇅</th>
+                <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -409,9 +414,9 @@ export function PlatformTenantsTab({ tenants }: { tenants: ManagedTenantSummary[
                   <td className="px-5 py-4 text-right">
                     <Link
                       href={`/admin/tenants/${tenant.tenantId}`}
-                      className="inline-flex h-9 items-center justify-center rounded-md bg-slate-950 px-3 text-xs font-semibold text-white hover:bg-slate-800"
+                      className="inline-flex h-8 items-center justify-center rounded-lg bg-[#0052ff] hover:bg-[#0043d9] px-3 text-xs font-semibold text-white shadow-xs transition"
                     >
-                      Manage Tenant
+                      Manage →
                     </Link>
                   </td>
                 </tr>
@@ -428,10 +433,11 @@ export function TenantConfigurationTab({
   tenantId,
   detail,
 }: {
-  tenantId: string
+  tenantId?: string | null
   detail: ManagedTenantDetail | null
 }) {
-  const settingsHref = `/admin/tenants/${tenantId}`
+  const resolvedTargetId = detail?.tenant?.tenantId || tenantId
+  const settingsHref = resolvedTargetId ? `/admin/tenants/${resolvedTargetId}` : '/admin/tenants'
 
   if (!detail) {
     return (
@@ -452,17 +458,20 @@ export function TenantConfigurationTab({
       <Panel className="p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Tenant Configuration</p>
-            <h2 className="mt-2 text-xl font-semibold text-slate-950">{detail.tenant.companyName}</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-              Configure the agent profile, OpenAI key, tenant database URL, SMTP, domain verification, and embed setup from one dashboard entry point.
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#0052ff]">Tenant Configuration</span>
+              <span className="rounded-full bg-blue-50 text-[#0052ff] border border-blue-200 px-2 py-0.5 text-[10px] font-semibold">Active Profile</span>
+            </div>
+            <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950">{detail.tenant.companyName}</h2>
+            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-500">
+              Configure the agent persona, OpenAI credentials, lead database URL, SMTP alerts, domain verification, and website embed snippet.
             </p>
           </div>
           <Link
             href={settingsHref}
-            className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-cyan-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-cyan-700"
+            className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-[#0052ff] hover:bg-[#0043d9] px-4 text-xs font-semibold text-white shadow-xs transition"
           >
-            Open Configuration
+            Open Configuration →
           </Link>
         </div>
 

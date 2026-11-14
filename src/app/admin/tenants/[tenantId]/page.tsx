@@ -18,21 +18,27 @@ type TenantDetailPageProps = {
   searchParams?: Promise<{ error?: string; saved?: string; created?: string; tab?: string }>
 }
 
-function canAccessTenant(session: AuthSession, tenantId: string): boolean {
-  return session.role === 'platform_admin' || session.tenantId === tenantId
-}
-
-function canManageTenant(session: AuthSession, tenantId: string): boolean {
+function canAccessTenant(session: AuthSession, targetTenantId: string, resolvedTenantId?: string): boolean {
+  if (session.role === 'platform_admin') return true
+  if (!session.tenantId) return false
+  const userTenant = session.tenantId.toLowerCase().trim()
   return (
-    session.role === 'platform_admin' ||
-    (session.tenantId === tenantId && canMutateDashboard(session))
+    userTenant === targetTenantId.toLowerCase().trim() ||
+    (resolvedTenantId ? userTenant === resolvedTenantId.toLowerCase().trim() : false)
   )
 }
 
-function canManageTenantSecrets(session: AuthSession, tenantId: string): boolean {
+function canManageTenant(session: AuthSession, targetTenantId: string): boolean {
   return (
     session.role === 'platform_admin' ||
-    (session.tenantId === tenantId &&
+    (session.tenantId?.toLowerCase() === targetTenantId.toLowerCase() && canMutateDashboard(session))
+  )
+}
+
+function canManageTenantSecrets(session: AuthSession, targetTenantId: string): boolean {
+  return (
+    session.role === 'platform_admin' ||
+    (session.tenantId?.toLowerCase() === targetTenantId.toLowerCase() &&
       (session.role === 'tenant_owner' || session.role === 'tenant_admin'))
   )
 }
@@ -40,8 +46,7 @@ function canManageTenantSecrets(session: AuthSession, tenantId: string): boolean
 export default async function TenantDetailPage({ params, searchParams }: TenantDetailPageProps) {
   const { tenantId } = await params
   const session = await getVerifiedSession()
-  if (!session) redirect(`/tenant/login?next=/admin/tenants/${tenantId}`)
-  if (!canAccessTenant(session, tenantId)) redirect('/dashboard')
+  if (!session) redirect(`/tenant/login?next=/admin/tenants/${encodeURIComponent(tenantId)}`)
 
   const [detail, pageParams, headerStore] = await Promise.all([
     getManagedTenantDetail(tenantId),
@@ -49,7 +54,13 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
     headers(),
   ])
 
-  if (!detail) redirect(session.role === 'platform_admin' ? '/admin/tenants' : '/dashboard')
+  if (!canAccessTenant(session, tenantId, detail?.tenant?.tenantId)) {
+    redirect('/dashboard?tab=overview&error=access_denied')
+  }
+
+  if (!detail) {
+    redirect(session.role === 'platform_admin' ? '/admin/tenants' : '/dashboard?tab=overview&error=tenant_not_found')
+  }
 
   const baseUrl =
     process.env.AGENT_BASE_URL?.trim() ||

@@ -7,16 +7,67 @@ export type CountItem = {
   count: number
 }
 
-export const baseTabs = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'communications', label: 'Communications' },
-  { id: 'leads', label: 'Lead Status' },
-  { id: 'ai', label: 'AI Assisted' },
-  { id: 'capabilities', label: 'Capabilities' },
-] as const
+export interface TabDefinition {
+  id: DashboardTabId
+  label: string
+  num: number
+  description: string
+  badgeText: string
+}
 
-export const tenantConfigurationTab = { id: 'configuration', label: 'Configuration' } as const
-export const platformTenantTab = { id: 'tenants', label: 'Tenants' } as const
+export const baseTabs: TabDefinition[] = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    num: 1,
+    description: 'Executive summary of voice-agent conversations, lead readiness, and volume metrics.',
+    badgeText: 'Live Metrics',
+  },
+  {
+    id: 'communications',
+    label: 'Communications',
+    num: 2,
+    description: 'The lookup table of completed calls, audio transcripts, and sentiment signals.',
+    badgeText: 'Call Intelligence',
+  },
+  {
+    id: 'leads',
+    label: 'Lead Status',
+    num: 3,
+    description: 'Captured prospect pipelines, urgency scoring, and follow-up commitments.',
+    badgeText: 'Pipeline Operations',
+  },
+  {
+    id: 'ai',
+    label: 'AI Assisted',
+    num: 4,
+    description: 'Key insights, automated risk evaluations, and AI next-step recommendations.',
+    badgeText: 'Automation Layer',
+  },
+  {
+    id: 'capabilities',
+    label: 'Capabilities',
+    num: 5,
+    description: 'Engine architecture, speech recognition models, and telephony integrations.',
+    badgeText: 'Platform Core',
+  },
+]
+
+export const tenantConfigurationTab: TabDefinition = {
+  id: 'configuration',
+  label: 'Configuration',
+  num: 6,
+  description: 'Tenant profile, OpenAI API keys, MongoDB URL, and website embed snippets.',
+  badgeText: 'Assessment Setup',
+}
+
+export const platformTenantTab: TabDefinition = {
+  id: 'tenants',
+  label: 'Tenants',
+  num: 6,
+  description: 'Global tenant management, subscription tiers, and domain whitelist governance.',
+  badgeText: 'Platform Control',
+}
 
 export const statusOptions: LeadStatus[] = ['new', 'reviewing', 'qualified', 'proposal', 'won', 'lost']
 export const chartColors = ['#194ad9', '#6e19eb', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#3b82f6']

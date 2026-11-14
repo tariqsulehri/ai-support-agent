@@ -69,7 +69,7 @@ export function Panel({
   className?: string
 }) {
   return (
-    <section className={`rounded-lg border border-white/75 bg-white/92 shadow-[0_18px_55px_rgba(15,23,42,0.08)] ring-1 ring-slate-900/5 backdrop-blur ${className}`}>
+    <section className={`rounded-xl border border-slate-200/90 bg-white shadow-xs overflow-hidden ${className}`}>
       {children}
     </section>
   )
@@ -79,47 +79,29 @@ export function StatCard({
   label,
   value,
   detail,
-  tone,
+  tone = 'cyan',
 }: {
   label: string
   value: string | number
   detail: string
-  tone: 'cyan' | 'emerald' | 'amber' | 'rose'
+  tone?: 'cyan' | 'emerald' | 'amber' | 'rose'
 }) {
   const tones = {
-    cyan: {
-      bar: 'from-[#194ad9] via-[#2563eb] to-[#38bdf8]',
-      icon: 'from-[#194ad9] to-[#3b82f6]',
-      shadow: 'shadow-[0_8px_16px_-4px_rgba(25,74,217,0.45)]',
-    },
-    emerald: {
-      bar: 'from-[#059669] via-[#10b981] to-[#34d399]',
-      icon: 'from-[#059669] to-[#10b981]',
-      shadow: 'shadow-[0_8px_16px_-4px_rgba(16,185,129,0.45)]',
-    },
-    amber: {
-      bar: 'from-[#d97706] via-[#f59e0b] to-[#fbbf24]',
-      icon: 'from-[#d97706] to-[#f59e0b]',
-      shadow: 'shadow-[0_8px_16px_-4px_rgba(245,158,11,0.45)]',
-    },
-    rose: {
-      bar: 'from-[#6e19eb] via-[#9333ea] to-[#ec4899]',
-      icon: 'from-[#6e19eb] to-[#9333ea]',
-      shadow: 'shadow-[0_8px_16px_-4px_rgba(110,25,235,0.45)]',
-    },
+    cyan: { dot: 'bg-[#0052ff]' },
+    emerald: { dot: 'bg-emerald-500' },
+    amber: { dot: 'bg-amber-500' },
+    rose: { dot: 'bg-rose-500' },
   }
-
-  const current = tones[tone]
+  const current = tones[tone] || tones.cyan
 
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-slate-100 bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300">
-      <div className={`absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r ${current.bar}`} />
-      <div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${current.icon} ${current.shadow} text-base font-black text-white`}>
-        {label.slice(0, 1)}
+    <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 transition">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+        <span className={`h-2 w-2 rounded-full ${current.dot}`} />
       </div>
-      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-2 text-4xl font-extrabold text-slate-950 tracking-tight">{value}</p>
-      <p className="mt-2 text-sm leading-5 text-slate-600 font-medium">{detail}</p>
+      <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{value}</p>
+      <p className="mt-1 text-xs text-slate-500 font-medium">{detail}</p>
     </div>
   )
 }
@@ -304,67 +286,87 @@ export function FilterBar({
   exportHref: string
 }) {
   return (
-    <Panel className="mb-6 p-4">
-      <form action="/dashboard" className="grid gap-3 lg:grid-cols-[1.4fr_repeat(4,1fr)_auto_auto] lg:items-end">
+    <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-xs">
+      <form action="/dashboard" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.5fr_repeat(4,1fr)_auto_auto] lg:items-end">
         <input type="hidden" name="tab" value={activeTab} />
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</span>
-          <input
-            name="q"
-            defaultValue={filters.q ?? ''}
-            placeholder="Name, email, phone, service, summary"
-            className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none focus:border-cyan-500"
-          />
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Range</span>
-          <select name="range" defaultValue={filters.range ?? '30'} className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm">
+        <div>
+          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            Search
+          </label>
+          <div className="relative">
+            <input
+              name="q"
+              defaultValue={filters.q ?? ''}
+              placeholder="Name, email, phone, summary..."
+              className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-800 shadow-xs outline-none focus:border-[#0052ff] focus:ring-1 focus:ring-[#0052ff]"
+            />
+            <svg className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
+            </svg>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            Range
+          </label>
+          <select name="range" defaultValue={filters.range ?? '30'} className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-800 shadow-xs outline-none focus:border-[#0052ff]">
             <option value="all">All time</option>
             <option value="today">Today</option>
             <option value="7">Last 7 days</option>
             <option value="30">Last 30 days</option>
             <option value="90">Last 90 days</option>
           </select>
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</span>
-          <select name="status" defaultValue={filters.status ?? 'all'} className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm">
+        </div>
+
+        <div>
+          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            Status
+          </label>
+          <select name="status" defaultValue={filters.status ?? 'all'} className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-800 shadow-xs outline-none focus:border-[#0052ff]">
             <option value="all">All statuses</option>
             {statusOptions.map((status) => (
               <option key={status} value={status}>{formatLabel(status)}</option>
             ))}
           </select>
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Quality</span>
-          <select name="quality" defaultValue={filters.quality ?? 'all'} className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm">
+        </div>
+
+        <div>
+          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            Quality
+          </label>
+          <select name="quality" defaultValue={filters.quality ?? 'all'} className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-800 shadow-xs outline-none focus:border-[#0052ff]">
             <option value="all">All quality</option>
             {['hot', 'warm', 'cold', 'unknown'].map((quality) => (
               <option key={quality} value={quality}>{formatLabel(quality)}</option>
             ))}
           </select>
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Urgency</span>
-          <select name="urgency" defaultValue={filters.urgency ?? 'all'} className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm">
+        </div>
+
+        <div>
+          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            Urgency
+          </label>
+          <select name="urgency" defaultValue={filters.urgency ?? 'all'} className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-800 shadow-xs outline-none focus:border-[#0052ff]">
             <option value="all">All urgency</option>
             {['high', 'medium', 'low', 'unknown'].map((urgency) => (
               <option key={urgency} value={urgency}>{formatLabel(urgency)}</option>
             ))}
           </select>
-        </label>
-        <button className="h-10 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+        </div>
+
+        <button className="h-9 rounded-lg bg-[#0052ff] hover:bg-[#0043d9] px-4 text-xs font-semibold text-white shadow-xs transition">
           Apply
         </button>
         <Link
           href={exportHref}
           prefetch={false}
-          className="flex h-10 items-center justify-center rounded-md border border-cyan-200 bg-cyan-50 px-5 text-sm font-semibold text-cyan-800 hover:bg-cyan-100"
+          className="flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition"
         >
           Export
         </Link>
       </form>
-    </Panel>
+    </div>
   )
 }
 
@@ -456,13 +458,13 @@ export function LeadDetailPanel({ call }: { call: DashboardCall | null }) {
 
 export function CommunicationList({ calls }: { calls: DashboardCall[] }) {
   if (calls.length === 0) {
-    return <p className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">No conversation records found.</p>
+    return <p className="rounded-xl border border-slate-200 bg-white p-6 text-xs text-slate-500 font-medium">No conversation records found.</p>
   }
 
   return (
     <div className="space-y-3">
       {calls.map((call) => (
-        <article key={call.id} className="rounded-lg border border-white/75 bg-white p-5 shadow-[0_14px_35px_rgba(15,23,42,0.07)]">
+        <article key={call.id} className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-xs hover:border-slate-300 transition">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -475,11 +477,11 @@ export function CommunicationList({ calls }: { calls: DashboardCall[] }) {
                   {isConversationFinalized(call) ? 'Finalized' : 'In progress'}
                 </Badge>
               </div>
-              <p className="mt-3 text-sm leading-6 text-slate-700">{call.summary}</p>
+              <p className="mt-3 text-xs leading-relaxed text-slate-700">{call.summary}</p>
               {call.keyPoints.length > 0 && (
-                <ul className="mt-3 grid gap-2 text-sm md:grid-cols-2">
+                <ul className="mt-3 grid gap-2 text-xs md:grid-cols-2">
                   {call.keyPoints.slice(0, 4).map((point) => (
-                    <li key={point} className="rounded-md border border-cyan-100 bg-cyan-50 px-3 py-2 text-cyan-950">
+                    <li key={point} className="rounded-lg border border-slate-200/70 bg-slate-50/80 px-3 py-2 text-slate-800">
                       {point}
                     </li>
                   ))}
@@ -487,14 +489,14 @@ export function CommunicationList({ calls }: { calls: DashboardCall[] }) {
               )}
             </div>
             <div className="flex shrink-0 flex-col gap-3 lg:items-end">
-              <p className="text-sm font-medium text-slate-500">{formatDate(call.createdAt)}</p>
+              <p className="text-xs font-medium text-slate-400">{formatDate(call.createdAt)}</p>
               <StatusForm call={call} />
               <Link
                 href={`/dashboard?tab=leads&selectedId=${call.id}`}
                 prefetch={false}
-                className="text-sm font-semibold text-cyan-700 hover:text-cyan-900"
+                className="text-xs font-semibold text-[#0052ff] hover:text-[#0043d9] transition"
               >
-                Open lead workspace
+                Open lead workspace →
               </Link>
             </div>
           </div>

@@ -310,25 +310,33 @@ export async function getManagedTenantDetail(tenantId: string): Promise<ManagedT
   const db = await getManagementDb()
   const c = collections(db)
   const normalizedTenantId = assertTenantId(tenantId)
-  const tenant = await c.tenants.findOne({ tenantId: normalizedTenantId })
+  const tenant = await c.tenants.findOne({
+    $or: [
+      { tenantId: normalizedTenantId },
+      { slug: normalizedTenantId },
+      { publicId: normalizedTenantId },
+    ],
+  })
   if (!tenant) return null
 
+  const resolvedTenantId = tenant.tenantId
+
   const [settings, domains, users, openAiSecret, databaseUrlSecret, smtpPasswordSecret] = await Promise.all([
-    c.settings.findOne({ tenantId: normalizedTenantId }),
-    c.domains.find({ tenantId: normalizedTenantId, status: 'active' }).sort({ origin: 1 }).toArray(),
-    listAuthUsersForTenant(normalizedTenantId),
-    getTenantSecretMetadata(normalizedTenantId, 'openai_api_key'),
-    getTenantSecretMetadata(normalizedTenantId, 'database_url'),
-    getTenantSecretMetadata(normalizedTenantId, 'smtp_password'),
+    c.settings.findOne({ tenantId: resolvedTenantId }),
+    c.domains.find({ tenantId: resolvedTenantId, status: 'active' }).sort({ origin: 1 }).toArray(),
+    listAuthUsersForTenant(resolvedTenantId),
+    getTenantSecretMetadata(resolvedTenantId, 'openai_api_key'),
+    getTenantSecretMetadata(resolvedTenantId, 'database_url'),
+    getTenantSecretMetadata(resolvedTenantId, 'smtp_password'),
   ])
 
-  if (!settings) throw new Error(`Tenant ${normalizedTenantId} is missing agent settings.`)
+  if (!settings) throw new Error(`Tenant ${resolvedTenantId} is missing agent settings.`)
 
   if (!tenant.clientApiKey) {
-    const generatedKey = mintClientApiKey(normalizedTenantId)
+    const generatedKey = mintClientApiKey(resolvedTenantId)
     const now = new Date()
     await c.tenants.updateOne(
-      { tenantId: normalizedTenantId },
+      { tenantId: resolvedTenantId },
       { $set: { clientApiKey: generatedKey, clientApiKeyCreatedAt: now, updatedAt: now } }
     )
     tenant.clientApiKey = generatedKey
