@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { VoiceAgent } from './index'
+import { primeAudio } from '@/lib/utils/audio-unlock'
 
 interface VoiceAgentWidgetProps {
   tenantId?:    string
@@ -62,7 +63,10 @@ export function VoiceAgentWidget({
       {!open && (
         <button
           id="agent-fab"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            primeAudio()
+            setOpen(true)
+          }}
           aria-label="Open chat"
           aria-expanded={open}
           className="

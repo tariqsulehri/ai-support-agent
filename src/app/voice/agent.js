@@ -68,6 +68,13 @@
 
         // Toggle logic
         button.onclick = function () {
+            try {
+                var a = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
+                a.play().then(function () { a.pause(); }).catch(function () {});
+            } catch {
+                // ignore
+            }
+
             if (!isLoaded) {
                 const { bg, fg } = getTheme();
 
@@ -87,7 +94,7 @@
                     border: "0"
                 });
 
-                iframe.allow = "microphone; autoplay";
+                iframe.allow = "microphone *; autoplay *";
 
                 container.appendChild(iframe);
                 isLoaded = true;

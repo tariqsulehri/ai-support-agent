@@ -126,6 +126,11 @@ export async function GET(req: NextRequest) {
     document.body.appendChild(button);
 
     button.onclick = async function () {
+      try {
+        var a = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
+        a.play().then(function () { a.pause(); }).catch(function () {});
+      } catch (e) {}
+
       if (!isLoaded) {
         let session = "";
         try {
@@ -147,7 +152,7 @@ export async function GET(req: NextRequest) {
 
         const iframe = document.createElement("iframe");
         iframe.src = url.toString();
-        iframe.allow = "microphone; autoplay";
+        iframe.allow = "microphone *; autoplay *";
 
         Object.assign(iframe.style, {
           width: "100%",

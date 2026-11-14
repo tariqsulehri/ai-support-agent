@@ -180,6 +180,8 @@ export interface UseVoiceAgentReturn {
   isRecording:  boolean
   hasSpeech:    boolean
   isPlaying:    boolean
+  isAutoplayBlocked: boolean
+  currentlyPlayingText: string | null
   language:     string
   voice:        OpenAIVoice
   leadData:     LeadData
@@ -189,6 +191,7 @@ export interface UseVoiceAgentReturn {
   setVoice:     (v: OpenAIVoice) => void
   stopPlayback: () => void
   playMessage:  (text: string) => void
+  playPendingAudio: () => void
   toggleMic:    () => void
   pressMic:     () => void   // push-to-talk: call on pointer down
   releaseMic:   () => void   // push-to-talk: call on pointer up/leave
@@ -228,7 +231,15 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
   stateRef.current = state
   const leadRef = useRef<LeadData>(EMPTY_LEAD)
 
-  const { isPlaying, enqueue, stopAll } = useAudioPlayer({
+  const {
+    isPlaying,
+    isAutoplayBlocked,
+    currentlyPlayingText,
+    enqueue,
+    playMessage,
+    playPendingAudio,
+    stopAll,
+  } = useAudioPlayer({
     requestHeaders: embedHeaders,
     onPlaybackStart: () => dispatch({ type: 'START_SPEAKING' }),
     onPlaybackEnd:   () => dispatch({ type: 'SPEAKING_DONE' }),
@@ -367,7 +378,8 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
           dispatch({ type: 'REPLY_COMPLETE', fullText: greetingText, endCall: false })
           historyRef.current.push({ role: 'assistant', content: greetingText })
           dispatch({ type: 'CONNECTED' })
-          enqueue(greetingText)
+          const playFn = enqueueRef.current ?? enqueue
+          playFn(greetingText)
         } else {
           const greeting = await streamChat([{ role: 'user', content: '__GREET__' }], cancelled ? null : dispatch)
           if (greeting?.fullText) greetingRef.current = greeting.fullText
@@ -668,15 +680,18 @@ export function useVoiceAgent({ tenantId, token, sessionToken }: UseVoiceAgentOp
     isRecording,
     hasSpeech,
     isPlaying,
+    isAutoplayBlocked,
+    currentlyPlayingText,
     language,
     voice,
     leadData:     state.leadData,
     callSummary:  state.callSummary,
     agentName,
     companyName,
-    setVoice:   handleSetVoice,
+    setVoice:     handleSetVoice,
     stopPlayback: stopAll,
-    playMessage: enqueue,
+    playMessage,
+    playPendingAudio,
     toggleMic,
     pressMic,
     releaseMic,

@@ -97,10 +97,15 @@
 
   function open() {
     if (!container) return
+    try {
+      var a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=')
+      a.play().then(function () { a.pause() }).catch(function () {})
+    } catch (e) {}
+
     if (!isLoaded) {
       iframe = document.createElement('iframe')
       iframe.src                         = src
-      iframe.allow                       = 'microphone; autoplay'
+      iframe.allow                       = 'microphone *; autoplay *'
       iframe.style.cssText               = 'border:none;width:100%;height:100%;'
       iframe.setAttribute('title',        'AI Support Agent')
       iframe.setAttribute('loading',      'lazy')

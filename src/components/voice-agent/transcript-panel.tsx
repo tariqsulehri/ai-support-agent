@@ -5,15 +5,18 @@ import { LeadPanel } from './lead-panel'
 import type { CallSummary, LeadData, Message, Phase } from '@/types'
 
 interface Props {
-  messages:      Message[]
-  partialReply:  string
-  agentName:     string
-  agentInitials: string
-  phase:         Phase
-  lead:          LeadData
-  callSummary:   CallSummary | null
-  onStartNewChat: () => void
-  onPlayMessage?: (text: string) => void
+  messages:        Message[]
+  partialReply:    string
+  agentName:       string
+  agentInitials:   string
+  phase:           Phase
+  lead:            LeadData
+  callSummary:     CallSummary | null
+  onStartNewChat:  () => void
+  onPlayMessage?:  (text: string) => void
+  onStopPlayback?: () => void
+  currentlyPlayingText?: string | null
+  isAutoplayBlocked?: boolean
 }
 
 export function TranscriptPanel({
@@ -25,6 +28,9 @@ export function TranscriptPanel({
   callSummary,
   onStartNewChat,
   onPlayMessage,
+  onStopPlayback,
+  currentlyPlayingText,
+  isAutoplayBlocked,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -51,6 +57,11 @@ export function TranscriptPanel({
       {messages.map((msg, i) => {
         const prev = messages[i - 1]
         const showMeta = !prev || prev.role !== msg.role
+        const isFirstAssistant =
+          msg.role === 'assistant' && i === messages.findIndex((m) => m.role === 'assistant')
+        const isAutoplayPending = Boolean(isAutoplayBlocked && isFirstAssistant)
+        const isPlayingThis = currentlyPlayingText === msg.content
+
         return (
           <MessageBubble
             key={msg.id}
@@ -59,6 +70,9 @@ export function TranscriptPanel({
             agentInitials={agentInitials}
             showMeta={showMeta}
             onPlay={onPlayMessage}
+            onStop={onStopPlayback}
+            isPlayingThis={isPlayingThis}
+            isAutoplayPending={isAutoplayPending}
           />
         )
       })}
@@ -183,15 +197,28 @@ function TypingDots() {
 
 // ── Message bubble ─────────────────────────────────────────────────────────────
 interface BubbleProps {
-  role:          'user' | 'assistant'
-  content:       string
-  agentInitials: string
-  showMeta:      boolean
-  streaming?:    boolean
-  onPlay?:       (text: string) => void
+  role:               'user' | 'assistant'
+  content:            string
+  agentInitials:      string
+  showMeta:           boolean
+  streaming?:         boolean
+  onPlay?:            (text: string) => void
+  onStop?:            () => void
+  isPlayingThis?:     boolean
+  isAutoplayPending?: boolean
 }
 
-function MessageBubble({ role, content, agentInitials, showMeta, streaming, onPlay }: BubbleProps) {
+function MessageBubble({
+  role,
+  content,
+  agentInitials,
+  showMeta,
+  streaming,
+  onPlay,
+  onStop,
+  isPlayingThis,
+  isAutoplayPending,
+}: BubbleProps) {
   const isAgent = role === 'assistant'
 
   if (isAgent) {
@@ -213,18 +240,48 @@ function MessageBubble({ role, content, agentInitials, showMeta, streaming, onPl
             )}
           </div>
           {onPlay && !streaming && (
-            <button
-              type="button"
-              onClick={() => onPlay(content)}
-              title="Listen to message"
-              aria-label="Listen to message"
-              className="self-start inline-flex items-center gap-1.5 text-[11px] text-ms-muted hover:text-ms-teal transition-colors px-1.5 py-0.5 rounded hover:bg-white/60 mt-0.5"
-            >
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.083-1.64.242-2.426.234-.847 1.058-1.354 1.938-1.354h2.24z" />
-              </svg>
-              <span>Listen</span>
-            </button>
+            isPlayingThis ? (
+              <button
+                type="button"
+                onClick={onStop}
+                title="Stop audio playback"
+                aria-label="Stop audio playback"
+                className="self-start inline-flex items-center gap-1.5 text-[11px] font-medium text-ms-teal bg-ms-teal-lt border border-ms-teal-md px-2 py-0.5 rounded-full transition-colors mt-1"
+              >
+                <span className="inline-flex gap-0.5 items-end h-3">
+                  <span className="w-0.5 h-3 bg-ms-teal animate-pulse" />
+                  <span className="w-0.5 h-2 bg-ms-teal animate-pulse" style={{ animationDelay: '150ms' }} />
+                  <span className="w-0.5 h-3 bg-ms-teal animate-pulse" style={{ animationDelay: '300ms' }} />
+                </span>
+                <span>Playing…</span>
+              </button>
+            ) : isAutoplayPending ? (
+              <button
+                type="button"
+                onClick={() => onPlay(content)}
+                title="Click to play greeting voice"
+                aria-label="Click to play greeting voice"
+                className="self-start inline-flex items-center gap-1.5 text-[11px] font-semibold text-white bg-ms-blue hover:bg-ms-blue-dk px-2.5 py-1 rounded-full shadow-sm transition-all duration-200 mt-1 animate-pulse"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.083-1.64.242-2.426.234-.847 1.058-1.354 1.938-1.354h2.24z" />
+                </svg>
+                <span>Tap to play greeting</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onPlay(content)}
+                title="Listen to message"
+                aria-label="Listen to message"
+                className="self-start inline-flex items-center gap-1.5 text-[11px] text-ms-muted hover:text-ms-teal transition-colors px-1.5 py-0.5 rounded hover:bg-white/60 mt-0.5"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.083-1.64.242-2.426.234-.847 1.058-1.354 1.938-1.354h2.24z" />
+                </svg>
+                <span>Listen</span>
+              </button>
+            )
           )}
         </div>
       </div>

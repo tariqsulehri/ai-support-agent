@@ -24,7 +24,7 @@ export function VoiceAgent({ tenantId, token, sessionToken, onClose }: VoiceAgen
 
   const {
     phase, transcript, partialReply, error,
-    isRecording,
+    isRecording, isAutoplayBlocked, currentlyPlayingText,
     language, voice, leadData, callSummary,
     agentName, companyName,
     setVoice, stopPlayback, pressMic, releaseMic, sendText, startNewChat,
@@ -117,6 +117,9 @@ export function VoiceAgent({ tenantId, token, sessionToken, onClose }: VoiceAgen
           callSummary={callSummary}
           onStartNewChat={startNewChat}
           onPlayMessage={playMessage}
+          onStopPlayback={stopPlayback}
+          currentlyPlayingText={currentlyPlayingText}
+          isAutoplayBlocked={isAutoplayBlocked}
         />
 
         {/* ── Input bar ───────────────────────────────────────────────────── */}
