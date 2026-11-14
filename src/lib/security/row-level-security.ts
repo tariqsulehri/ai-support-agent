@@ -127,3 +127,4 @@ export function assertTenantAccess(
 
   throw new TenantAccessDeniedError('Unauthenticated: Access scope required for tenant data access.')
 }
+

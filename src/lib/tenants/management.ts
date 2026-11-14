@@ -4,6 +4,7 @@ import { getMongoDb, isMongoConfigured } from '@/lib/db/mongodb'
 import { getAuthUserByEmail, listAuthUsersForTenant, upsertAuthUser } from '@/lib/auth/users'
 import type { AuthRole, AuthUserRecord } from '@/lib/auth/types'
 import { hashTenantCredential } from './hash'
+import { createSignedEmbedToken } from '@/lib/security/embed-tokens'
 import { normalizeOrigin, normalizeTenantId } from './normalize'
 import { ensureTenantRegistryIndexes } from './db-registry'
 import { getTenantSecretMetadata, upsertTenantSecretInDb, type TenantSecretPublicMetadata } from './secrets'
@@ -118,7 +119,10 @@ async function getManagementDb(): Promise<Db> {
   return db
 }
 
-export function generateEmbedToken(): string {
+export function generateEmbedToken(tenantId?: string): string {
+  if (tenantId?.trim()) {
+    return createSignedEmbedToken(tenantId.trim())
+  }
   return randomBytes(24).toString('base64url')
 }
 

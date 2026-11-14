@@ -340,7 +340,7 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
   const baseUrl = process.env.AGENT_BASE_URL?.trim() ||
     `${headerStore.get('x-forwarded-proto') ?? 'http'}://${headerStore.get('host') ?? 'localhost:3000'}`
   const snippet = embedSnippet({ baseUrl, tenantId: detail.tenant.tenantId })
-  const suggestedEmbedToken = generateEmbedToken()
+  const suggestedEmbedToken = generateEmbedToken(detail.tenant.tenantId)
   const mutable = canManageTenant(session, detail.tenant.tenantId)
   const canEditSecrets = canManageTenantSecrets(session, detail.tenant.tenantId)
   const canSetDomains = session.role === 'platform_admin'

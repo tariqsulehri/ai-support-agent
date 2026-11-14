@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { resolveTenantFromHeaders, getDefaultTenant } from '@/lib/tenants/registry'
+import { resolveTenantFromHeaders, getDefaultTenant, getTenantById } from '@/lib/tenants/registry'
 import { env } from '@/lib/config/env'
 import type { TenantConfig } from '@/lib/tenants/types'
 import { originFromUrl, verifyEmbedSessionToken } from './embed-session'
+import { verifySignedEmbedToken } from './embed-tokens'
 
 export function isEmbedAuthEnabled(): boolean {
   if (process.env.NODE_ENV === 'production') {
@@ -60,11 +61,30 @@ async function tenantFromEmbedSession(
 export async function requireEmbedApiAuth(req: NextRequest): Promise<NextResponse | null> {
   const headers = headersFromRequest(req)
 
+  // Verify signed embed token for cross-tenant tampering
+  const signedToken = verifySignedEmbedToken(headers.token)
+  if (signedToken && headers.tenantId && signedToken.tenantId !== headers.tenantId) {
+    return NextResponse.json({ error: 'Token tenant mismatch: Token was minted for another tenant' }, { status: 403 })
+  }
+
+  // Verify embed session token for cross-tenant tampering
+  if (headers.sessionToken) {
+    const session = verifyEmbedSessionToken(headers.sessionToken)
+    if (session && headers.tenantId && session.tenantId !== headers.tenantId) {
+      return NextResponse.json({ error: 'Session token tenant mismatch: Session belongs to another tenant' }, { status: 403 })
+    }
+  }
+
   if (!isEmbedAuthEnabled()) {
     if (headers.tenantId && !(await resolveTenantFromHeaders(headers, { enforceToken: false }))) {
       return NextResponse.json({ error: 'Unknown tenant' }, { status: 400 })
     }
     return null
+  }
+
+  if (signedToken) {
+    const tenant = await getTenantById(signedToken.tenantId)
+    if (tenant) return null
   }
 
   const sessionTenant = await tenantFromEmbedSession(headers.sessionToken, headers.parentUrl)
@@ -86,6 +106,15 @@ export async function validateEmbedQuery(
   token: string | undefined,
   sessionToken?: string | undefined
 ): Promise<{ ok: boolean; reason?: string }> {
+  // Validate signed embed token
+  const signedToken = verifySignedEmbedToken(token)
+  if (signedToken) {
+    if (tenantId && signedToken.tenantId !== tenantId) {
+      return { ok: false, reason: 'Token was issued for another tenant' }
+    }
+    return { ok: true }
+  }
+
   if (!isEmbedAuthEnabled()) return { ok: true }
 
   const sessionTenant = await tenantFromEmbedSession(sessionToken, undefined)
@@ -104,15 +133,32 @@ export async function validateEmbedQuery(
 export async function getTenantFromRequest(req: NextRequest): Promise<TenantConfig> {
   const headers = headersFromRequest(req)
   const authEnabled = isEmbedAuthEnabled()
+
+  // 1. Resolve via signed embed token (encodes tenantId)
+  const signedToken = verifySignedEmbedToken(headers.token)
+  if (signedToken) {
+    if (headers.tenantId && headers.tenantId !== signedToken.tenantId) {
+      throw new Error(`[embed-auth] Cross-tenant violation: Token tenant (${signedToken.tenantId}) does not match requested tenant (${headers.tenantId}).`)
+    }
+    const tenant = await getTenantById(signedToken.tenantId)
+    if (tenant) return tenant
+  }
+
+  // 2. Resolve via embed session token (encodes tenantId + origin)
+  const sessionTenant = await tenantFromEmbedSession(headers.sessionToken, headers.parentUrl)
+  if (sessionTenant) {
+    if (headers.tenantId && headers.tenantId !== sessionTenant.id) {
+      throw new Error(`[embed-auth] Cross-tenant violation: Session tenant (${sessionTenant.id}) does not match requested tenant (${headers.tenantId}).`)
+    }
+    return sessionTenant
+  }
+
   const unauthenticatedHeaders = {
     tenantId: headers.tenantId,
     token: headers.token,
     apiKey: headers.apiKey,
     parentUrl: headers.parentUrl,
   }
-
-  const sessionTenant = await tenantFromEmbedSession(headers.sessionToken, headers.parentUrl)
-  if (sessionTenant) return sessionTenant
 
   const tenant =
     (await resolveTenantFromHeaders(authEnabled ? headers : unauthenticatedHeaders, { enforceToken: authEnabled })) ??

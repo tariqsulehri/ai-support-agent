@@ -81,7 +81,11 @@ async function verifyPayloadSignature(payload: string, signatureB64url: string):
 
 export async function createSessionToken(input: Omit<AuthSession, 'exp'>): Promise<string> {
   const payloadJson = JSON.stringify({
-    ...input,
+    userId: input.userId,
+    tenantId: input.tenantId ? input.tenantId.trim() : null,
+    email: input.email,
+    name: input.name,
+    role: input.role,
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
   })
   const payload = base64urlEncode(textEncode(payloadJson))
@@ -103,7 +107,22 @@ export async function verifySessionToken(token: string | undefined): Promise<Aut
     const parsed = JSON.parse(decodedText) as AuthSession
     if (!parsed.userId || !parsed.email || !parsed.role || !parsed.exp) return null
     if (parsed.exp < Math.floor(Date.now() / 1000)) return null
-    return parsed
+
+    // For any tenant-scoped user, tenantId MUST be present in the token payload
+    if (parsed.role !== 'platform_admin') {
+      if (!parsed.tenantId || typeof parsed.tenantId !== 'string' || !parsed.tenantId.trim()) {
+        return null
+      }
+    }
+
+    return {
+      userId: parsed.userId,
+      tenantId: parsed.tenantId ? parsed.tenantId.trim() : null,
+      email: parsed.email,
+      name: parsed.name,
+      role: parsed.role,
+      exp: parsed.exp,
+    }
   } catch {
     return null
   }
