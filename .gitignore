@@ -6,3 +6,5 @@ node_modules/
 .vercel
 deployment/.env.*
 !deployment/.env.*.example
+audit/results/
+
