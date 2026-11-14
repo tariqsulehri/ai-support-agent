@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getVerifiedSession } from '@/lib/auth/session'
-import { CalibrSplitLogin } from '@/components/auth/calibr-split-login'
+import { SupportAgentSplitLogin } from '@/components/auth/support-agent-split-login'
 
 type LoginPageProps = {
   searchParams?: Promise<{ error?: string; next?: string }>
@@ -24,7 +24,7 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
         : 'Invalid admin credentials.'
 
   return (
-    <CalibrSplitLogin
+    <SupportAgentSplitLogin
       scope="platform"
       next={next}
       error={error}

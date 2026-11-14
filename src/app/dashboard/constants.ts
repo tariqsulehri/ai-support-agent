@@ -58,7 +58,7 @@ export const tenantConfigurationTab: TabDefinition = {
   label: 'Configuration',
   num: 6,
   description: 'Tenant profile, OpenAI API keys, MongoDB URL, and website embed snippets.',
-  badgeText: 'Assessment Setup',
+  badgeText: 'Tenant Settings',
 }
 
 export const platformTenantTab: TabDefinition = {

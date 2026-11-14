@@ -9,7 +9,7 @@ import { StatusBadge } from '@/components/admin/status-badge'
 import { AdminPanel as Panel } from '@/components/admin/panel'
 import { Field, TextArea, CheckboxField } from '@/components/admin/form-fields'
 import { formatLabel } from '@/lib/admin/forms'
-import { TkxelCalibrLogo } from '@/components/brand/calibr-logo'
+import { SupportAgentLogo } from '@/components/brand/support-agent-logo'
 import {
   saveSettingsAction,
   saveDomainsAction,
@@ -249,9 +249,9 @@ export function TenantDetailView({
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col antialiased">
-      {/* Top Application Navbar (matching Image 2) */}
+      {/* Top Application Navbar */}
       <header className="sticky top-0 z-40 h-14 border-b border-slate-200/90 bg-white px-4 sm:px-6 flex items-center justify-between select-none">
-        {/* Left: Back Link & tkxel | Calibr Logo */}
+        {/* Left: Back Link & Support Agent Logo */}
         <div className="flex items-center gap-4">
           <Link
             href="/dashboard"
@@ -268,12 +268,36 @@ export function TenantDetailView({
           </Link>
 
           <Link href="/dashboard" className="flex items-center">
-            <TkxelCalibrLogo variant="dark" />
+            <SupportAgentLogo variant="dark" />
           </Link>
         </div>
 
-        {/* Right: Notifications, AI Icon & User Profile Badge */}
-        <div className="flex items-center gap-3 sm:gap-4">
+        {/* Right: Test Agent, Notifications, AI Icon & User Profile Badge */}
+        <div className="flex items-center gap-2.5 sm:gap-4">
+          {/* Test Voice Agent Button */}
+          <a
+            href={`${baseUrl}/voice?tenant=${encodeURIComponent(tenant.tenantId)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition shadow-xs"
+            title="Launch interactive voice agent tester"
+          >
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Test Voice Agent</span>
+            <svg className="h-3 w-3 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M4.25 2A2.25 2.25 0 002 4.25v2.5a.75.75 0 001.5 0v-2.5a.75.75 0 01.75-.75h11.5a.75.75 0 01.75.75v11.5a.75.75 0 01-.75.75H4.25a.75.75 0 01-.75-.75v-2.5a.75.75 0 00-1.5 0v2.5A2.25 2.25 0 004.25 18h11.5A2.25 2.25 0 0018 15.75V4.25A2.25 2.25 0 0015.75 2H4.25z"
+                clipRule="evenodd"
+              />
+              <path
+                fillRule="evenodd"
+                d="M12.53 9.47a.75.75 0 010 1.06l-3 3a.75.75 0 11-1.06-1.06l1.72-1.72H3.75a.75.75 0 010-1.5h6.44L8.47 8.53a.75.75 0 011.06-1.06l3 3z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </a>
+
           <button
             type="button"
             className="relative flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
@@ -292,7 +316,7 @@ export function TenantDetailView({
             </div>
             <div className="hidden sm:block text-left">
               <p className="text-xs font-bold text-slate-900 leading-tight">
-                {session.name || 'Tariq Mahmood'}
+                {session.name || 'Support Agent User'}
               </p>
               <p className="text-[10px] font-mono text-slate-500 tracking-wider">
                 {roleTitle}
@@ -304,7 +328,7 @@ export function TenantDetailView({
 
       {/* Main Layout Body: Left Sidebar + Main Content */}
       <div className="flex-1 flex min-w-0">
-        {/* Left Navigation Sidebar (matching Image 2) */}
+        {/* Left Navigation Sidebar */}
         <aside className="hidden lg:flex w-60 shrink-0 flex-col justify-between border-r border-slate-200/90 bg-white p-3 select-none">
           <div className="space-y-1">
             <Link
@@ -315,38 +339,7 @@ export function TenantDetailView({
                 <path d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75H4.25a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h4a.75.75 0 010 1.5h-4A2.25 2.25 0 012 15.75V4.25z" />
                 <path d="M12.75 9a.75.75 0 01.75-.75h3.5a.75.75 0 01.75.75v6a.75.75 0 01-.75.75h-3.5a.75.75 0 01-.75-.75v-6z" />
               </svg>
-              <span>Admin Dashboard</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tab=communications"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-            >
-              <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-              </svg>
-              <span>Pending Approvals</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tab=leads"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-            >
-              <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 18a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 4.163 1.225 1.225 0 01-.549 1.096A8.06 8.06 0 0114.5 16z" />
-              </svg>
-              <span>Team Roster</span>
-            </Link>
-
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-            >
-              <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
-                <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
-              </svg>
-              <span>Skill Assessments</span>
+              <span>Live Overview</span>
             </Link>
 
             <Link
@@ -356,7 +349,17 @@ export function TenantDetailView({
               <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 2c-4.418 0-8 3.134-8 7 0 1.76.74 3.37 1.97 4.6-.28 1.1-.94 2.12-1.87 2.87a.75.75 0 00.5 1.33c2.3 0 4.14-.9 5.23-1.92.7.08 1.43.12 2.17.12 4.418 0 8-3.134 8-7s-3.582-7-8-7z" clipRule="evenodd" />
               </svg>
-              <span>CEFR Communication</span>
+              <span>Call Transcripts</span>
+            </Link>
+
+            <Link
+              href="/dashboard?tab=leads"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+            >
+              <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+              </svg>
+              <span>Lead Pipeline</span>
             </Link>
 
             <Link
@@ -364,10 +367,56 @@ export function TenantDetailView({
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
             >
               <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.949 5.684a1 1 0 00-1.898 0l-.683 2.051a1 1 0 01-.633.633l-2.051.683a1 1 0 000 1.898l2.051.684a1 1 0 01.633.632l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.051-.683a1 1 0 000-1.898l-2.051-.684a1 1 0 01-.633-.632L6.95 5.684z" />
+                <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a8.03 8.03 0 01-6.19 6.19l-1.192.24a1 1 0 000 1.96l1.192.24a8.03 8.03 0 016.19 6.19l.24 1.192a1 1 0 001.96 0l.24-1.192a8.03 8.03 0 016.19-6.19l1.192-.24a1 1 0 000-1.96l-1.192-.24a8.03 8.03 0 01-6.19-6.19l-.24-1.192z" />
               </svg>
-              <span>AI Dashboard</span>
+              <span>AI Intelligence</span>
             </Link>
+
+            <Link
+              href="/dashboard?tab=capabilities"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+            >
+              <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v11.5A2.25 2.25 0 0115.75 18H4.25A2.25 2.25 0 012 15.75V4.25zm4.03 6.28a.75.75 0 00-1.06-1.06L4.72 9.72a.75.75 0 000 1.06l.25.25a.75.75 0 001.06 0l3-3a.75.75 0 00-1.06-1.06L6.5 8.44l-.47-.47zm6.47-2.78a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5a.75.75 0 01-.75-.75zm0 4.5a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5a.75.75 0 01-.75-.75z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>Engine Capabilities</span>
+            </Link>
+
+            <a
+              href={`${baseUrl}/voice?tenant=${encodeURIComponent(tenant.tenantId)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="h-4 w-4 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+                  <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.58 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z" />
+                </svg>
+                <span>Test Voice Agent</span>
+              </div>
+              <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200">LIVE</span>
+            </a>
+
+            {session.role === 'platform_admin' && (
+              <Link
+                href="/dashboard?tab=tenants"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+              >
+                <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>Tenants Directory</span>
+              </Link>
+            )}
 
             {/* Setup / Configuration Section with Active State */}
             <div className="pt-2">
@@ -380,7 +429,7 @@ export function TenantDetailView({
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span>Tenant Setup</span>
+                  <span>Agent Setup</span>
                 </div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#0052ff]">Active</span>
               </div>
@@ -459,10 +508,10 @@ export function TenantDetailView({
               </div>
               <div className="text-left overflow-hidden">
                 <p className="text-xs font-bold text-slate-900 truncate">
-                  {session.name || 'Tariq Mahmood'}
+                  {session.name || 'Support Agent User'}
                 </p>
                 <p className="text-[10px] font-mono text-slate-500 truncate">
-                  ID 1363 | {roleTitle}
+                  {tenant.tenantId} | {roleTitle}
                 </p>
               </div>
             </div>

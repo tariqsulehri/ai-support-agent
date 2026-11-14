@@ -20,7 +20,7 @@ import {
   PlatformTenantsTab,
   TenantConfigurationTab,
 } from './tabs'
-import { TkxelCalibrLogo } from '@/components/brand/calibr-logo'
+import { SupportAgentLogo } from '@/components/brand/support-agent-logo'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -161,7 +161,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col antialiased">
       {/* Top Application Navbar */}
       <header className="sticky top-0 z-40 h-14 border-b border-slate-200/90 bg-white px-4 sm:px-6 flex items-center justify-between select-none">
-        {/* Left: Back Icon & tkxel | Calibr Logo */}
+        {/* Left: Dashboard Home Link & Support Agent Logo */}
         <div className="flex items-center gap-4">
           <Link
             href="/dashboard"
@@ -176,11 +176,45 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               />
             </svg>
           </Link>
-          <TkxelCalibrLogo variant="dark" />
+          <SupportAgentLogo variant="dark" />
         </div>
 
-        {/* Right: Notifications, Sparkle, and User Profile Badge */}
-        <div className="flex items-center gap-3.5">
+        {/* Right: Test Agent, AI Sparkle, Notifications, and User Profile Badge */}
+        <div className="flex items-center gap-2.5 sm:gap-3.5">
+          {/* Test Voice Agent Button */}
+          <Link
+            href="/voice"
+            target="_blank"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition shadow-xs"
+            title="Launch interactive voice agent tester"
+          >
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Test Voice Agent</span>
+            <svg className="h-3 w-3 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M4.25 2A2.25 2.25 0 002 4.25v2.5a.75.75 0 001.5 0v-2.5a.75.75 0 01.75-.75h11.5a.75.75 0 01.75.75v11.5a.75.75 0 01-.75.75H4.25a.75.75 0 01-.75-.75v-2.5a.75.75 0 00-1.5 0v2.5A2.25 2.25 0 004.25 18h11.5A2.25 2.25 0 0018 15.75V4.25A2.25 2.25 0 0015.75 2H4.25z"
+                clipRule="evenodd"
+              />
+              <path
+                fillRule="evenodd"
+                d="M12.53 9.47a.75.75 0 010 1.06l-3 3a.75.75 0 11-1.06-1.06l1.72-1.72H3.75a.75.75 0 010-1.5h6.44L8.47 8.53a.75.75 0 011.06-1.06l3 3z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </Link>
+
+          {/* AI Co-pilot Sparkle Icon */}
+          <Link
+            href={dashboardTabHref('ai', filters)}
+            className="p-1.5 text-slate-500 hover:text-[#0052ff] transition rounded-lg hover:bg-slate-100"
+            title="AI Intelligence"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a8.03 8.03 0 01-6.19 6.19l-1.192.24a1 1 0 000 1.96l1.192.24a8.03 8.03 0 016.19 6.19l.24 1.192a1 1 0 001.96 0l.24-1.192a8.03 8.03 0 016.19-6.19l1.192-.24a1 1 0 000-1.96l-1.192-.24a8.03 8.03 0 01-6.19-6.19l-.24-1.192z" />
+            </svg>
+          </Link>
+
           {/* Notification Bell */}
           <button
             type="button"
@@ -193,17 +227,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[#ff5e1a] ring-2 ring-white" />
           </button>
 
-          {/* Sparkle / AI Assistant Icon */}
-          <button
-            type="button"
-            className="p-1.5 text-slate-500 hover:text-[#0052ff] transition rounded-lg hover:bg-slate-100"
-            title="AI Co-pilot"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a8.03 8.03 0 01-6.19 6.19l-1.192.24a1 1 0 000 1.96l1.192.24a8.03 8.03 0 016.19 6.19l.24 1.192a1 1 0 001.96 0l.24-1.192a8.03 8.03 0 016.19-6.19l1.192-.24a1 1 0 000-1.96l-1.192-.24a8.03 8.03 0 01-6.19-6.19l-.24-1.192z" />
-            </svg>
-          </button>
-
           <span className="h-5 w-px bg-slate-200" />
 
           {/* User Profile Chip */}
@@ -213,7 +236,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
             <div className="hidden sm:block text-left">
               <p className="text-xs font-bold text-slate-900 leading-tight">
-                {session.name || 'Tariq Mahmood'}
+                {session.name || 'Support Agent User'}
               </p>
               <p className="text-[10px] font-semibold text-slate-400 tracking-wider">
                 {roleTitle}
@@ -261,8 +284,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               >
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75H4.25a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h4a.75.75 0 010 1.5h-4A2.25 2.25 0 012 15.75V4.25z" />
+                  <path d="M12.75 9a.75.75 0 01.75-.75h3.5a.75.75 0 01.75.75v6a.75.75 0 01-.75.75h-3.5a.75.75 0 01-.75-.75v-6z" />
                 </svg>
-                <span>Admin Dashboard</span>
+                <span>Live Overview</span>
               </Link>
 
               <Link
@@ -276,11 +300,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    d="M10 2c-4.418 0-8 3.134-8 7 0 1.76.74 3.37 1.97 4.6-.28 1.1-.94 2.12-1.87 2.87a.75.75 0 00.5 1.33c2.3 0 4.14-.9 5.23-1.92.7.08 1.43.12 2.17.12 4.418 0 8-3.134 8-7s-3.582-7-8-7z"
                     clipRule="evenodd"
                   />
                 </svg>
-                <span>Pending Approvals</span>
+                <span>Call Transcripts</span>
               </Link>
 
               <Link
@@ -294,7 +318,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                 </svg>
-                <span>Team Roster</span>
+                <span>Lead Pipeline</span>
               </Link>
 
               <Link
@@ -308,7 +332,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a8.03 8.03 0 01-6.19 6.19l-1.192.24a1 1 0 000 1.96l1.192.24a8.03 8.03 0 016.19 6.19l.24 1.192a1 1 0 001.96 0l.24-1.192a8.03 8.03 0 016.19-6.19l1.192-.24a1 1 0 000-1.96l-1.192-.24a8.03 8.03 0 01-6.19-6.19l-.24-1.192z" />
                 </svg>
-                <span>Skill Assessments</span>
+                <span>AI Intelligence</span>
               </Link>
 
               <Link
@@ -322,38 +346,47 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
+                    d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v11.5A2.25 2.25 0 0115.75 18H4.25A2.25 2.25 0 012 15.75V4.25zm4.03 6.28a.75.75 0 00-1.06-1.06L4.72 9.72a.75.75 0 000 1.06l.25.25a.75.75 0 001.06 0l3-3a.75.75 0 00-1.06-1.06L6.5 8.44l-.47-.47zm6.47-2.78a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5a.75.75 0 01-.75-.75zm0 4.5a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5a.75.75 0 01-.75-.75z"
                     clipRule="evenodd"
                   />
                 </svg>
-                <span>CEFR Communication</span>
+                <span>Engine Capabilities</span>
               </Link>
 
               <Link
-                href={dashboardTabHref('ai', filters)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+                href="/voice"
+                target="_blank"
+                className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
               >
-                <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.789 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-3.658-1.83z" />
-                </svg>
-                <span>AI Dashboard</span>
+                <div className="flex items-center gap-3">
+                  <svg className="h-4 w-4 shrink-0 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+                    <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.58 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z" />
+                  </svg>
+                  <span>Test Voice Agent</span>
+                </div>
+                <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200">LIVE</span>
               </Link>
 
-              <div className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer">
-                <div className="flex items-center gap-3">
+              {session.role === 'platform_admin' && (
+                <Link
+                  href={dashboardTabHref('tenants', filters)}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                    activeTab === 'tenants'
+                      ? 'bg-blue-50/70 text-[#0052ff]'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
                   <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                    <path
+                      fillRule="evenodd"
+                      d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
+                      clipRule="evenodd"
+                    />
                   </svg>
-                  <span>Reports</span>
-                </div>
-                <svg className="h-3 w-3 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
+                  <span>Tenants Directory</span>
+                </Link>
+              )}
 
               {/* Setup / Configuration Section with Expandable Tree */}
               <div className="pt-2">
@@ -365,19 +398,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                         ? `/admin/tenants/${session.tenantId}`
                         : dashboardTabHref('configuration', filters)
                   }
-                  className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-[#0052ff] hover:bg-blue-50/50 transition"
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                    activeTab === 'configuration'
+                      ? 'bg-blue-50/70 text-[#0052ff]'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
-                    <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <svg className="h-4 w-4 shrink-0 text-[#0052ff]" viewBox="0 0 20 20" fill="currentColor">
                       <path
                         fillRule="evenodd"
                         d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
                         clipRule="evenodd"
                       />
                     </svg>
-                    <span>Setup</span>
+                    <span>Agent Setup</span>
                   </div>
-                  <svg className="h-3.5 w-3.5 text-[#0052ff]" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="h-3.5 w-3.5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
                     <path
                       fillRule="evenodd"
                       d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -386,46 +423,49 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   </svg>
                 </Link>
 
-                {/* Sub-tree menu (matching items from screenshot 2) */}
+                {/* Sub-tree menu (Actual application options formatted as 1, 2, 3, 4, 5) */}
                 <div className="ml-4 pl-3 border-l-2 border-slate-100 mt-1 space-y-1 text-[11px] font-medium text-slate-600">
-                  <div className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 cursor-pointer">
+                  <Link
+                    href={session.tenantId ? `/admin/tenants/${session.tenantId}?tab=overview` : dashboardTabHref('configuration', filters)}
+                    className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 transition"
+                  >
                     <span className="text-slate-400 font-mono">1</span>
-                    <span>Evaluation Periods</span>
-                  </div>
-                  <div className="flex items-center gap-2 py-1 px-2 rounded bg-blue-50/80 text-[#0052ff] font-semibold border-l-2 border-[#0052ff] -ml-[13px] pl-[11px]">
-                    <span className="font-mono">2</span>
-                    <span>Assessment Options</span>
-                  </div>
-                  <div className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 cursor-pointer">
+                    <span>Readiness Checklist</span>
+                  </Link>
+                  <Link
+                    href={session.tenantId ? `/admin/tenants/${session.tenantId}?tab=embed` : dashboardTabHref('configuration', filters)}
+                    className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 transition"
+                  >
+                    <span className="text-slate-400 font-mono">2</span>
+                    <span>Embed & API Keys</span>
+                  </Link>
+                  <Link
+                    href={session.tenantId ? `/admin/tenants/${session.tenantId}?tab=agent` : dashboardTabHref('configuration', filters)}
+                    className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 transition"
+                  >
                     <span className="text-slate-400 font-mono">3</span>
-                    <span>Organization</span>
-                  </div>
-                  <div className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 cursor-pointer">
+                    <span>Agent Persona</span>
+                  </Link>
+                  <Link
+                    href={session.tenantId ? `/admin/tenants/${session.tenantId}?tab=integrations` : dashboardTabHref('configuration', filters)}
+                    className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 transition"
+                  >
                     <span className="text-slate-400 font-mono">4</span>
-                    <span>User Management</span>
-                  </div>
-                  <div className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 cursor-pointer">
+                    <span>OpenAI & MongoDB</span>
+                  </Link>
+                  <Link
+                    href={session.tenantId ? `/admin/tenants/${session.tenantId}?tab=team` : dashboardTabHref('configuration', filters)}
+                    className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 transition"
+                  >
                     <span className="text-slate-400 font-mono">5</span>
-                    <span>Skill Framework</span>
-                  </div>
-                  <div className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 cursor-pointer">
-                    <span className="text-slate-400 font-mono">6</span>
-                    <span>Targets & Rules</span>
-                  </div>
-                  <div className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 cursor-pointer">
-                    <span className="text-slate-400 font-mono">7</span>
-                    <span>Industries & Domains</span>
-                  </div>
-                  <div className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 cursor-pointer">
-                    <span className="text-slate-400 font-mono">8</span>
-                    <span>Scoring Simulator</span>
-                  </div>
+                    <span>Team Access</span>
+                  </Link>
                 </div>
               </div>
             </nav>
           </div>
 
-          {/* Bottom Profile Widget in Sidebar (matching Image 2 bottom-left) */}
+          {/* Bottom Profile Widget in Sidebar */}
           <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0052ff] text-xs font-bold text-white shadow-xs">
@@ -433,10 +473,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </div>
               <div className="text-left overflow-hidden">
                 <p className="text-xs font-bold text-slate-900 truncate">
-                  {session.name || 'Tariq Mahmood'}
+                  {session.name || 'Support Agent User'}
                 </p>
                 <p className="text-[10px] font-mono text-slate-500 truncate">
-                  ID 1363 | {roleTitle}
+                  {session.tenantId || 'platform'} | {roleTitle}
                 </p>
               </div>
             </div>
@@ -475,7 +515,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <div className="relative shrink-0">
                 <input
                   type="text"
-                  placeholder="Search configuration..."
+                  placeholder="Search callers, leads, records..."
                   defaultValue={filters.q ?? ''}
                   className="h-9 w-full sm:w-64 rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-700 placeholder-slate-400 shadow-xs outline-none focus:border-[#0052ff] focus:ring-1 focus:ring-[#0052ff]"
                 />
