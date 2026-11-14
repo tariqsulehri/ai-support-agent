@@ -13,7 +13,8 @@
     "tenants:secrets:migrate-openai": "tsx src/scripts/migrate-openai-secrets.ts",
     "tenants:secret:set-openai": "tsx src/scripts/set-tenant-openai-secret.ts",
     "tenants:migrate-conversations": "tsx src/scripts/migrate-tenant-conversations.ts",
-    "auth:user:create": "tsx src/scripts/create-auth-user.ts"
+    "auth:user:create": "tsx src/scripts/create-auth-user.ts",
+    "impeccable": ".agent/skills/impeccable/scripts/impeccable"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.0.0",

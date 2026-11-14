@@ -61,3 +61,4 @@
 - Tenant Database Registry & Collections: `src/lib/tenants/db-registry.ts`, `src/lib/tenants/db-types.ts`
 - Encrypted Secrets Storage: `src/lib/tenants/secrets.ts`, `src/lib/security/encryption.ts`
 - Usage Counters: `src/lib/observability/usage.ts`
+
