@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --import tsx --test src/tests/**/*.test.ts",
     "cli:voice": "tsx src/cli/voice.ts",
     "cli:text": "tsx src/cli/text.ts",
     "tenants:migrate": "tsx src/scripts/migrate-tenants.ts",

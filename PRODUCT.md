@@ -58,3 +58,4 @@ An enterprise-ready, embeddable voice support agent combining real-time streamin
 2. **Sub-Second Perceived Latency**: Stream chat completions via SSE and buffer TTS chunks eagerly ahead of playback.
 3. **Strict Multi-Tenant Sovereignty**: Secrets are encrypted at rest; credentials and tenant conversations remain strictly isolated.
 4. **Resilient Interaction**: If audio playback is blocked by browser autoplay rules, remain online, display the greeting, and unlock audio immediately upon the first user gesture.
+

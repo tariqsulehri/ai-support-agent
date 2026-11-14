@@ -35,6 +35,7 @@ const envSchema = z.object({
   USAGE_EVENTS_ENABLED: z.enum(['true', 'false']).default('false'),
   AUDIT_LOGS_TTL_DAYS: z.coerce.number().int().positive().optional(),
   USAGE_EVENTS_TTL_DAYS: z.coerce.number().int().positive().optional(),
+  CALL_RECORDS_TTL_DAYS: z.coerce.number().int().positive().optional(),
 
   // Optional subscription and per-tenant runtime protection.
   SUBSCRIPTION_ENFORCEMENT_ENABLED: z.enum(['true', 'false']).default('false'),

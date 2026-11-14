@@ -58,3 +58,4 @@ export function isUserGestureActive(): boolean {
   const userAct = (navigator as unknown as { userActivation?: { hasBeenActive?: boolean } }).userActivation
   return Boolean(userAct?.hasBeenActive)
 }
+

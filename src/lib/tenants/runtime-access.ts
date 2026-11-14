@@ -28,6 +28,9 @@ function subscriptionEnforcementEnabled(): boolean {
 }
 
 function rateLimitEnabled(): boolean {
+  if (process.env.NODE_ENV === 'production') {
+    return env.TENANT_RATE_LIMIT_ENABLED !== 'false'
+  }
   return env.TENANT_RATE_LIMIT_ENABLED === 'true'
 }
 

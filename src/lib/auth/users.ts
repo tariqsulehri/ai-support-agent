@@ -30,11 +30,18 @@ export async function ensureAuthUserIndexes(db: Db): Promise<void> {
   ])
 }
 
+let indexesPromise: Promise<void> | null = null
+
 async function getAuthDb(): Promise<Db> {
   if (!isMongoConfigured()) throw new Error('MongoDB is required for admin authentication.')
   const db = await getMongoDb()
   if (!db) throw new Error('MongoDB is required for admin authentication.')
-  await ensureAuthUserIndexes(db)
+  if (!indexesPromise) {
+    indexesPromise = ensureAuthUserIndexes(db).catch((err) => {
+      indexesPromise = null
+      console.warn('[auth indexes] index creation error:', err)
+    })
+  }
   return db
 }
 

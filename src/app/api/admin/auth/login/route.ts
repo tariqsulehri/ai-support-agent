@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { setSessionCookie } from '@/lib/auth/session'
 import { authenticateUser } from '@/lib/auth/users'
 import type { AuthUserRecord } from '@/lib/auth/types'
+import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from '@/lib/auth/rate-limiter'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -33,19 +34,36 @@ function canUseLoginScope(user: AuthUserRecord, scope: LoginScope): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  const clientIp =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    '127.0.0.1'
+
   const formData = await req.formData()
-  const email = String(formData.get('email') ?? '')
+  const email = String(formData.get('email') ?? '').trim()
   const password = String(formData.get('password') ?? '')
   const scope = loginScope(formData.get('scope'))
   const next = safeNext(formData.get('next'), scope)
 
+  // Rate limit check before costly scrypt password verification
+  const rateLimit = checkLoginRateLimit(clientIp, email)
+  if (!rateLimit.allowed) {
+    const url = new URL(loginPath(scope), req.url)
+    url.searchParams.set('error', 'rate_limit')
+    url.searchParams.set('next', next)
+    return NextResponse.redirect(url, { status: 303 })
+  }
+
   const user = await authenticateUser(email, password)
   if (!user || !canUseLoginScope(user, scope)) {
+    recordFailedLogin(clientIp, email)
     const url = new URL(loginPath(scope), req.url)
     url.searchParams.set('error', user ? 'role' : 'invalid')
     url.searchParams.set('next', next)
     return NextResponse.redirect(url, { status: 303 })
   }
+
+  resetLoginRateLimit(clientIp, email)
 
   await setSessionCookie({
     userId: user.userId,

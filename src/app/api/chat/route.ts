@@ -17,6 +17,33 @@ export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
 
+const MAX_HISTORY_MESSAGES = 20
+const MAX_MESSAGE_CHARS = 2000
+
+function sanitizeMessages(raw: unknown): ChatMessage[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null
+
+  const cleaned: ChatMessage[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const role = (item as { role?: unknown }).role
+    const content = (item as { content?: unknown }).content
+
+    if ((role === 'user' || role === 'assistant') && typeof content === 'string') {
+      const trimmed = content.trim()
+      if (trimmed.length > 0) {
+        cleaned.push({
+          role,
+          content: trimmed.slice(0, MAX_MESSAGE_CHARS),
+        })
+      }
+    }
+  }
+
+  if (cleaned.length === 0) return null
+  return cleaned.slice(-MAX_HISTORY_MESSAGES)
+}
+
 /**
  * Streaming chat endpoint — emits Server-Sent Events.
  *
@@ -38,11 +65,13 @@ export async function POST(req: NextRequest) {
   let existingLead: Partial<LeadData> = {}
   try {
     const body = await req.json()
-    messages = body.messages
+    const sanitized = sanitizeMessages(body.messages)
+    if (!sanitized) throw new Error('Invalid messages array')
+    messages = sanitized
+
     if (body.lead && typeof body.lead === 'object') {
       existingLead = body.lead
     }
-    if (!Array.isArray(messages)) throw new Error('messages must be an array')
   } catch {
     return new Response('Invalid request body', { status: 400 })
   }

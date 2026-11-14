@@ -18,7 +18,9 @@ export default async function TenantLoginPage({ searchParams }: LoginPageProps) 
   const next = params?.next ?? '/dashboard'
   const errorMessage = error === 'role'
     ? 'This login is only for tenant users.'
-    : 'Invalid tenant email or password.'
+    : error === 'rate_limit'
+      ? 'Too many failed login attempts. Please wait 15 minutes before trying again.'
+      : 'Invalid tenant email or password.'
 
   return (
     <main className="min-h-dvh bg-[#f6f8fb] px-4 py-10 text-slate-950">

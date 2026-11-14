@@ -5,6 +5,9 @@ import type { TenantConfig } from '@/lib/tenants/types'
 import { originFromUrl, verifyEmbedSessionToken } from './embed-session'
 
 export function isEmbedAuthEnabled(): boolean {
+  if (process.env.NODE_ENV === 'production') {
+    return env.EMBED_AUTH_ENABLED !== 'false'
+  }
   return env.EMBED_AUTH_ENABLED === 'true'
 }
 

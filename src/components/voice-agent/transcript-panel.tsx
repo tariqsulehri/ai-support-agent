@@ -41,8 +41,14 @@ export function TranscriptPanel({
   const isEmpty = messages.length === 0 && !partialReply
 
   return (
-    <div className="flex-1 overflow-y-auto scrollbar-thin px-4 py-4
-                    flex flex-col gap-1 min-h-0 bg-surface-hover">
+    <div
+      role="log"
+      aria-live="polite"
+      aria-atomic="false"
+      aria-relevant="additions text"
+      className="flex-1 overflow-y-auto scrollbar-thin px-4 py-4
+                    flex flex-col gap-1 min-h-0 bg-surface-hover"
+    >
 
       {/* Empty state */}
       {isEmpty && phase === 'connecting' && (

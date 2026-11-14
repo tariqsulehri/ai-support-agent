@@ -18,7 +18,9 @@ export default async function AdminLoginPage({ searchParams }: LoginPageProps) {
   const next = params?.next ?? '/admin/tenants'
   const errorMessage = error === 'role'
     ? 'This login is only for the super admin account.'
-    : 'Invalid super admin email or password.'
+    : error === 'rate_limit'
+      ? 'Too many failed login attempts. Please wait 15 minutes before trying again.'
+      : 'Invalid super admin email or password.'
 
   return (
     <main className="min-h-dvh bg-[#f6f8fb] px-4 py-10 text-slate-950">

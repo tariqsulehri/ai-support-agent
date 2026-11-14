@@ -1,12 +1,22 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { SESSION_COOKIE_NAME } from '@/lib/auth/types'
+import { verifySessionToken } from '@/lib/auth/token'
 
-export function middleware(req: NextRequest) {
-  const hasSessionCookie = Boolean(req.cookies.get(SESSION_COOKIE_NAME)?.value)
-  if (hasSessionCookie) return NextResponse.next()
+export async function middleware(req: NextRequest) {
+  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value
+  const session = await verifySessionToken(token)
+
+  if (session) {
+    if (req.nextUrl.pathname.startsWith('/admin/tenants') && session.role !== 'platform_admin') {
+      const url = req.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+    return NextResponse.next()
+  }
 
   const url = req.nextUrl.clone()
-  url.pathname = req.nextUrl.pathname === '/admin/tenants' || req.nextUrl.pathname === '/admin/tenants/'
+  url.pathname = req.nextUrl.pathname.startsWith('/admin/tenants')
     ? '/admin/login'
     : '/tenant/login'
   url.search = ''

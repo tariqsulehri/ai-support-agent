@@ -77,6 +77,8 @@ async function ensureConversationIndexes(store: ConversationStore): Promise<void
   if (indexKeys.has(key)) return
 
   const collection = store.db.collection(env.MONGODB_CALLS_COLLECTION)
+  const ttlDays = env.CALL_RECORDS_TTL_DAYS
+
   await Promise.all([
     collection.createIndex({ 'tenant.id': 1, createdAt: -1 }),
     collection.createIndex({ 'tenant.id': 1, status: 1, createdAt: -1 }),
@@ -84,6 +86,14 @@ async function ensureConversationIndexes(store: ConversationStore): Promise<void
     collection.createIndex({ 'tenant.id': 1, 'requirement.urgency': 1, createdAt: -1 }),
     collection.createIndex({ status: 1, updatedAt: -1 }),
     collection.createIndex({ createdAt: -1 }),
+    ttlDays && ttlDays > 0
+      ? collection
+          .createIndex(
+            { createdAt: 1 },
+            { expireAfterSeconds: ttlDays * 24 * 60 * 60, name: 'call_records_ttl' }
+          )
+          .catch(() => {})
+      : Promise.resolve(),
   ])
   indexKeys.add(key)
 }

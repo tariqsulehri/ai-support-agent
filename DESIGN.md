@@ -116,3 +116,4 @@ ai-support-agent provides a calm, responsive, and trustworthy conversational int
 - **DO** handle browser autoplay restrictions gracefully: keep the agent in `Online` state and unlock pre-buffered speech on user gesture.
 - **DON'T** display raw hidden tokens (`[LEAD:{...}]`, `[END_CALL]`) in chat bubbles or audio streams.
 - **DON'T** hardcode fixed brand colors in component styles; always rely on theme variables (`var(--va-primary)`) to respect tenant styling.
+
