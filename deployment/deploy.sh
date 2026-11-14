@@ -8,8 +8,13 @@ echo "========================================="
 echo " Deploying web-ai-agent (latest)"
 echo "========================================="
 
-echo "==> [1/3] Pulling latest image..."
-docker compose pull
+if [ -d "./src-build" ]; then
+  echo "==> [1/3] Building image from local src-build..."
+  docker compose build
+else
+  echo "==> [1/3] Pulling latest image from registry..."
+  docker compose pull
+fi
 
 echo "==> [2/3] Stopping and removing existing container..."
 docker compose down

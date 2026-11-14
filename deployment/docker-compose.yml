@@ -1,6 +1,9 @@
 services:
 
   web-ai-agent:
+    build:
+      context: ./src-build
+      dockerfile: Dockerfile
     image: tariqsulehri/web-ai-agent:latest
     platform: linux/amd64
     container_name: web-ai-agent
@@ -10,6 +13,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      HOSTNAME: "0.0.0.0"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -17,7 +21,7 @@ services:
     volumes:
       - web_ai_agent_data:/app/data
     healthcheck:
-      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/voice', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));" ]
+      test: [ "CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/voice', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));" ]
       interval: 10s
       timeout: 5s
       retries: 5
