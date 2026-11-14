@@ -6,6 +6,10 @@ import {
   maskClientApiKey,
   CLIENT_API_KEY_PREFIX,
 } from '../lib/security/client-keys'
+import {
+  createEmbedSessionToken,
+  verifyEmbedSessionToken,
+} from '../lib/security/embed-session'
 
 describe('Encrypted Client API Key (Server-Only Decryption & Authentic Tenant ID)', () => {
   const tenantId = 'vital-steer-technologies'
@@ -53,7 +57,9 @@ describe('Encrypted Client API Key (Server-Only Decryption & Authentic Tenant ID
     const raw = key.slice(CLIENT_API_KEY_PREFIX.length)
     const [iv, cipher, tag] = raw.split('.')
 
-    const tamperedTag = (tag.endsWith('a') ? 'b' : 'a') + tag.slice(1)
+    const tagBuf = Buffer.from(tag, 'base64url')
+    tagBuf[0] ^= 1
+    const tamperedTag = tagBuf.toString('base64url')
     const tamperedKey = `${CLIENT_API_KEY_PREFIX}${iv}.${cipher}.${tamperedTag}`
 
     const result = decryptClientApiKey(tamperedKey)
@@ -65,7 +71,9 @@ describe('Encrypted Client API Key (Server-Only Decryption & Authentic Tenant ID
     const raw = key.slice(CLIENT_API_KEY_PREFIX.length)
     const [iv, cipher, tag] = raw.split('.')
 
-    const tamperedIv = (iv.endsWith('a') ? 'b' : 'a') + iv.slice(1)
+    const ivBuf = Buffer.from(iv, 'base64url')
+    ivBuf[0] ^= 1
+    const tamperedIv = ivBuf.toString('base64url')
     const tamperedKey = `${CLIENT_API_KEY_PREFIX}${tamperedIv}.${cipher}.${tag}`
 
     const result = decryptClientApiKey(tamperedKey)
@@ -102,5 +110,19 @@ describe('Encrypted Client API Key (Server-Only Decryption & Authentic Tenant ID
     assert.ok(masked.startsWith(CLIENT_API_KEY_PREFIX))
     assert.ok(masked.includes('••••'))
     assert.notEqual(masked, key)
+  })
+
+  it('generates and validates an embed session token with origin binding', () => {
+    const sessionToken = createEmbedSessionToken({
+      tenantId: 'vital-steer-technologies',
+      origin: 'https://vitalsteertechnologies.com',
+    })
+
+    assert.ok(sessionToken)
+    const verified = verifyEmbedSessionToken(sessionToken)
+    assert.ok(verified)
+    assert.equal(verified?.tenantId, 'vital-steer-technologies')
+    assert.equal(verified?.origin, 'https://vitalsteertechnologies.com')
+    assert.ok((verified?.exp ?? 0) > Math.floor(Date.now() / 1000))
   })
 })

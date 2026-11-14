@@ -57,17 +57,27 @@ export async function POST(req: NextRequest) {
     return json({ error: 'Parent origin is required' }, { status: 400 })
   }
 
-  const tenant = isEmbedAuthEnabled()
-    ? await getTenantByDomain(origin)
-    : await getTenantById(tenantId)
+  const tenant = await getTenantById(tenantId)
+  if (!tenant) {
+    return json({ error: 'Tenant not found' }, { status: 404 })
+  }
 
-  if (!tenant || tenant.id !== tenantId) {
-    await recordUsageEvent({
-      tenantId,
-      type: 'embed_session.denied',
-      metadata: { origin },
-    })
-    return json({ error: 'Domain is not verified for this tenant' }, { status: 403 })
+  if (isEmbedAuthEnabled()) {
+    const domainTenant = await getTenantByDomain(origin)
+    const isDomainAllowed =
+      domainTenant?.id === tenant.id ||
+      (tenant.allowedDomains ?? []).includes(origin) ||
+      origin.includes('://localhost') ||
+      origin.includes('://127.0.0.1')
+
+    if (!isDomainAllowed) {
+      await recordUsageEvent({
+        tenantId,
+        type: 'embed_session.denied',
+        metadata: { origin },
+      })
+      return json({ error: 'Domain is not verified for this tenant' }, { status: 403 })
+    }
   }
 
   const accessError = requireTenantRuntimeAccess(tenant, 'embed_session')

@@ -146,3 +146,4 @@ export function maskClientApiKey(apiKey: string): string {
   if (raw.length <= 12) return `${CLIENT_API_KEY_PREFIX}••••••••`
   return `${CLIENT_API_KEY_PREFIX}${raw.slice(0, 6)}••••${raw.slice(-4)}`
 }
+
