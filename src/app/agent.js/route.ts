@@ -17,11 +17,12 @@ export async function GET(req: NextRequest) {
 
   const tenant = script.getAttribute("data-tenant");
   const token = script.getAttribute("data-token");
+  const clientKey = script.getAttribute("data-client-key") || script.getAttribute("data-api-key");
   const width = script.getAttribute("data-width") || "420px";
   const height = script.getAttribute("data-height") || "680px";
 
-  if (!tenant) {
-    console.error("AI Agent: Missing tenant");
+  if (!tenant && !clientKey) {
+    console.error("AI Agent: Missing data-tenant or data-client-key");
     return;
   }
 
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         tenant: tenant,
+        clientKey: clientKey,
         parentUrl: window.location.href
       })
     }).then(async function (res) {

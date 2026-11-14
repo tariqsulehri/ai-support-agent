@@ -7,6 +7,7 @@ import {
   createManagedTenantUser,
   embedSnippet,
   formatKnowledgeBase,
+  generateClientApiKey,
   generateEmbedToken,
   getManagedTenantDetail,
   parseDomains,
@@ -339,6 +340,8 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
 
   const baseUrl = process.env.AGENT_BASE_URL?.trim() ||
     `${headerStore.get('x-forwarded-proto') ?? 'http'}://${headerStore.get('host') ?? 'localhost:3000'}`
+  const clientApiKey = generateClientApiKey(detail.tenant.tenantId)
+  const clientKeySnippet = embedSnippet({ baseUrl, tenantId: detail.tenant.tenantId, clientKey: clientApiKey })
   const snippet = embedSnippet({ baseUrl, tenantId: detail.tenant.tenantId })
   const suggestedEmbedToken = generateEmbedToken(detail.tenant.tenantId)
   const mutable = canManageTenant(session, detail.tenant.tenantId)
@@ -592,11 +595,44 @@ export default async function TenantDetailPage({ params, searchParams }: TenantD
               )}
             </Panel>
 
-            <Panel title="Embed Snippet">
-              <p className="mb-3 text-sm leading-6 text-slate-500">
-                Use the latest embed token you created or rotated for this tenant.
-              </p>
-              <pre className="overflow-x-auto rounded-md border border-slate-200 bg-slate-950 p-4 text-xs leading-6 text-cyan-100">{snippet}</pre>
+            <Panel title="Embed Snippet & Client API Key">
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Encrypted Client API Key (Server-Decrypted & Sealed)
+                    </p>
+                    <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700">
+                      Tamper Proof
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Sealed with the server-only master key. Clients and third parties cannot modify or spoof the tenant ID.
+                  </p>
+                  <pre className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-900 p-3 text-xs font-mono text-emerald-300">
+                    {clientApiKey}
+                  </pre>
+                </div>
+
+                <div className="border-t border-slate-100 pt-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Recommended HTML Embed Code (with Client Key)
+                  </p>
+                  <pre className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-950 p-3 text-xs leading-5 text-cyan-100">
+                    {clientKeySnippet}
+                  </pre>
+                </div>
+
+                <div className="border-t border-slate-100 pt-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Legacy HTML Embed Code (Dynamic Domain Session)
+                  </p>
+                  <pre className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-slate-950 p-3 text-xs leading-5 text-slate-300">
+                    {snippet}
+                  </pre>
+                </div>
+              </div>
+
               {mutable && (
                 <form action={saveEmbedTokenAction} className="mt-4 space-y-3 border-t border-slate-100 pt-4">
                   <input type="hidden" name="tenantId" value={detail.tenant.tenantId} />

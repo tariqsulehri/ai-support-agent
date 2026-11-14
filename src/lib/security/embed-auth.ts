@@ -4,6 +4,7 @@ import { env } from '@/lib/config/env'
 import type { TenantConfig } from '@/lib/tenants/types'
 import { originFromUrl, verifyEmbedSessionToken } from './embed-session'
 import { verifySignedEmbedToken } from './embed-tokens'
+import { decryptClientApiKey } from './client-keys'
 
 export function isEmbedAuthEnabled(): boolean {
   if (process.env.NODE_ENV === 'production') {
@@ -67,6 +68,15 @@ export async function requireEmbedApiAuth(req: NextRequest): Promise<NextRespons
     return NextResponse.json({ error: 'Token tenant mismatch: Token was minted for another tenant' }, { status: 403 })
   }
 
+  // Verify encrypted client API key for cross-tenant tampering
+  const clientKey = decryptClientApiKey(headers.apiKey)
+  if (headers.apiKey && !clientKey) {
+    return NextResponse.json({ error: 'Invalid or forged client API key' }, { status: 401 })
+  }
+  if (clientKey && headers.tenantId && clientKey.tid !== headers.tenantId) {
+    return NextResponse.json({ error: 'Client API key tenant mismatch: Key was minted for another tenant' }, { status: 403 })
+  }
+
   // Verify embed session token for cross-tenant tampering
   if (headers.sessionToken) {
     const session = verifyEmbedSessionToken(headers.sessionToken)
@@ -84,6 +94,11 @@ export async function requireEmbedApiAuth(req: NextRequest): Promise<NextRespons
 
   if (signedToken) {
     const tenant = await getTenantById(signedToken.tenantId)
+    if (tenant) return null
+  }
+
+  if (clientKey) {
+    const tenant = await getTenantById(clientKey.tid)
     if (tenant) return null
   }
 
@@ -144,7 +159,17 @@ export async function getTenantFromRequest(req: NextRequest): Promise<TenantConf
     if (tenant) return tenant
   }
 
-  // 2. Resolve via embed session token (encodes tenantId + origin)
+  // 2. Resolve via encrypted client API key (server decrypts authentic tenantId)
+  const clientKey = decryptClientApiKey(headers.apiKey)
+  if (clientKey) {
+    if (headers.tenantId && headers.tenantId !== clientKey.tid) {
+      throw new Error(`[embed-auth] Cross-tenant violation: Client key tenant (${clientKey.tid}) does not match requested tenant (${headers.tenantId}).`)
+    }
+    const tenant = await getTenantById(clientKey.tid)
+    if (tenant) return tenant
+  }
+
+  // 3. Resolve via embed session token (encodes tenantId + origin)
   const sessionTenant = await tenantFromEmbedSession(headers.sessionToken, headers.parentUrl)
   if (sessionTenant) {
     if (headers.tenantId && headers.tenantId !== sessionTenant.id) {

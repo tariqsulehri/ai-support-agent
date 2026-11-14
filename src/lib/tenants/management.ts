@@ -5,6 +5,7 @@ import { getAuthUserByEmail, listAuthUsersForTenant, upsertAuthUser } from '@/li
 import type { AuthRole, AuthUserRecord } from '@/lib/auth/types'
 import { hashTenantCredential } from './hash'
 import { createSignedEmbedToken } from '@/lib/security/embed-tokens'
+import { mintClientApiKey } from '@/lib/security/client-keys'
 import { normalizeOrigin, normalizeTenantId } from './normalize'
 import { ensureTenantRegistryIndexes } from './db-registry'
 import { getTenantSecretMetadata, upsertTenantSecretInDb, type TenantSecretPublicMetadata } from './secrets'
@@ -732,7 +733,17 @@ export async function createManagedTenantUser(input: {
   })
 }
 
-export function embedSnippet(input: { baseUrl: string; tenantId: string; tokenPlaceholder?: string }): string {
+export function generateClientApiKey(tenantId: string): string {
+  return mintClientApiKey(tenantId)
+}
+
+export function embedSnippet(input: {
+  baseUrl: string
+  tenantId: string
+  tokenPlaceholder?: string
+  clientKey?: string
+}): string {
   const tokenAttribute = input.tokenPlaceholder ? ` data-token="${input.tokenPlaceholder}"` : ''
-  return `<script src="${input.baseUrl.replace(/\/$/, '')}/agent.js" data-tenant="${input.tenantId}"${tokenAttribute}></script>`
+  const clientKeyAttribute = input.clientKey ? ` data-client-key="${input.clientKey}"` : ''
+  return `<script src="${input.baseUrl.replace(/\/$/, '')}/agent.js" data-tenant="${input.tenantId}"${tokenAttribute}${clientKeyAttribute}></script>`
 }

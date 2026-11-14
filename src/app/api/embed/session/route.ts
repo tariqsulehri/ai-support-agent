@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isEmbedAuthEnabled } from '@/lib/security/embed-auth'
 import { createEmbedSessionToken, originFromUrl } from '@/lib/security/embed-session'
+import { decryptClientApiKey } from '@/lib/security/client-keys'
 import { getTenantByDomain, getTenantById } from '@/lib/tenants/registry'
 import { recordUsageEvent } from '@/lib/observability/usage'
 import { requireTenantRuntimeAccess } from '@/lib/tenants/runtime-access'
@@ -17,21 +18,40 @@ function json(data: object, init?: ResponseInit): NextResponse {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { tenant?: string; parentUrl?: string }
+  let body: { tenant?: string; clientKey?: string; clientApiKey?: string; parentUrl?: string }
   try {
     body = await req.json()
   } catch {
-    return json({ error: 'Invalid request body' }, { status: 400 })
+    body = {}
   }
 
-  const tenantId = body.tenant?.trim()
+  const rawKey = body.clientKey?.trim() ||
+    body.clientApiKey?.trim() ||
+    req.headers.get('x-api-key')?.trim()
+
+  let authenticatedTenantId: string | undefined
+
+  if (rawKey) {
+    const decrypted = decryptClientApiKey(rawKey)
+    if (!decrypted) {
+      return json({ error: 'Invalid or forged client API key: Decryption or authentication failed' }, { status: 401 })
+    }
+
+    if (body.tenant && body.tenant.trim() !== decrypted.tid) {
+      return json({ error: 'Tenant mismatch: Client API key belongs to a different tenant' }, { status: 403 })
+    }
+
+    authenticatedTenantId = decrypted.tid
+  }
+
+  const tenantId = authenticatedTenantId ?? body.tenant?.trim()
   const parentUrl = req.headers.get('origin') ??
     req.headers.get('referer') ??
     body.parentUrl
   const origin = originFromUrl(parentUrl)
 
   if (!tenantId) {
-    return json({ error: 'Tenant is required' }, { status: 400 })
+    return json({ error: 'Tenant or valid client API key is required' }, { status: 400 })
   }
   if (!origin) {
     return json({ error: 'Parent origin is required' }, { status: 400 })
