@@ -1,4 +1,5 @@
 import { conversationCollection, getConversationStoresForScope, type ConversationStore } from '@/lib/db/conversation-store'
+import { buildRlsQuery, filterRecordsByRls } from '@/lib/security/row-level-security'
 import type { Document } from 'mongodb'
 import type { DashboardAccessScope } from '@/lib/auth/types'
 import type {
@@ -317,24 +318,21 @@ function buildStoreQuery(
   filters: DashboardFilters,
   scope: DashboardAccessScope | undefined
 ): Document {
-  const query: Document = store.tenantId
-    ? { 'tenant.id': store.tenantId }
-    : scope?.kind === 'tenant'
-      ? { 'tenant.id': scope.tenantId }
-      : {}
+  const baseFilter: Document = {}
   const createdAfter = rangeStartDate(filters.range)
 
   if (createdAfter) {
-    query.$or = [
+    baseFilter.$or = [
       { createdAt: { $gte: createdAfter } },
       { updatedAt: { $gte: createdAfter } },
     ]
   }
-  if (filters.status && filters.status !== 'all') query.status = filters.status
-  if (filters.quality && filters.quality !== 'all') query['classification.leadQuality'] = filters.quality
-  if (filters.urgency && filters.urgency !== 'all') query['requirement.urgency'] = filters.urgency
+  if (filters.status && filters.status !== 'all') baseFilter.status = filters.status
+  if (filters.quality && filters.quality !== 'all') baseFilter['classification.leadQuality'] = filters.quality
+  if (filters.urgency && filters.urgency !== 'all') baseFilter['requirement.urgency'] = filters.urgency
 
-  return query
+  // Enforce Row-Level Security: tenant users are strictly bound to scope.tenantId
+  return buildRlsQuery(baseFilter, scope, store.tenantId)
 }
 
 const DASHBOARD_RECORD_PROJECTION = {
@@ -440,8 +438,11 @@ export async function getDashboardAnalytics(
       }
     }))
 
-    const records = recordsByStore
+    const rawRecords = recordsByStore
       .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
+
+    // Post-query defense-in-depth: enforce Row-Level Security isolation
+    const records = filterRecordsByRls(rawRecords, options.scope)
       .sort((a, b) => {
         const bTime = (b?.updatedAt instanceof Date ? b.updatedAt.getTime() : new Date(b?.updatedAt || b?.createdAt || 0).getTime())
         const aTime = (a?.updatedAt instanceof Date ? a.updatedAt.getTime() : new Date(a?.updatedAt || a?.createdAt || 0).getTime())
@@ -519,7 +520,9 @@ export async function getDashboardAnalytics(
       openFollowUps,
       overdueFollowUps,
       filteredCalls: totalCalls,
-      selectedCall: calls.find((call) => call.id === filters.selectedId) ?? calls[0] ?? null,
+      selectedCall: filters.selectedId
+        ? calls.find((call) => call.id === filters.selectedId) ?? null
+        : calls[0] ?? null,
       recentCalls: calls.slice(0, 30),
       statusCounts: rankedItems(statusMap),
       leadQualityCounts: rankedItems(qualityMap),

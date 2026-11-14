@@ -1,6 +1,7 @@
 import { ObjectId, type InsertOneResult, type Document } from 'mongodb'
 import { conversationCollection, getConversationStoreForTenant, getConversationStoresForScope } from './conversation-store'
 import { DATABASE_STRING_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
+import { scopedRecordQuery, assertTenantAccess } from '@/lib/security/row-level-security'
 import type { TenantConfig } from '@/lib/tenants/types'
 import type { CallSummary, ChatHistory, ConversationAnalysis, LeadData } from '@/types'
 import type { SendCallSummaryEmailResult } from '@/lib/email/call-summary'
@@ -41,12 +42,6 @@ export interface UpdateCallRecordManagementInput {
 
 function hasLeadData(lead: LeadData): boolean {
   return Object.values(lead).some((value) => Boolean(value?.trim()))
-}
-
-function scopedRecordQuery(id: string, scope?: DashboardAccessScope): Document {
-  const query: Document = { _id: new ObjectId(id) }
-  if (scope?.kind === 'tenant') query['tenant.id'] = scope.tenantId
-  return query
 }
 
 function conversationRecord(input: SaveCallRecordInput, now: Date): Document {
@@ -219,7 +214,7 @@ export async function updateCallRecordStatus(
     return {
       saved: false,
       id,
-      error: 'Call record was not found.',
+      error: 'Call record was not found or access denied.',
     }
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
@@ -258,11 +253,36 @@ export async function updateCallRecordManagement(
     return {
       saved: false,
       id: input.id,
-      error: 'Call record was not found.',
+      error: 'Call record was not found or access denied.',
     }
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
     console.error('[mongodb]', error)
     return { saved: false, error }
+  }
+}
+
+export async function getCallRecordById(
+  id: string,
+  scope?: DashboardAccessScope
+): Promise<Document | null> {
+  if (!ObjectId.isValid(id)) return null
+
+  try {
+    const stores = await getConversationStoresForScope(scope)
+    if (stores.length === 0) return null
+
+    const query = scopedRecordQuery(id, scope)
+    for (const store of stores) {
+      const record = await conversationCollection(store).findOne(query)
+      if (record) {
+        assertTenantAccess(record.tenant?.id, scope)
+        return record
+      }
+    }
+    return null
+  } catch (err) {
+    console.error('[mongodb] getCallRecordById error', err)
+    return null
   }
 }

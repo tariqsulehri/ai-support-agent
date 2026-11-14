@@ -2,7 +2,7 @@ import { createHash } from 'crypto'
 import { MongoClient, type Collection, type Db, type Document } from 'mongodb'
 import { env } from '@/lib/config/env'
 import { getMongoDb, isMongoConfigured } from './mongodb'
-import { getAllTenants, getTenantById } from '@/lib/tenants/registry'
+import { getTenantById } from '@/lib/tenants/registry'
 import { getDecryptedTenantSecret } from '@/lib/tenants/secrets'
 import { DATABASE_STRING_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
 import type { DashboardAccessScope } from '@/lib/auth/types'
@@ -84,6 +84,7 @@ async function ensureConversationIndexes(store: ConversationStore): Promise<void
     collection.createIndex({ 'tenant.id': 1, status: 1, createdAt: -1 }),
     collection.createIndex({ 'tenant.id': 1, 'classification.leadQuality': 1, createdAt: -1 }),
     collection.createIndex({ 'tenant.id': 1, 'requirement.urgency': 1, createdAt: -1 }),
+    collection.createIndex({ 'tenant.id': 1, conversationId: 1 }),
     collection.createIndex({ status: 1, updatedAt: -1 }),
     collection.createIndex({ createdAt: -1 }),
     ttlDays && ttlDays > 0
@@ -107,6 +108,19 @@ export function conversationCollection<T extends Document = Document>(
 export async function getConversationStoreForTenant(
   tenant: TenantConfig
 ): Promise<ConversationStore | null> {
+  // Store all tenant data in our platform database with strict row-level security
+  const internal = await getInternalConversationStore()
+  if (internal) {
+    const store: ConversationStore = {
+      tenantId: tenant.id,
+      db: internal.db,
+      source: 'internal',
+    }
+    await ensureConversationIndexes(store)
+    return store
+  }
+
+  // Fallback to tenant-configured database if platform store is not configured
   try {
     const tenantDb = await getTenantConversationDb(tenant.id)
     if (tenantDb) {
@@ -115,24 +129,13 @@ export async function getConversationStoreForTenant(
       return store
     }
   } catch (error) {
-    console.warn('[conversation-store] tenant database unavailable, attempting platform store fallback', {
+    console.warn('[conversation-store] tenant database unavailable', {
       tenantId: tenant.id,
       error: error instanceof Error ? error.message : String(error),
     })
   }
 
-  // Graceful fallback to internal platform store so tenant's records are not lost
-  const fallback = await getInternalConversationStore()
-  if (fallback) {
-    try {
-      await ensureConversationIndexes(fallback)
-      return fallback
-    } catch {
-      return fallback
-    }
-  }
-
-  console.warn('[conversation-store] tenant database string missing', {
+  console.warn('[conversation-store] conversation database unavailable', {
     tenantId: tenant.id,
     error: DATABASE_STRING_NOT_CONFIGURED,
   })
@@ -142,6 +145,16 @@ export async function getConversationStoreForTenant(
 export async function getConversationStoresForScope(
   scope?: DashboardAccessScope
 ): Promise<ConversationStore[]> {
+  const internal = await getInternalConversationStore()
+  if (internal) {
+    await ensureConversationIndexes(internal)
+    if (scope?.kind === 'tenant') {
+      return [{ tenantId: scope.tenantId, db: internal.db, source: 'internal' }]
+    }
+    return [internal]
+  }
+
+  // Fallback for standalone tenant stores if platform DB is not configured
   if (scope?.kind === 'tenant') {
     const tenant = await getTenantById(scope.tenantId)
     if (!tenant) return []
@@ -149,52 +162,5 @@ export async function getConversationStoresForScope(
     return store ? [store] : []
   }
 
-  const stores: ConversationStore[] = []
-  const seenDatabases = new Set<string>()
-
-  // Always include the platform database so records in the primary DB are never omitted
-  const internal = await getInternalConversationStore()
-  if (internal) {
-    try {
-      await ensureConversationIndexes(internal)
-      stores.push(internal)
-      seenDatabases.add(internal.db.databaseName)
-    } catch (err) {
-      console.warn('[conversation-store] failed to initialize internal store indexes', {
-        error: err instanceof Error ? err.message : String(err),
-      })
-      stores.push(internal)
-      seenDatabases.add(internal.db.databaseName)
-    }
-  }
-
-  const tenants = await getAllTenants()
-  const tenantStores = await Promise.allSettled(tenants.map(async (tenant) => {
-    try {
-      const tenantDb = await getTenantConversationDb(tenant.id)
-      if (!tenantDb) return null
-
-      // Deduplicate if the tenant points to the same database as the platform store
-      if (seenDatabases.has(tenantDb.databaseName)) return null
-
-      const store = { tenantId: tenant.id, db: tenantDb, source: 'tenant' as const }
-      await ensureConversationIndexes(store)
-      return store
-    } catch (error) {
-      console.warn('[conversation-store] tenant database skipped for platform dashboard', {
-        tenantId: tenant.id,
-        error: error instanceof Error ? error.message : String(error),
-      })
-      return null
-    }
-  }))
-
-  for (const result of tenantStores) {
-    if (result.status === 'fulfilled' && result.value) {
-      stores.push(result.value)
-      seenDatabases.add(result.value.db.databaseName)
-    }
-  }
-
-  return stores
+  return []
 }

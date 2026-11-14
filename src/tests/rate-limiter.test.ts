@@ -51,3 +51,4 @@ describe('Admin Login Sliding Window Rate Limiter', () => {
     assert.equal(status.remaining, 5)
   })
 })
+

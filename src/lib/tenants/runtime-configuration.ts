@@ -1,4 +1,5 @@
 import { getDecryptedTenantSecret } from './secrets'
+import { isMongoConfigured } from '@/lib/db/mongodb'
 import type { TenantConfig } from './types'
 
 export const DATABASE_STRING_NOT_CONFIGURED = 'Database string not configured.'
@@ -30,6 +31,9 @@ function hasTenantOpenAIKey(tenant: TenantConfig): boolean {
 }
 
 async function hasTenantDatabaseString(tenant: TenantConfig): Promise<boolean> {
+  // If platform MongoDB is configured, all tenant data is securely stored in our central database
+  if (isMongoConfigured()) return true
+
   try {
     const databaseUrl = await getDecryptedTenantSecret(tenant.id, 'database_url')
     return Boolean(databaseUrl?.trim())
