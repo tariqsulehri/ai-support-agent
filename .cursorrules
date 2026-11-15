@@ -5,3 +5,4 @@ DO NOT deploy containers until the user explicitly says to.
 - Never execute remote container deployment (`deploy.sh`, `docker compose up`, `docker compose down`, rebuilding remote images) on the remote VM (`161.97.110.121`) unless the user explicitly requests or confirms a deployment in their current prompt.
 - Do not rsync or push deployment code to the remote server automatically upon completing a code change.
 - Perform all testing, building, and validation strictly locally.
+

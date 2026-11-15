@@ -80,12 +80,27 @@ async function ensureConversationIndexes(store: ConversationStore): Promise<void
   const ttlDays = env.CALL_RECORDS_TTL_DAYS
 
   await Promise.all([
+    // Primary compound sort indexes for high-throughput pagination (tenant-scoped)
+    collection.createIndex({ 'tenant.id': 1, updatedAt: -1, createdAt: -1 }),
     collection.createIndex({ 'tenant.id': 1, createdAt: -1 }),
+
+    // Compound filter + sort indexes (prevents in-memory sort on filtered queries)
+    collection.createIndex({ 'tenant.id': 1, status: 1, updatedAt: -1 }),
     collection.createIndex({ 'tenant.id': 1, status: 1, createdAt: -1 }),
+    collection.createIndex({ 'tenant.id': 1, 'classification.leadQuality': 1, updatedAt: -1 }),
     collection.createIndex({ 'tenant.id': 1, 'classification.leadQuality': 1, createdAt: -1 }),
+    collection.createIndex({ 'tenant.id': 1, 'requirement.urgency': 1, updatedAt: -1 }),
     collection.createIndex({ 'tenant.id': 1, 'requirement.urgency': 1, createdAt: -1 }),
+    collection.createIndex({ 'tenant.id': 1, hasLead: 1, updatedAt: -1 }),
+    collection.createIndex({ 'tenant.id': 1, maturityScore: -1, updatedAt: -1 }),
     collection.createIndex({ 'tenant.id': 1, conversationId: 1 }),
+
+    // Follow-up queue optimization (eliminates full scans for overdue / scheduled followups)
+    collection.createIndex({ 'tenant.id': 1, followUpAt: 1, status: 1 }),
+
+    // Cross-tenant / Platform Admin indexes
     collection.createIndex({ status: 1, updatedAt: -1 }),
+    collection.createIndex({ updatedAt: -1, createdAt: -1 }),
     collection.createIndex({ createdAt: -1 }),
     ttlDays && ttlDays > 0
       ? collection

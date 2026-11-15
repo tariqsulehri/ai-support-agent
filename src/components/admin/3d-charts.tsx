@@ -30,7 +30,7 @@ function ChartInfoButton({
         onFocus={() => setShowTooltip(true)}
         onBlur={() => setShowTooltip(false)}
         onClick={() => setShowTooltip(true)}
-        className="rounded-full p-1 text-slate-400 transition-colors hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#194ad9]/30"
+        className="rounded-full p-1 text-slate-400 transition-colors hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0052ff]/30"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="10" />
@@ -67,9 +67,9 @@ function ChartViewToggle({
       title={isTableView ? 'Show chart' : 'Show data table'}
       aria-label={isTableView ? `Show chart for ${title}` : `Show data table for ${title}`}
       aria-pressed={isTableView}
-      className={`shrink-0 rounded-lg border p-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#194ad9]/30 ${
+      className={`shrink-0 rounded-lg border p-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0052ff]/30 ${
         isTableView
-          ? 'border-[#194ad9] bg-[#194ad9]/10 text-[#194ad9]'
+          ? 'border-[#0052ff] bg-[#0052ff]/10 text-[#0052ff]'
           : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
       }`}
     >
@@ -448,7 +448,7 @@ export function MonthlyCallVolumeChart({
             <defs>
               <linearGradient id={`call-column-${chartId}`} x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%" stopColor="#2563eb" />
-                <stop offset="55%" stopColor="#194ad9" />
+                <stop offset="55%" stopColor="#0052ff" />
                 <stop offset="100%" stopColor="#0b347f" />
               </linearGradient>
             </defs>

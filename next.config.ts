@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import path from 'path'
 
 function buildFrameAncestors(): string {
   const raw = process.env.ALLOWED_FRAME_ANCESTORS?.trim()
@@ -14,6 +15,7 @@ const frameAncestors = buildFrameAncestors()
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  outputFileTracingRoot: path.join(__dirname),
   devIndicators: false,
   async headers() {
     return [

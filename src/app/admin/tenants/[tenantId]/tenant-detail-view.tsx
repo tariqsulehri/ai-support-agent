@@ -250,13 +250,13 @@ export function TenantDetailView({
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col antialiased">
       {/* Top Application Navbar */}
-      <header className="sticky top-0 z-40 h-14 border-b border-slate-200/90 bg-white px-4 sm:px-6 flex items-center justify-between select-none">
+      <header className="sticky top-0 z-40 h-14 border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between select-none shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
         {/* Left: Back Link & Support Agent Logo */}
         <div className="flex items-center gap-4">
           <Link
             href="/dashboard"
             title="Back to Dashboard"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition"
           >
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path
@@ -279,7 +279,7 @@ export function TenantDetailView({
             href={`${baseUrl}/voice?tenant=${encodeURIComponent(tenant.tenantId)}`}
             target="_blank"
             rel="noreferrer"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition shadow-xs"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-emerald-200/90 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-3 py-1.5 text-[11px] font-bold text-emerald-800 hover:from-emerald-100 hover:to-emerald-200/70 transition shadow-[0_1px_3px_rgba(16,185,129,0.15)]"
             title="Launch interactive voice agent tester"
           >
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -300,7 +300,7 @@ export function TenantDetailView({
 
           <button
             type="button"
-            className="relative flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
+            className="relative flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
             title="Notifications"
           >
             <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -311,7 +311,7 @@ export function TenantDetailView({
 
           {/* User profile pill */}
           <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0052ff] text-xs font-bold text-white shadow-xs">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#0052ff] to-[#0038b8] text-xs font-bold text-white shadow-[0_2px_6px_rgba(0,82,255,0.35)] ring-2 ring-white">
               {userInitials}
             </div>
             <div className="hidden sm:block text-left">
@@ -326,184 +326,186 @@ export function TenantDetailView({
         </div>
       </header>
 
-      {/* Main Layout Body: Left Sidebar + Main Content */}
+      {/* Main Layout Body: Left Sidebar (CONSTANT & PERSISTENT) + Main Content */}
       <div className="flex-1 flex min-w-0">
-        {/* Left Navigation Sidebar */}
-        <aside className="hidden lg:flex w-60 shrink-0 flex-col justify-between border-r border-slate-200/90 bg-white p-3 select-none">
-          <div className="space-y-1">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-            >
-              <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75H4.25a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h4a.75.75 0 010 1.5h-4A2.25 2.25 0 012 15.75V4.25z" />
-                <path d="M12.75 9a.75.75 0 01.75-.75h3.5a.75.75 0 01.75.75v6a.75.75 0 01-.75.75h-3.5a.75.75 0 01-.75-.75v-6z" />
-              </svg>
-              <span>Live Overview</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tab=communications"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-            >
-              <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 2c-4.418 0-8 3.134-8 7 0 1.76.74 3.37 1.97 4.6-.28 1.1-.94 2.12-1.87 2.87a.75.75 0 00.5 1.33c2.3 0 4.14-.9 5.23-1.92.7.08 1.43.12 2.17.12 4.418 0 8-3.134 8-7s-3.582-7-8-7z" clipRule="evenodd" />
-              </svg>
-              <span>Call Transcripts</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tab=leads"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-            >
-              <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-              </svg>
-              <span>Lead Pipeline</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tab=ai"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-            >
-              <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a8.03 8.03 0 01-6.19 6.19l-1.192.24a1 1 0 000 1.96l1.192.24a8.03 8.03 0 016.19 6.19l.24 1.192a1 1 0 001.96 0l.24-1.192a8.03 8.03 0 016.19-6.19l1.192-.24a1 1 0 000-1.96l-1.192-.24a8.03 8.03 0 01-6.19-6.19l-.24-1.192z" />
-              </svg>
-              <span>AI Intelligence</span>
-            </Link>
-
-            <Link
-              href="/dashboard?tab=capabilities"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-            >
-              <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path
-                  fillRule="evenodd"
-                  d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v11.5A2.25 2.25 0 0115.75 18H4.25A2.25 2.25 0 012 15.75V4.25zm4.03 6.28a.75.75 0 00-1.06-1.06L4.72 9.72a.75.75 0 000 1.06l.25.25a.75.75 0 001.06 0l3-3a.75.75 0 00-1.06-1.06L6.5 8.44l-.47-.47zm6.47-2.78a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5a.75.75 0 01-.75-.75zm0 4.5a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5a.75.75 0 01-.75-.75z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span>Engine Capabilities</span>
-            </Link>
-
-            <a
-              href={`${baseUrl}/voice?tenant=${encodeURIComponent(tenant.tenantId)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
-            >
-              <div className="flex items-center gap-3">
-                <svg className="h-4 w-4 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-                  <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.58 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z" />
-                </svg>
-                <span>Test Voice Agent</span>
-              </div>
-              <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200">LIVE</span>
-            </a>
-
-            {session.role === 'platform_admin' && (
+        {/* Left Navigation Sidebar — CONSTANT EVERY TIME */}
+        <aside className="w-64 flex flex-col justify-between border-r border-slate-200/80 bg-white/95 backdrop-blur-md shrink-0 select-none shadow-[2px_0_12px_rgba(0,0,0,0.03)] sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto p-4 z-30">
+          <div className="space-y-6">
+            <nav className="space-y-1.5">
               <Link
-                href="/dashboard?tab=tenants"
-                className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+                href="/dashboard"
+                className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition border border-transparent"
+              >
+                <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75H4.25a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h4a.75.75 0 010 1.5h-4A2.25 2.25 0 012 15.75V4.25z" />
+                  <path d="M12.75 9a.75.75 0 01.75-.75h3.5a.75.75 0 01.75.75v6a.75.75 0 01-.75.75h-3.5a.75.75 0 01-.75-.75v-6z" />
+                </svg>
+                <span>Live Overview</span>
+              </Link>
+
+              <Link
+                href="/dashboard?tab=communications"
+                className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition border border-transparent"
+              >
+                <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 2c-4.418 0-8 3.134-8 7 0 1.76.74 3.37 1.97 4.6-.28 1.1-.94 2.12-1.87 2.87a.75.75 0 00.5 1.33c2.3 0 4.14-.9 5.23-1.92.7.08 1.43.12 2.17.12 4.418 0 8-3.134 8-7s-3.582-7-8-7z" clipRule="evenodd" />
+                </svg>
+                <span>Call Transcripts</span>
+              </Link>
+
+              <Link
+                href="/dashboard?tab=leads"
+                className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition border border-transparent"
+              >
+                <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                </svg>
+                <span>Lead Pipeline</span>
+              </Link>
+
+              <Link
+                href="/dashboard?tab=ai"
+                className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition border border-transparent"
+              >
+                <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a8.03 8.03 0 01-6.19 6.19l-1.192.24a1 1 0 000 1.96l1.192.24a8.03 8.03 0 016.19 6.19l.24 1.192a1 1 0 001.96 0l.24-1.192a8.03 8.03 0 016.19-6.19l1.192-.24a1 1 0 000-1.96l-1.192-.24a8.03 8.03 0 01-6.19-6.19l-.24-1.192z" />
+                </svg>
+                <span>AI Intelligence</span>
+              </Link>
+
+              <Link
+                href="/dashboard?tab=capabilities"
+                className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition border border-transparent"
               >
                 <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
-                    d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
+                    d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v11.5A2.25 2.25 0 0115.75 18H4.25A2.25 2.25 0 012 15.75V4.25zm4.03 6.28a.75.75 0 00-1.06-1.06L4.72 9.72a.75.75 0 000 1.06l.25.25a.75.75 0 001.06 0l3-3a.75.75 0 00-1.06-1.06L6.5 8.44l-.47-.47zm6.47-2.78a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5a.75.75 0 01-.75-.75zm0 4.5a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5a.75.75 0 01-.75-.75z"
                     clipRule="evenodd"
                   />
                 </svg>
-                <span>Tenants Directory</span>
+                <span>Engine Capabilities</span>
               </Link>
-            )}
 
-            {/* Setup / Configuration Section with Active State */}
-            <div className="pt-2">
-              <div className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-[#0052ff] bg-blue-50/70 border-l-2 border-[#0052ff] select-none">
+              <a
+                href={`${baseUrl}/voice?tenant=${encodeURIComponent(tenant.tenantId)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition border border-transparent"
+              >
                 <div className="flex items-center gap-3">
-                  <svg className="h-4 w-4 shrink-0 text-[#0052ff]" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="h-4 w-4 text-emerald-600 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+                    <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.58 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z" />
+                  </svg>
+                  <span>Test Voice Agent</span>
+                </div>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200/80 shadow-2xs">LIVE</span>
+              </a>
+
+              {session.role === 'platform_admin' && (
+                <Link
+                  href="/dashboard?tab=tenants"
+                  className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition border border-transparent"
+                >
+                  <svg className="h-4 w-4 text-slate-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                     <path
                       fillRule="evenodd"
-                      d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                      d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span>Agent Setup</span>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#0052ff]">Active</span>
-              </div>
+                  <span>Tenants Directory</span>
+                </Link>
+              )}
 
-              {/* Sub-tree menu (matching Image 2) */}
-              <div className="ml-4 pl-3 border-l-2 border-slate-100 mt-1 space-y-1 text-[11px] font-medium text-slate-600">
-                <button
-                  type="button"
-                  onClick={() => switchTab('overview')}
-                  className={`flex w-full items-center gap-2 py-1 px-2 rounded text-left transition ${
-                    activeTab === 'overview'
-                      ? 'bg-blue-50/80 text-[#0052ff] font-semibold border-l-2 border-[#0052ff] -ml-[13px] pl-[11px]'
-                      : 'hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <span className="font-mono text-slate-400">1</span>
-                  <span>Readiness Checklist</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => switchTab('embed')}
-                  className={`flex w-full items-center gap-2 py-1 px-2 rounded text-left transition ${
-                    activeTab === 'embed'
-                      ? 'bg-blue-50/80 text-[#0052ff] font-semibold border-l-2 border-[#0052ff] -ml-[13px] pl-[11px]'
-                      : 'hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <span className="font-mono text-slate-400">2</span>
-                  <span>Embed & API Keys</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => switchTab('agent')}
-                  className={`flex w-full items-center gap-2 py-1 px-2 rounded text-left transition ${
-                    activeTab === 'agent'
-                      ? 'bg-blue-50/80 text-[#0052ff] font-semibold border-l-2 border-[#0052ff] -ml-[13px] pl-[11px]'
-                      : 'hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <span className="font-mono text-slate-400">3</span>
-                  <span>Agent Persona</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => switchTab('integrations')}
-                  className={`flex w-full items-center gap-2 py-1 px-2 rounded text-left transition ${
-                    activeTab === 'integrations'
-                      ? 'bg-blue-50/80 text-[#0052ff] font-semibold border-l-2 border-[#0052ff] -ml-[13px] pl-[11px]'
-                      : 'hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <span className="font-mono text-slate-400">4</span>
-                  <span>OpenAI & MongoDB</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => switchTab('team')}
-                  className={`flex w-full items-center gap-2 py-1 px-2 rounded text-left transition ${
-                    activeTab === 'team'
-                      ? 'bg-blue-50/80 text-[#0052ff] font-semibold border-l-2 border-[#0052ff] -ml-[13px] pl-[11px]'
-                      : 'hover:bg-slate-50 text-slate-600'
-                  }`}
-                >
-                  <span className="font-mono text-slate-400">5</span>
-                  <span>Team Access</span>
-                </button>
+              {/* Setup / Configuration Section with Active State */}
+              <div className="pt-2">
+                <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#0052ff] bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white border border-blue-200/80 shadow-[inset_0_1px_0_rgba(255,255,255,1),0_1px_3px_rgba(0,82,255,0.08)] select-none">
+                  <div className="flex items-center gap-3">
+                    <svg className="h-4 w-4 shrink-0 text-[#0052ff]" viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fillRule="evenodd"
+                        d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>Agent Setup</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#0052ff]">Active</span>
+                </div>
+
+                {/* Sub-tree menu (matching Image 2) */}
+                <div className="ml-4 pl-3 border-l-2 border-slate-200/80 mt-1.5 space-y-1 text-[11px] font-medium text-slate-600">
+                  <button
+                    type="button"
+                    onClick={() => switchTab('overview')}
+                    className={`flex w-full items-center gap-2 py-1.5 px-2.5 rounded-lg text-left transition-all duration-150 ${
+                      activeTab === 'overview'
+                        ? 'bg-gradient-to-r from-blue-50/90 to-white text-[#0052ff] font-bold border border-blue-200/80 shadow-xs'
+                        : 'hover:bg-slate-100/80 text-slate-600'
+                    }`}
+                  >
+                    <span className="font-mono text-[#0052ff] font-bold">1</span>
+                    <span>Readiness Checklist</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchTab('embed')}
+                    className={`flex w-full items-center gap-2 py-1.5 px-2.5 rounded-lg text-left transition-all duration-150 ${
+                      activeTab === 'embed'
+                        ? 'bg-gradient-to-r from-blue-50/90 to-white text-[#0052ff] font-bold border border-blue-200/80 shadow-xs'
+                        : 'hover:bg-slate-100/80 text-slate-600'
+                    }`}
+                  >
+                    <span className="font-mono text-[#0052ff] font-bold">2</span>
+                    <span>Embed & API Keys</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchTab('agent')}
+                    className={`flex w-full items-center gap-2 py-1.5 px-2.5 rounded-lg text-left transition-all duration-150 ${
+                      activeTab === 'agent'
+                        ? 'bg-gradient-to-r from-blue-50/90 to-white text-[#0052ff] font-bold border border-blue-200/80 shadow-xs'
+                        : 'hover:bg-slate-100/80 text-slate-600'
+                    }`}
+                  >
+                    <span className="font-mono text-[#0052ff] font-bold">3</span>
+                    <span>Agent Persona</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchTab('integrations')}
+                    className={`flex w-full items-center gap-2 py-1.5 px-2.5 rounded-lg text-left transition-all duration-150 ${
+                      activeTab === 'integrations'
+                        ? 'bg-gradient-to-r from-blue-50/90 to-white text-[#0052ff] font-bold border border-blue-200/80 shadow-xs'
+                        : 'hover:bg-slate-100/80 text-slate-600'
+                    }`}
+                  >
+                    <span className="font-mono text-[#0052ff] font-bold">4</span>
+                    <span>OpenAI & MongoDB</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchTab('team')}
+                    className={`flex w-full items-center gap-2 py-1.5 px-2.5 rounded-lg text-left transition-all duration-150 ${
+                      activeTab === 'team'
+                        ? 'bg-gradient-to-r from-blue-50/90 to-white text-[#0052ff] font-bold border border-blue-200/80 shadow-xs'
+                        : 'hover:bg-slate-100/80 text-slate-600'
+                    }`}
+                  >
+                    <span className="font-mono text-[#0052ff] font-bold">5</span>
+                    <span>Team Access</span>
+                  </button>
+                </div>
               </div>
-            </div>
+            </nav>
           </div>
 
-          {/* Bottom user card */}
-          <div className="pt-3 border-t border-slate-100">
+          {/* Bottom user card in sidebar */}
+          <div className="pt-4 border-t border-slate-200/80">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0052ff] text-xs font-bold text-white shadow-xs">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0052ff] to-[#0038b8] text-xs font-bold text-white shadow-[0_2px_6px_rgba(0,82,255,0.35)] ring-2 ring-white">
                 {userInitials}
               </div>
               <div className="text-left overflow-hidden">
@@ -522,7 +524,7 @@ export function TenantDetailView({
         <main className="flex-1 bg-[#f8fafc]/60 p-4 sm:p-6 lg:p-8 min-w-0 space-y-5 overflow-y-auto">
           {/* Notifications / Alerts */}
           {errorParam && (
-            <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50/90 p-4 text-xs font-medium text-rose-800 shadow-xs">
+            <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50/90 p-4 text-xs font-medium text-rose-800 shadow-xs">
               <svg className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
               </svg>
@@ -534,7 +536,7 @@ export function TenantDetailView({
           )}
 
           {savedParam && (
-            <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50/90 p-4 text-xs font-medium text-emerald-800 shadow-xs">
+            <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/90 p-4 text-xs font-medium text-emerald-800 shadow-xs">
               <svg className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
               </svg>
@@ -550,36 +552,36 @@ export function TenantDetailView({
           )}
 
           {createdParam && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800 shadow-xs">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800 shadow-xs">
               Tenant created successfully.
             </div>
           )}
 
-          {/* Tenant Hero Header Card (matching Image 2 top card) */}
-          <section className="rounded-xl border border-slate-200/90 bg-white p-5 shadow-xs">
+          {/* Tenant Hero Header Card */}
+          <section className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.06),0_1px_3px_rgba(0,0,0,0.03)]">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start sm:items-center gap-3.5">
                 {/* Soft rounded blue square icon */}
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-200/80 bg-blue-50/70 text-[#0052ff]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50 to-blue-100/60 text-[#0052ff] shadow-[0_2px_8px_rgba(0,82,255,0.12)]">
                   <DetailTabIcon id={activeTab} className="h-6 w-6" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <h1 className="text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
+                    <h1 className="text-xl font-bold tracking-tight text-slate-950 sm:text-2xl font-sans">
                       {tenant.companyName}
                     </h1>
-                    <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-[#0052ff]">
+                    <span className="inline-flex items-center rounded-full border border-blue-200/90 bg-blue-50/90 px-3 py-0.5 text-[11px] font-bold text-[#0052ff] shadow-[0_1px_2px_rgba(0,82,255,0.1)]">
                       {activeTabDef.badgeText}
                     </span>
                     <StatusBadge status={tenant.status} />
-                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+                    <span className="inline-flex items-center rounded-full border border-indigo-200/90 bg-gradient-to-b from-indigo-50 to-indigo-100/70 px-3 py-0.5 text-[11px] font-bold text-indigo-800 shadow-2xs">
                       {formatLabel(tenant.subscription?.type ?? 'free')} • {formatLabel(subscriptionStatus)}
                     </span>
                     <span
-                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                      className={`inline-flex items-center rounded-full border px-3 py-0.5 text-[11px] font-bold shadow-2xs ${
                         embedReady
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                          : 'border-amber-200 bg-amber-50 text-amber-800'
+                          ? 'border-emerald-200/90 bg-gradient-to-b from-emerald-50 to-emerald-100/70 text-emerald-800'
+                          : 'border-amber-200/90 bg-gradient-to-b from-amber-50 to-amber-100/70 text-amber-800'
                       }`}
                     >
                       {embedReady ? '● Embed Live' : '○ Setup in Progress'}
@@ -591,13 +593,53 @@ export function TenantDetailView({
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {/* Action Buttons in Top Header Card */}
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                {activeTab === 'agent' && mutable && (
+                  <button
+                    form="agent-settings-form"
+                    type="submit"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition cursor-pointer active:scale-[0.98]"
+                  >
+                    <span>Save Agent Persona</span>
+                    <span>✓</span>
+                  </button>
+                )}
+                {activeTab === 'embed' && canSetDomains && (
+                  <button
+                    form="domains-form"
+                    type="submit"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition cursor-pointer active:scale-[0.98]"
+                  >
+                    <span>Save Allowed Domains</span>
+                    <span>✓</span>
+                  </button>
+                )}
+                {activeTab === 'integrations' && canEditSecrets && (
+                  <button
+                    form="openai-form"
+                    type="submit"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition cursor-pointer active:scale-[0.98]"
+                  >
+                    <span>Save API Keys</span>
+                    <span>✓</span>
+                  </button>
+                )}
+                {activeTab === 'team' && mutable && (
+                  <button
+                    form="team-user-form"
+                    type="submit"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition cursor-pointer active:scale-[0.98]"
+                  >
+                    <span>+ Add Team Member</span>
+                  </button>
+                )}
+
                 <a
                   href={`${baseUrl}/voice?tenant=${encodeURIComponent(tenant.tenantId)}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 hover:text-slate-900 transition"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-300 transition"
                 >
                   <svg className="h-3.5 w-3.5 text-slate-500" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h4a.75.75 0 010 1.5h-4z" clipRule="evenodd" />
@@ -606,21 +648,20 @@ export function TenantDetailView({
                   Preview Agent
                 </a>
 
-                <button
-                  type="button"
-                  onClick={() => switchTab('embed')}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#0052ff] hover:bg-[#0043d9] px-3.5 text-xs font-semibold text-white shadow-xs transition"
-                >
-                  <svg className="h-3.5 w-3.5 text-white/80" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" clipRule="evenodd" />
-                  </svg>
-                  Get Embed Code
-                </button>
+                {activeTab !== 'embed' && (
+                  <button
+                    type="button"
+                    onClick={() => switchTab('embed')}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/80 hover:bg-blue-100/80 px-4 text-xs font-bold text-[#0052ff] shadow-xs transition"
+                  >
+                    Get Embed Code
+                  </button>
+                )}
               </div>
             </div>
           </section>
 
-          {/* Stepped Numbered Pill Tabs Bar (matching Image 2) */}
+          {/* Stepped Numbered Pill Tabs Bar */}
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between py-1">
             <nav className="flex flex-wrap items-center gap-2" aria-label="Stepped tabs">
               {detailTabs.map((tab) => {
@@ -630,18 +671,18 @@ export function TenantDetailView({
                     key={tab.id}
                     type="button"
                     onClick={() => switchTab(tab.id)}
-                    className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all duration-150 ${
                       selected
-                        ? 'bg-[#0052ff] text-white shadow-xs'
-                        : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700'
+                        ? 'bg-gradient-to-r from-[#0052ff] to-[#0040d0] text-white shadow-[0_3px_10px_rgba(0,82,255,0.35),inset_0_1px_0_rgba(255,255,255,0.25)] font-bold scale-[1.02]'
+                        : 'bg-white border border-slate-200/80 text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm'
                     }`}
                   >
                     {/* Number badge */}
                     <span
                       className={`inline-flex h-4 min-w-[16px] items-center justify-center rounded px-1 text-[10px] font-bold ${
                         selected
-                          ? 'bg-white/25 text-white'
-                          : 'bg-slate-200 text-slate-600'
+                          ? 'bg-white/20 text-white shadow-inner font-extrabold'
+                          : 'bg-blue-50 text-[#0052ff] border border-blue-200/70'
                       }`}
                     >
                       {tab.num}
@@ -653,10 +694,6 @@ export function TenantDetailView({
                 )
               })}
             </nav>
-
-            <span className="text-xs text-slate-400 font-medium">
-              {activeTabDef.description}
-            </span>
           </div>
 
           {/* TAB 1: OVERVIEW & READINESS */}
@@ -670,7 +707,7 @@ export function TenantDetailView({
                       <h2 className="text-sm font-bold tracking-tight text-slate-900">Tenant Setup Checklist</h2>
                       <p className="mt-0.5 text-xs text-slate-500">Core requirements needed for live customer deployment.</p>
                     </div>
-                    <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    <span className="inline-flex items-center rounded-full bg-blue-50 text-[#0052ff] border border-blue-200/80 px-3 py-1 text-xs font-bold shadow-2xs">
                       {completedCount} of {setupRequirements.length} Ready ({completionPercent}%)
                     </span>
                   </div>
@@ -916,9 +953,21 @@ export function TenantDetailView({
               <Panel
                 title="Allowed Origins & Domain Ownership Verification"
                 subtitle="Requests are rejected with 403 Forbidden unless initiated from one of these verified origins."
+                actions={
+                  canSetDomains && (
+                    <button
+                      form="domains-form"
+                      type="submit"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition cursor-pointer active:scale-[0.98]"
+                    >
+                      <span>Save Allowed Domains</span>
+                      <span>✓</span>
+                    </button>
+                  )
+                }
               >
                 {canSetDomains ? (
-                  <form action={saveDomainsAction} className="space-y-4">
+                  <form id="domains-form" action={saveDomainsAction} className="space-y-4">
                     <input type="hidden" name="tenantId" value={tenant.tenantId} />
                     <TextArea
                       label="Whitelisted Origins (One per line)"
@@ -1009,8 +1058,23 @@ export function TenantDetailView({
           {/* TAB 3: AGENT PERSONA */}
           {activeTab === 'agent' && (
             <div className="space-y-5">
-              <Panel title="Voice Agent Persona & Behavior Settings">
-                <form action={saveSettingsAction} className="space-y-5">
+              <Panel
+                title="Voice Agent Persona & Behavior Settings"
+                subtitle="Define the persona, tone, language, opening greeting, and knowledge base for your AI support agent."
+                actions={
+                  mutable && (
+                    <button
+                      form="agent-settings-form"
+                      type="submit"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition cursor-pointer active:scale-[0.98]"
+                    >
+                      <span>Save Agent Profile</span>
+                      <span>✓</span>
+                    </button>
+                  )
+                }
+              >
+                <form id="agent-settings-form" action={saveSettingsAction} className="space-y-5">
                   <input type="hidden" name="tenantId" value={tenant.tenantId} />
 
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -1074,6 +1138,18 @@ export function TenantDetailView({
               <Panel
                 title="OpenAI API Key"
                 subtitle="Encrypted with server master key. Used to power agent conversations and transcription."
+                actions={
+                  canEditSecrets && (
+                    <button
+                      form="openai-form"
+                      type="submit"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition cursor-pointer active:scale-[0.98]"
+                    >
+                      <span>Save OpenAI Key</span>
+                      <span>✓</span>
+                    </button>
+                  )
+                }
               >
                 <div className="space-y-4">
                   <div className="rounded-xl bg-slate-50 p-4 border border-slate-200/80 flex items-center justify-between">
@@ -1091,7 +1167,7 @@ export function TenantDetailView({
                   </div>
 
                   {canEditSecrets ? (
-                    <form action={saveOpenAiKeyAction} className="space-y-3">
+                    <form id="openai-form" action={saveOpenAiKeyAction} className="space-y-3">
                       <input type="hidden" name="tenantId" value={tenant.tenantId} />
                       <Field label="Replace OpenAI Key" name="openaiApiKey" type="password" required autoComplete="off" placeholder="sk-..." />
                       <button className="h-9 rounded-lg bg-[#0052ff] hover:bg-[#0043d9] px-4 text-xs font-semibold text-white shadow-xs transition">
@@ -1108,6 +1184,18 @@ export function TenantDetailView({
               <Panel
                 title="Dedicated Lead Database URL"
                 subtitle="Store transcripts, leads, and recordings into this tenant's dedicated MongoDB cluster."
+                actions={
+                  canEditSecrets && (
+                    <button
+                      form="database-url-form"
+                      type="submit"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition cursor-pointer active:scale-[0.98]"
+                    >
+                      <span>Save Database URL</span>
+                      <span>✓</span>
+                    </button>
+                  )
+                }
               >
                 <div className="space-y-4">
                   <div className="rounded-xl bg-slate-50 p-4 border border-slate-200/80">
@@ -1118,7 +1206,7 @@ export function TenantDetailView({
                   </div>
 
                   {canEditSecrets ? (
-                    <form action={saveDatabaseUrlAction} className="space-y-3">
+                    <form id="database-url-form" action={saveDatabaseUrlAction} className="space-y-3">
                       <input type="hidden" name="tenantId" value={tenant.tenantId} />
                       <Field label="MongoDB Connection URI" name="databaseUrl" type="password" required autoComplete="off" placeholder="mongodb+srv://..." />
                       <button className="h-9 rounded-lg bg-[#0052ff] hover:bg-[#0043d9] px-4 text-xs font-semibold text-white shadow-xs transition">
@@ -1135,9 +1223,21 @@ export function TenantDetailView({
               <Panel
                 title="SMTP Email Notifications"
                 subtitle="Automatically sends call transcripts and captured leads to team members upon conversation completion."
+                actions={
+                  canEditSecrets && (
+                    <button
+                      form="smtp-form"
+                      type="submit"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition cursor-pointer active:scale-[0.98]"
+                    >
+                      <span>Save SMTP Alerts</span>
+                      <span>✓</span>
+                    </button>
+                  )
+                }
               >
                 {canEditSecrets ? (
-                  <form action={saveEmailNotificationsAction} className="space-y-4">
+                  <form id="smtp-form" action={saveEmailNotificationsAction} className="space-y-4">
                     <input type="hidden" name="tenantId" value={tenant.tenantId} />
 
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -1187,18 +1287,32 @@ export function TenantDetailView({
           {/* TAB 5: TEAM & ACCESS */}
           {activeTab === 'team' && (
             <div className="space-y-5">
-              <Panel title="Team Members & Role Access">
+              <Panel
+                title="Team Members & Role Access"
+                subtitle="Manage tenant administrators and team members with access to this agent."
+                actions={
+                  mutable && (
+                    <button
+                      form="team-user-form"
+                      type="submit"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition cursor-pointer active:scale-[0.98]"
+                    >
+                      <span>+ Add Team Member</span>
+                    </button>
+                  )
+                }
+              >
                 <div className="space-y-3">
                   {detail.users.length === 0 ? (
                     <p className="text-xs text-slate-400">No specific users assigned yet.</p>
                   ) : (
                     detail.users.map((user) => (
-                      <div key={user.userId} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3.5">
+                      <div key={user.userId} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3.5 shadow-2xs">
                         <div>
                           <p className="text-xs font-bold text-slate-900">{user.name || user.email}</p>
                           <p className="text-xs text-slate-500 font-mono mt-0.5">{user.email}</p>
                         </div>
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+                        <span className="rounded-full border border-indigo-200/90 bg-gradient-to-b from-indigo-50 to-indigo-100/70 px-3 py-0.5 text-[11px] font-bold text-indigo-800 shadow-2xs">
                           {formatLabel(user.role)}
                         </span>
                       </div>
@@ -1209,7 +1323,7 @@ export function TenantDetailView({
                 {mutable && (
                   <div className="mt-6 pt-5 border-t border-slate-100">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Invite Team Admin</h3>
-                    <form action={createTenantUserAction} className="space-y-3.5">
+                    <form id="team-user-form" action={createTenantUserAction} className="space-y-3.5">
                       <input type="hidden" name="tenantId" value={tenant.tenantId} />
                       <div className="grid gap-3 sm:grid-cols-2">
                         <Field label="Full Name" name="name" autoComplete="off" />

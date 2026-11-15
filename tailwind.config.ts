@@ -10,8 +10,15 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: [
-          'Segoe UI', '-apple-system', 'BlinkMacSystemFont',
-          'Inter', 'Helvetica Neue', 'Arial', 'sans-serif',
+          'var(--font-poppins)',
+          'Poppins',
+          'Segoe UI',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Inter',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
         ],
       },
       colors: {

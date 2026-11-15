@@ -2,6 +2,7 @@ import { ObjectId, type InsertOneResult, type Document } from 'mongodb'
 import { conversationCollection, getConversationStoreForTenant, getConversationStoresForScope } from './conversation-store'
 import { DATABASE_STRING_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
 import { scopedRecordQuery, assertTenantAccess } from '@/lib/security/row-level-security'
+import { calculateMaturityScore } from '@/lib/ai/maturity-score'
 import type { TenantConfig } from '@/lib/tenants/types'
 import type { CallSummary, ChatHistory, ConversationAnalysis, LeadData } from '@/types'
 import type { SendCallSummaryEmailResult } from '@/lib/email/call-summary'
@@ -45,6 +46,16 @@ function hasLeadData(lead: LeadData): boolean {
 }
 
 function conversationRecord(input: SaveCallRecordInput, now: Date): Document {
+  const maturity = calculateMaturityScore({
+    status: 'new',
+    leadQuality: input.analysis?.classification?.leadQuality,
+    urgency: input.analysis?.requirement?.urgency,
+    sentiment: input.analysis?.classification?.sentiment,
+    lead: input.lead,
+    messageCount: input.messages.length,
+    hasLead: hasLeadData(input.lead),
+  })
+
   return {
     ...(input.conversationId ? { conversationId: input.conversationId } : {}),
     tenant: {
@@ -57,6 +68,8 @@ function conversationRecord(input: SaveCallRecordInput, now: Date): Document {
     hasLead: hasLeadData(input.lead),
     requirement: input.analysis?.requirement ?? null,
     classification: input.analysis?.classification ?? null,
+    maturityScore: maturity.score,
+    maturityLabel: maturity.label,
     summary: {
       text: input.summary.summary,
       keyPoints: input.summary.keyPoints,
@@ -123,6 +136,13 @@ export async function saveConversationSnapshot(input: SaveConversationSnapshotIn
 
     const now = new Date()
     const transcript = input.messages.filter((message) => message.content !== '__GREET__')
+    const maturity = calculateMaturityScore({
+      status: 'new',
+      lead: input.lead,
+      messageCount: transcript.length,
+      hasLead: hasLeadData(input.lead),
+    })
+
     await conversationCollection(store).updateOne(
       {
         'tenant.id': input.tenant.id,
@@ -158,6 +178,8 @@ export async function saveConversationSnapshot(input: SaveConversationSnapshotIn
           user: input.lead,
           lead: input.lead,
           hasLead: hasLeadData(input.lead),
+          maturityScore: maturity.score,
+          maturityLabel: maturity.label,
           transcript,
           source: {
             mode: transcript.some((message) => message.role === 'user') ? 'conversation' : 'unknown',
@@ -191,9 +213,22 @@ export async function updateCallRecordStatus(
     const stores = await getConversationStoresForScope(scope)
     if (stores.length === 0) return { saved: false, error: 'Conversation database is not configured.' }
 
+    const existing = await getCallRecordById(id, scope)
+    const maturity = calculateMaturityScore({
+      status,
+      leadQuality: existing?.classification?.leadQuality,
+      urgency: existing?.requirement?.urgency,
+      sentiment: existing?.classification?.sentiment,
+      lead: existing?.lead ?? existing?.user,
+      messageCount: Array.isArray(existing?.transcript) ? existing.transcript.length : 0,
+      hasLead: existing?.hasLead,
+    })
+
     const update: Document = {
       $set: {
         status,
+        maturityScore: maturity.score,
+        maturityLabel: maturity.label,
         updatedAt: new Date(),
       },
       $push: {

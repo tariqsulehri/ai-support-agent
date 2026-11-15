@@ -167,3 +167,4 @@ export function CalibrOwlMascot({ className = 'h-52 w-52' }: { className?: strin
     </svg>
   )
 }
+

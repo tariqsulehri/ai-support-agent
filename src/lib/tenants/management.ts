@@ -8,7 +8,7 @@ import { createSignedEmbedToken } from '@/lib/security/embed-tokens'
 import { mintClientApiKey } from '@/lib/security/client-keys'
 import { normalizeOrigin, normalizeTenantId } from './normalize'
 import { ensureTenantRegistryIndexes } from './db-registry'
-import { getTenantSecretMetadata, upsertTenantSecretInDb, type TenantSecretPublicMetadata } from './secrets'
+import { getTenantSecretMetadata, getBatchTenantSecretsMetadata, upsertTenantSecretInDb, type TenantSecretPublicMetadata } from './secrets'
 import {
   TENANT_COLLECTIONS,
   type TenantAgentSettingsRecord,
@@ -237,73 +237,86 @@ async function replaceTenantDomains(db: Db, tenantId: string, domains: string[],
 
   if (!uniqueDomains.length) return
 
-  await Promise.all(uniqueDomains.map(async (origin) => {
-    const existing = await c.domains.findOne({ tenantId: normalizedTenantId, origin })
-    if (existing) {
-      await c.domains.updateOne(
-        { tenantId: normalizedTenantId, origin },
-        {
-          $set: {
-            status: 'active',
-            updatedAt: now,
-            verificationStatus: existing.verificationStatus ?? 'pending',
-            verificationToken: existing.verificationToken ?? generateDomainVerificationToken(),
-          },
-        }
-      )
-      return
-    }
+  // Batch query existing domains for this tenant to eliminate N+1 queries
+  const existingDomains = await c.domains
+    .find({ tenantId: normalizedTenantId, origin: { $in: uniqueDomains } })
+    .toArray()
+  const existingMap = new Map(existingDomains.map((d) => [d.origin, d]))
 
-    await c.domains.insertOne({
-      tenantId: normalizedTenantId,
-      origin,
-      status: 'active',
-      verificationStatus: 'pending',
-      verificationToken: generateDomainVerificationToken(),
-      createdAt: now,
-      updatedAt: now,
+  await Promise.all(
+    uniqueDomains.map(async (origin) => {
+      const existing = existingMap.get(origin)
+      if (existing) {
+        await c.domains.updateOne(
+          { tenantId: normalizedTenantId, origin },
+          {
+            $set: {
+              status: 'active',
+              updatedAt: now,
+              verificationStatus: existing.verificationStatus ?? 'pending',
+              verificationToken: existing.verificationToken ?? generateDomainVerificationToken(),
+            },
+          }
+        )
+      } else {
+        await c.domains.insertOne({
+          tenantId: normalizedTenantId,
+          origin,
+          status: 'active',
+          verificationStatus: 'pending',
+          verificationToken: generateDomainVerificationToken(),
+          createdAt: now,
+          updatedAt: now,
+        })
+      }
     })
-  }))
+  )
 }
 
 export async function listManagedTenants(): Promise<ManagedTenantSummary[]> {
   const db = await getManagementDb()
   const c = collections(db)
+
+  // 1. Fetch tenants with index sort
   const tenants = await c.tenants.find({}).sort({ createdAt: 1 }).toArray()
+  if (!tenants.length) return []
 
-  const summaries = await Promise.allSettled(tenants.map(async (tenant) => {
-    try {
-      const [domains, openAiSecret] = await Promise.all([
-        c.domains.find({ tenantId: tenant.tenantId, status: 'active' }).sort({ origin: 1 }).toArray(),
-        getTenantSecretMetadata(tenant.tenantId, 'openai_api_key'),
-      ])
+  const tenantIds = tenants.map((t) => t.tenantId)
 
-      const subscription = tenant.subscription
+  // 2. Batch fetch active domains for ALL tenants in a single indexed query (No N+1)
+  const allDomains = await c.domains
+    .find(
+      { tenantId: { $in: tenantIds }, status: 'active' },
+      { projection: { tenantId: 1, origin: 1 } }
+    )
+    .sort({ origin: 1 })
+    .toArray()
 
-      return {
-        tenantId: tenant.tenantId,
-        companyName: tenant.companyName,
-        status: tenant.status,
-        subscriptionStatus: subscription?.status ?? 'trial',
-        subscriptionType: subscription?.type ?? 'free',
-        billingCycle: subscription?.billingCycle ?? 'monthly',
-        domains: domains.map((domain) => domain.origin),
-        updatedAt: tenant.updatedAt,
-        hasOpenAiKey: Boolean(openAiSecret),
-      }
-    } catch (err) {
-      console.warn('[tenants:management] Failed to summarize tenant, skipping', {
-        tenantId: tenant.tenantId,
-        error: err instanceof Error ? err.message : String(err),
-      })
-      return null
+  const domainsByTenant = new Map<string, string[]>()
+  for (const d of allDomains) {
+    const list = domainsByTenant.get(d.tenantId) ?? []
+    list.push(d.origin)
+    domainsByTenant.set(d.tenantId, list)
+  }
+
+  // 3. Batch fetch secrets metadata for ALL tenants in a single indexed query (No N+1)
+  const secretsByTenant = await getBatchTenantSecretsMetadata(tenantIds, 'openai_api_key')
+
+  // 4. In-memory O(1) hash join
+  return tenants.map((tenant) => {
+    const subscription = tenant.subscription
+    return {
+      tenantId: tenant.tenantId,
+      companyName: tenant.companyName,
+      status: tenant.status,
+      subscriptionStatus: subscription?.status ?? 'trial',
+      subscriptionType: subscription?.type ?? 'free',
+      billingCycle: subscription?.billingCycle ?? 'monthly',
+      domains: domainsByTenant.get(tenant.tenantId) ?? [],
+      updatedAt: tenant.updatedAt,
+      hasOpenAiKey: secretsByTenant.has(tenant.tenantId),
     }
-  }))
-
-  return summaries
-    .filter((r): r is PromiseFulfilledResult<ManagedTenantSummary | null> => r.status === 'fulfilled')
-    .map((r) => r.value)
-    .filter((s): s is ManagedTenantSummary => Boolean(s))
+  })
 }
 
 export async function getManagedTenantDetail(tenantId: string): Promise<ManagedTenantDetail | null> {

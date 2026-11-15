@@ -1,6 +1,7 @@
+import { ObjectId, type Document } from 'mongodb'
 import { conversationCollection, getConversationStoresForScope, type ConversationStore } from '@/lib/db/conversation-store'
 import { buildRlsQuery, filterRecordsByRls } from '@/lib/security/row-level-security'
-import type { Document } from 'mongodb'
+import { calculateMaturityScore } from '@/lib/ai/maturity-score'
 import type { DashboardAccessScope } from '@/lib/auth/types'
 import type {
   ChatHistory,
@@ -11,9 +12,19 @@ import type {
   LeadQuality,
 } from '@/types'
 
-type CountItem = {
+export type CountItem = {
   label: string
   count: number
+}
+
+export type PaginationMeta = {
+  page: number
+  limit: number
+  totalRecords: number
+  filteredRecords: number
+  totalPages: number
+  hasPrevPage: boolean
+  hasNextPage: boolean
 }
 
 export type DashboardCall = {
@@ -41,6 +52,8 @@ export type DashboardCall = {
   statusHistory: Array<{ status: string; changedAt: string }>
   createdAt: string
   updatedAt: string
+  maturityScore: number // 1 to 5 stars
+  maturityLabel: string
 }
 
 export type DashboardFilters = {
@@ -50,6 +63,9 @@ export type DashboardFilters = {
   urgency?: string
   range?: string
   selectedId?: string
+  page?: number | string
+  limit?: number | string
+  sort?: string
 }
 
 export type DashboardAnalyticsOptions = {
@@ -60,6 +76,8 @@ export type DashboardAnalytics = {
   configured: boolean
   generatedAt: string
   totalCalls: number
+  filteredCalls: number
+  pagination: PaginationMeta
   callsWithLead: number
   hotLeads: number
   qualifiedPipeline: number
@@ -69,7 +87,6 @@ export type DashboardAnalytics = {
   conversionReadiness: number
   openFollowUps: number
   overdueFollowUps: number
-  filteredCalls: number
   selectedCall: DashboardCall | null
   recentCalls: DashboardCall[]
   statusCounts: CountItem[]
@@ -105,6 +122,8 @@ type RawRecord = Document & {
     leadQuality?: LeadQuality
     sentiment?: ConversationSentiment
   } | null
+  maturityScore?: number
+  maturityLabel?: string
   summary?: {
     text?: string
     keyPoints?: string[]
@@ -129,10 +148,22 @@ type RawRecord = Document & {
   finalizedAt?: Date
 }
 
+const EMPTY_PAGINATION: PaginationMeta = {
+  page: 1,
+  limit: 10,
+  totalRecords: 0,
+  filteredRecords: 0,
+  totalPages: 1,
+  hasPrevPage: false,
+  hasNextPage: false,
+}
+
 const EMPTY_ANALYTICS: DashboardAnalytics = {
   configured: false,
   generatedAt: new Date().toISOString(),
   totalCalls: 0,
+  filteredCalls: 0,
+  pagination: EMPTY_PAGINATION,
   callsWithLead: 0,
   hotLeads: 0,
   qualifiedPipeline: 0,
@@ -142,7 +173,6 @@ const EMPTY_ANALYTICS: DashboardAnalytics = {
   conversionReadiness: 0,
   openFollowUps: 0,
   overdueFollowUps: 0,
-  filteredCalls: 0,
   selectedCall: null,
   recentCalls: [],
   statusCounts: [],
@@ -190,43 +220,27 @@ function optionalDateString(value: unknown): string | null {
   return d ? d.toISOString() : null
 }
 
-function increment(map: Map<string, number>, label: string | null | undefined): void {
-  const key = label?.trim() || 'unknown'
-  map.set(key, (map.get(key) ?? 0) + 1)
+function escapeRegex(text: string): string {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
 }
 
-function rankedItems(map: Map<string, number>, limit = 8): CountItem[] {
-  return [...map.entries()]
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
-    .slice(0, limit)
-}
-
-function monthlyCallVolume(calls: DashboardCall[], now = new Date()): CountItem[] {
-  const months = Array.from({ length: 6 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1)
-    return {
-      year: date.getFullYear(),
-      month: date.getMonth(),
-      label: new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric' }).format(date),
-      count: 0,
-    }
-  })
-  const byMonth = new Map(months.map((month) => [`${month.year}-${month.month}`, month]))
-
-  for (const call of calls) {
-    const createdAt = new Date(call.createdAt)
-    const bucket = byMonth.get(`${createdAt.getFullYear()}-${createdAt.getMonth()}`)
-    if (bucket) bucket.count += 1
-  }
-
-  return months.map(({ label, count }) => ({ label, count }))
-}
-
-function toDashboardCall(record: RawRecord): DashboardCall {
+export function toDashboardCall(record: RawRecord): DashboardCall {
   const lead = normalizeLead(record.lead ?? record.user)
   const classification = record.classification
   const requirement = record.requirement
+
+  const maturity =
+    typeof record.maturityScore === 'number' && record.maturityLabel
+      ? { score: record.maturityScore as 1 | 2 | 3 | 4 | 5, label: record.maturityLabel }
+      : calculateMaturityScore({
+          status: record.status,
+          leadQuality: classification?.leadQuality,
+          urgency: requirement?.urgency,
+          sentiment: classification?.sentiment,
+          lead,
+          messageCount: Array.isArray(record.transcript) ? record.transcript.length : 0,
+          hasLead: record.hasLead ?? hasLead(lead),
+        })
 
   return {
     id: record._id.toString(),
@@ -256,52 +270,9 @@ function toDashboardCall(record: RawRecord): DashboardCall {
     })),
     createdAt: dateString(record.createdAt),
     updatedAt: dateString(record.updatedAt),
+    maturityScore: maturity.score,
+    maturityLabel: maturity.label,
   }
-}
-
-function withinRange(call: DashboardCall, range: string | undefined): boolean {
-  if (!range || range === 'all') return true
-
-  const activityAt = new Date(call.updatedAt || call.createdAt).getTime()
-  const now = Date.now()
-  const days = range === 'today' ? 1 : Number(range)
-  if (!Number.isFinite(days)) return true
-
-  return activityAt >= now - days * 24 * 60 * 60 * 1000
-}
-
-function matchesSearch(call: DashboardCall, query: string | undefined): boolean {
-  const normalized = query?.trim().toLowerCase()
-  if (!normalized) return true
-
-  return [
-    call.lead.name,
-    call.lead.email,
-    call.lead.phone,
-    call.lead.company,
-    call.lead.country,
-    call.lead.purpose,
-    call.companyName,
-    call.category,
-    call.intent,
-    call.summary,
-    call.owner,
-    call.notes,
-    ...call.servicesInterested,
-    ...call.keyPoints,
-  ]
-    .filter(Boolean)
-    .some((value) => String(value).toLowerCase().includes(normalized))
-}
-
-function applyFilters(calls: DashboardCall[], filters: DashboardFilters): DashboardCall[] {
-  return calls.filter((call) =>
-    matchesSearch(call, filters.q) &&
-    withinRange(call, filters.range) &&
-    (!filters.status || filters.status === 'all' || call.status === filters.status) &&
-    (!filters.quality || filters.quality === 'all' || call.leadQuality === filters.quality) &&
-    (!filters.urgency || filters.urgency === 'all' || call.urgency === filters.urgency)
-  )
 }
 
 function rangeStartDate(range: string | undefined): Date | null {
@@ -320,13 +291,43 @@ function buildStoreQuery(
 ): Document {
   const baseFilter: Document = {}
   const createdAfter = rangeStartDate(filters.range)
+  const conditions: Document[] = []
 
   if (createdAfter) {
-    baseFilter.$or = [
-      { createdAt: { $gte: createdAfter } },
-      { updatedAt: { $gte: createdAfter } },
-    ]
+    conditions.push({
+      $or: [
+        { createdAt: { $gte: createdAfter } },
+        { updatedAt: { $gte: createdAfter } },
+      ],
+    })
   }
+
+  if (filters.q?.trim()) {
+    const reg = { $regex: escapeRegex(filters.q.trim()), $options: 'i' }
+    conditions.push({
+      $or: [
+        { 'lead.name': reg },
+        { 'lead.company': reg },
+        { 'lead.email': reg },
+        { 'lead.phone': reg },
+        { 'lead.country': reg },
+        { 'lead.purpose': reg },
+        { 'summary.text': reg },
+        { 'callSummary.summary': reg },
+        { 'classification.category': reg },
+        { 'classification.intent': reg },
+      ],
+    })
+  }
+
+  if (conditions.length === 1) {
+    const [single] = conditions
+    if (single.$or) baseFilter.$or = single.$or
+    else Object.assign(baseFilter, single)
+  } else if (conditions.length > 1) {
+    baseFilter.$and = conditions
+  }
+
   if (filters.status && filters.status !== 'all') baseFilter.status = filters.status
   if (filters.quality && filters.quality !== 'all') baseFilter['classification.leadQuality'] = filters.quality
   if (filters.urgency && filters.urgency !== 'all') baseFilter['requirement.urgency'] = filters.urgency
@@ -342,6 +343,8 @@ const DASHBOARD_RECORD_PROJECTION = {
   hasLead: 1,
   requirement: 1,
   classification: 1,
+  maturityScore: 1,
+  maturityLabel: 1,
   summary: 1,
   callSummary: 1,
   transcript: 1,
@@ -356,19 +359,18 @@ const DASHBOARD_RECORD_PROJECTION = {
   updatedAt: 1,
 } as const
 
-function buildRecommendations(calls: DashboardCall[], analytics: Pick<DashboardAnalytics,
-  'totalCalls' | 'callsWithLead' | 'hotLeads' | 'emailFailures' | 'averageMessages'
->): string[] {
-  if (calls.length === 0) {
+function buildRecommendations(
+  calls: DashboardCall[],
+  analytics: Pick<DashboardAnalytics, 'totalCalls' | 'callsWithLead' | 'hotLeads' | 'emailFailures' | 'averageMessages'>
+): string[] {
+  if (analytics.totalCalls === 0) {
     return ['No communications are available yet. Start by validating call capture, MongoDB persistence, and email notifications end to end.']
   }
 
   const recommendations: string[] = []
-  const hotOpen = calls.filter((call) =>
-    call.leadQuality === 'hot' && !['won', 'lost'].includes(call.status)
-  )
+  const hotOpen = calls.filter((call) => call.leadQuality === 'hot' && !['won', 'lost'].includes(call.status))
   const highUrgency = calls.filter((call) => call.urgency === 'high' && !['won', 'lost'].includes(call.status))
-  const leadCaptureRate = Math.round((analytics.callsWithLead / analytics.totalCalls) * 100)
+  const leadCaptureRate = Math.round((analytics.callsWithLead / (analytics.totalCalls || 1)) * 100)
 
   if (hotOpen.length > 0) {
     recommendations.push(`Prioritize ${hotOpen.length} hot lead${hotOpen.length === 1 ? '' : 's'} still outside won/lost status; assign owner follow-up within the same business day.`)
@@ -407,6 +409,19 @@ function buildRiskSignals(calls: DashboardCall[]): string[] {
   return risks.length ? risks.slice(0, 5) : ['No major risk signals detected in the current communication set.']
 }
 
+function resolveSortSpec(sortKey?: string): Document {
+  if (sortKey === 'created_desc') return { createdAt: -1 }
+  if (sortKey === 'created_asc') return { createdAt: 1 }
+  if (sortKey === 'maturity_desc') return { maturityScore: -1, updatedAt: -1 }
+  if (sortKey === 'quality_desc') return { 'classification.leadQuality': 1, updatedAt: -1 }
+  return { updatedAt: -1, createdAt: -1 }
+}
+
+/**
+ * High-performance dashboard analytics and paginated records fetcher.
+ * Uses index-backed COUNT queries, server-side aggregations, and pagination (default 10 records).
+ * Can smoothly handle millions of records without high memory pressure or full-table scans.
+ */
 export async function getDashboardAnalytics(
   filters: DashboardFilters = {},
   options: DashboardAnalyticsOptions = {}
@@ -415,101 +430,297 @@ export async function getDashboardAnalytics(
     const stores = await getConversationStoresForScope(options.scope)
     if (stores.length === 0) return EMPTY_ANALYTICS
 
-    const recordsByStore = await Promise.allSettled(stores.map(async (store) => {
-      try {
-        const historyRange = filters.range && filters.range !== 'all' &&
-          (filters.range === 'today' || Number(filters.range) < 180)
-          ? '180'
-          : filters.range
-        const query = buildStoreQuery(store, { ...filters, range: historyRange }, options.scope)
+    // Enforce server-side pagination parameters (default 10 records per page)
+    const page = Math.max(1, Math.floor(Number(filters.page) || 1))
+    const limit = Math.max(1, Math.min(100, Math.floor(Number(filters.limit) || 10)))
+    const skip = (page - 1) * limit
+    const sortSpec = resolveSortSpec(filters.sort)
 
-        return await conversationCollection<RawRecord>(store)
-          .find(query, { projection: DASHBOARD_RECORD_PROJECTION })
-          .sort({ updatedAt: -1, createdAt: -1 })
-          .limit(500)
-          .toArray()
-      } catch (err) {
-        console.warn('[dashboard] Failed to read conversations from store, skipping', {
-          tenantId: store.tenantId ?? 'platform',
-          source: store.source,
-          error: err instanceof Error ? err.message : String(err),
-        })
-        return []
-      }
-    }))
+    let totalRecordsCount = 0
+    let filteredRecordsCount = 0
 
-    const rawRecords = recordsByStore
-      .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
+    // 1. Parallel execution across stores: Counts and Paginated Query
+    const storeResults = await Promise.allSettled(
+      stores.map(async (store) => {
+        const col = conversationCollection<RawRecord>(store)
 
-    // Post-query defense-in-depth: enforce Row-Level Security isolation
-    const records = filterRecordsByRls(rawRecords, options.scope)
-      .sort((a, b) => {
-        const bTime = (b?.updatedAt instanceof Date ? b.updatedAt.getTime() : new Date(b?.updatedAt || b?.createdAt || 0).getTime())
-        const aTime = (a?.updatedAt instanceof Date ? a.updatedAt.getTime() : new Date(a?.updatedAt || a?.createdAt || 0).getTime())
-        return bTime - aTime
+        // Query 1: Unfiltered scope query for total database count
+        const scopeTotalQuery = buildStoreQuery(store, {}, options.scope)
+
+        // Query 2: Filtered query for current view
+        const filteredQuery = buildStoreQuery(store, filters, options.scope)
+
+        // Parallel count queries directly on B-tree indexes
+        const [storeTotalCount, storeFilteredCount, pagedDocs] = await Promise.all([
+          col.countDocuments(scopeTotalQuery),
+          col.countDocuments(filteredQuery),
+          col
+            .find(filteredQuery, { projection: DASHBOARD_RECORD_PROJECTION })
+            .sort(sortSpec)
+            .skip(skip)
+            .limit(limit)
+            .toArray(),
+        ])
+
+        return {
+          storeTotalCount,
+          storeFilteredCount,
+          pagedDocs,
+          store,
+          filteredQuery,
+        }
       })
-      .slice(0, 500)
+    )
 
-    const allCalls: DashboardCall[] = []
-    for (const record of records) {
-      try {
-        allCalls.push(toDashboardCall(record))
-      } catch (err) {
-        console.warn('[dashboard] Skipped malformed conversation record', {
-          id: record._id ? String(record._id) : 'unknown',
-          tenantId: record.tenant?.id,
-          error: err instanceof Error ? err.message : String(err),
-        })
+    const fulfilledStores = storeResults
+      .flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))
+
+    for (const r of fulfilledStores) {
+      totalRecordsCount += r.storeTotalCount
+      filteredRecordsCount += r.storeFilteredCount
+    }
+
+    const rawPagedDocs = fulfilledStores.flatMap((r) => r.pagedDocs)
+
+    // Apply defense-in-depth RLS filtering
+    const verifiedDocs = filterRecordsByRls(rawPagedDocs, options.scope)
+    const recentCalls = verifiedDocs.slice(0, limit).map(toDashboardCall)
+
+    // Calculate pagination metadata
+    const totalPages = Math.max(1, Math.ceil(filteredRecordsCount / limit))
+    const pagination: PaginationMeta = {
+      page,
+      limit,
+      totalRecords: totalRecordsCount,
+      filteredRecords: filteredRecordsCount,
+      totalPages,
+      hasPrevPage: page > 1,
+      hasNextPage: page < totalPages,
+    }
+
+    // 2. Fetch Selected Call (Single indexed lookup if specified)
+    let selectedCall: DashboardCall | null = null
+    if (filters.selectedId && ObjectId.isValid(filters.selectedId)) {
+      const matchInRecent = recentCalls.find((c) => c.id === filters.selectedId)
+      if (matchInRecent) {
+        selectedCall = matchInRecent
+      } else {
+        const targetId = new ObjectId(filters.selectedId)
+        for (const { store } of fulfilledStores) {
+          const doc = await conversationCollection<RawRecord>(store).findOne(
+            buildRlsQuery({ _id: targetId }, options.scope, store.tenantId),
+            { projection: DASHBOARD_RECORD_PROJECTION }
+          )
+          if (doc) {
+            selectedCall = toDashboardCall(doc)
+            break
+          }
+        }
       }
     }
-    const calls = applyFilters(allCalls, filters)
-    const trendCalls = allCalls.filter((call) => matchesSearch(call, filters.q))
-    const totalCalls = calls.length
-    const statusMap = new Map<string, number>()
-    const qualityMap = new Map<string, number>()
-    const intentMap = new Map<string, number>()
-    const urgencyMap = new Map<string, number>()
-    const sentimentMap = new Map<string, number>()
-    const categoryMap = new Map<string, number>()
-    const serviceMap = new Map<string, number>()
-    const countryMap = new Map<string, number>()
-
-    let messageCount = 0
-    for (const call of calls) {
-      increment(statusMap, call.status)
-      increment(qualityMap, call.leadQuality)
-      increment(intentMap, call.intent)
-      increment(urgencyMap, call.urgency)
-      increment(sentimentMap, call.sentiment)
-      increment(categoryMap, call.category)
-      increment(countryMap, call.lead.country)
-      for (const service of call.servicesInterested) increment(serviceMap, service)
-      messageCount += call.transcript.length
+    if (!selectedCall) {
+      selectedCall = recentCalls[0] ?? null
     }
 
-    const callsWithLead = calls.filter((call) => hasLead(call.lead)).length
-    const hotLeads = calls.filter((call) => call.leadQuality === 'hot').length
-    const qualifiedPipeline = calls.filter((call) =>
-      ['qualified', 'proposal', 'won'].includes(call.status)
-    ).length
-    const emailSent = calls.filter((call) => call.emailSent).length
-    const emailFailures = calls.filter((call) => call.emailError).length
-    const openFollowUps = calls.filter((call) => call.followUpAt && !['won', 'lost'].includes(call.status)).length
-    const overdueFollowUps = calls.filter((call) =>
-      call.followUpAt &&
-      new Date(call.followUpAt).getTime() < Date.now() &&
-      !['won', 'lost'].includes(call.status)
-    ).length
-    const averageMessages = totalCalls ? Math.round((messageCount / totalCalls) * 10) / 10 : 0
-    const conversionReadiness = totalCalls
-      ? Math.round(((hotLeads * 2 + qualifiedPipeline + callsWithLead) / (totalCalls * 4)) * 100)
+    // 3. Fast Server-Side Aggregations for Distributions & KPIs
+    // We execute an aggregation pipeline on the primary store to calculate KPI counts
+    let callsWithLead = 0
+    let hotLeads = 0
+    let qualifiedPipeline = 0
+    let emailSent = 0
+    let emailFailures = 0
+    let openFollowUps = 0
+    let overdueFollowUps = 0
+    let averageMessages = 0
+    let statusCounts: CountItem[] = []
+    let leadQualityCounts: CountItem[] = []
+    let monthlyCallVolume: CountItem[] = []
+    let intentCounts: CountItem[] = []
+    let urgencyCounts: CountItem[] = []
+    let sentimentCounts: CountItem[] = []
+    let categoryCounts: CountItem[] = []
+    let serviceCounts: CountItem[] = []
+    let topCountries: CountItem[] = []
+    let followUpQueue: DashboardCall[] = []
+
+    try {
+      const primaryStore = stores[0]
+      if (primaryStore) {
+        const col = conversationCollection<RawRecord>(primaryStore)
+        const filteredQuery = buildStoreQuery(primaryStore, filters, options.scope)
+
+        const [facetResult, followUpDocs] = await Promise.all([
+          col
+            .aggregate<{
+              kpis: Array<{
+                callsWithLead: number
+                hotLeads: number
+                qualifiedPipeline: number
+                emailSent: number
+                emailFailures: number
+                totalMessages: number
+                totalRecords: number
+              }>
+              statuses: Array<{ _id: string; count: number }>
+              qualities: Array<{ _id: string; count: number }>
+              intents: Array<{ _id: string; count: number }>
+              urgencies: Array<{ _id: string; count: number }>
+              sentiments: Array<{ _id: string; count: number }>
+              categories: Array<{ _id: string; count: number }>
+              services: Array<{ _id: string; count: number }>
+              countries: Array<{ _id: string; count: number }>
+              monthly: Array<{ _id: { year: number; month: number }; count: number }>
+            }>([
+              { $match: filteredQuery },
+              {
+                $facet: {
+                  kpis: [
+                    {
+                      $group: {
+                        _id: null,
+                        callsWithLead: { $sum: { $cond: [{ $eq: ['$hasLead', true] }, 1, 0] } },
+                        hotLeads: { $sum: { $cond: [{ $eq: ['$classification.leadQuality', 'hot'] }, 1, 0] } },
+                        qualifiedPipeline: {
+                          $sum: {
+                            $cond: [{ $in: ['$status', ['qualified', 'proposal', 'won']] }, 1, 0],
+                          },
+                        },
+                        emailSent: { $sum: { $cond: [{ $eq: ['$email.sent', true] }, 1, 0] } },
+                        emailFailures: {
+                          $sum: { $cond: [{ $ifNull: ['$email.error', false] }, 1, 0] },
+                        },
+                        totalMessages: { $sum: { $size: { $ifNull: ['$transcript', []] } } },
+                        totalRecords: { $sum: 1 },
+                      },
+                    },
+                  ],
+                  statuses: [{ $group: { _id: '$status', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 8 }],
+                  qualities: [{ $group: { _id: '$classification.leadQuality', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 8 }],
+                  intents: [{ $group: { _id: '$classification.intent', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 8 }],
+                  urgencies: [{ $group: { _id: '$requirement.urgency', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 8 }],
+                  sentiments: [{ $group: { _id: '$classification.sentiment', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 8 }],
+                  categories: [{ $group: { _id: '$classification.category', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 8 }],
+                  services: [{ $unwind: { path: '$requirement.servicesInterested', preserveNullAndEmptyArrays: false } }, { $group: { _id: '$requirement.servicesInterested', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 8 }],
+                  countries: [{ $group: { _id: '$lead.country', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 6 }],
+                  monthly: [
+                    {
+                      $group: {
+                        _id: {
+                          year: { $year: '$createdAt' },
+                          month: { $month: '$createdAt' },
+                        },
+                        count: { $sum: 1 },
+                      },
+                    },
+                    { $sort: { '_id.year': 1, '_id.month': 1 } },
+                    { $limit: 6 },
+                  ],
+                },
+              },
+            ])
+            .toArray(),
+
+          // Follow-up priority queue (top 10 records matching hot urgency or follow-up)
+          col
+            .find(
+              buildRlsQuery(
+                {
+                  status: { $nin: ['won', 'lost'] },
+                  $or: [
+                    { 'classification.leadQuality': 'hot' },
+                    { 'requirement.urgency': 'high' },
+                    { followUpAt: { $ne: null } },
+                  ],
+                },
+                options.scope,
+                primaryStore.tenantId
+              ),
+              { projection: DASHBOARD_RECORD_PROJECTION }
+            )
+            .sort({ followUpAt: 1, updatedAt: -1 })
+            .limit(10)
+            .toArray(),
+        ])
+
+        const facet = facetResult[0]
+        if (facet) {
+          const kpi = facet.kpis[0]
+          if (kpi) {
+            callsWithLead = kpi.callsWithLead ?? 0
+            hotLeads = kpi.hotLeads ?? 0
+            qualifiedPipeline = kpi.qualifiedPipeline ?? 0
+            emailSent = kpi.emailSent ?? 0
+            emailFailures = kpi.emailFailures ?? 0
+            const totalMsgs = kpi.totalMessages ?? 0
+            averageMessages = filteredRecordsCount ? Math.round((totalMsgs / filteredRecordsCount) * 10) / 10 : 0
+          }
+
+          statusCounts = facet.statuses.map((s) => ({ label: s._id || 'unknown', count: s.count }))
+          leadQualityCounts = facet.qualities.map((q) => ({ label: q._id || 'unknown', count: q.count }))
+          intentCounts = facet.intents.map((i) => ({ label: i._id || 'unknown', count: i.count }))
+          urgencyCounts = facet.urgencies.map((u) => ({ label: u._id || 'unknown', count: u.count }))
+          sentimentCounts = facet.sentiments.map((s) => ({ label: s._id || 'neutral', count: s.count }))
+          categoryCounts = facet.categories.map((c) => ({ label: c._id || 'other', count: c.count }))
+          serviceCounts = facet.services.map((s) => ({ label: s._id || 'other', count: s.count }))
+          topCountries = facet.countries.filter((c) => c._id).map((c) => ({ label: c._id, count: c.count }))
+
+          // Month names
+          monthlyCallVolume = facet.monthly.map((m) => {
+            const date = new Date(m._id.year, (m._id.month || 1) - 1, 1)
+            const label = new Intl.DateTimeFormat('en', { month: 'short', year: 'numeric' }).format(date)
+            return { label, count: m.count }
+          })
+        }
+
+        followUpQueue = followUpDocs.map(toDashboardCall)
+
+        // Count open and overdue follow-ups directly on indexed queries
+        const [openCount, overdueCount] = await Promise.all([
+          col.countDocuments(
+            buildRlsQuery(
+              { followUpAt: { $ne: null }, status: { $nin: ['won', 'lost'] } },
+              options.scope,
+              primaryStore.tenantId
+            )
+          ),
+          col.countDocuments(
+            buildRlsQuery(
+              { followUpAt: { $lt: new Date() }, status: { $nin: ['won', 'lost'] } },
+              options.scope,
+              primaryStore.tenantId
+            )
+          ),
+        ])
+        openFollowUps = openCount
+        overdueFollowUps = overdueCount
+      }
+    } catch (aggErr) {
+      console.warn('[dashboard:analytics] Aggregation fallback to recent items', aggErr)
+      // Safe fallback if aggregation is not supported
+      callsWithLead = recentCalls.filter((c) => hasLead(c.lead)).length
+      hotLeads = recentCalls.filter((c) => c.leadQuality === 'hot').length
+      qualifiedPipeline = recentCalls.filter((c) => ['qualified', 'proposal', 'won'].includes(c.status)).length
+      followUpQueue = recentCalls.slice(0, 5)
+    }
+
+    const conversionReadiness = filteredRecordsCount
+      ? Math.min(100, Math.round(((hotLeads * 2 + qualifiedPipeline + callsWithLead) / (filteredRecordsCount * 4)) * 100))
       : 0
-    const partialAnalytics = { totalCalls, callsWithLead, hotLeads, emailFailures, averageMessages }
+
+    const partialAnalytics = {
+      totalCalls: filteredRecordsCount,
+      callsWithLead,
+      hotLeads,
+      emailFailures,
+      averageMessages,
+    }
 
     return {
       configured: true,
       generatedAt: new Date().toISOString(),
-      totalCalls,
+      totalCalls: totalRecordsCount,
+      filteredCalls: filteredRecordsCount,
+      pagination,
       callsWithLead,
       hotLeads,
       qualifiedPipeline,
@@ -519,31 +730,23 @@ export async function getDashboardAnalytics(
       conversionReadiness,
       openFollowUps,
       overdueFollowUps,
-      filteredCalls: totalCalls,
-      selectedCall: filters.selectedId
-        ? calls.find((call) => call.id === filters.selectedId) ?? null
-        : calls[0] ?? null,
-      recentCalls: calls.slice(0, 30),
-      statusCounts: rankedItems(statusMap),
-      leadQualityCounts: rankedItems(qualityMap),
-      monthlyCallVolume: monthlyCallVolume(trendCalls),
-      intentCounts: rankedItems(intentMap),
-      urgencyCounts: rankedItems(urgencyMap),
-      sentimentCounts: rankedItems(sentimentMap),
-      categoryCounts: rankedItems(categoryMap),
-      serviceCounts: rankedItems(serviceMap),
-      topCountries: rankedItems(countryMap, 6),
-      aiRecommendations: buildRecommendations(calls, partialAnalytics),
-      riskSignals: buildRiskSignals(calls),
-      followUpQueue: calls
-        .filter((call) =>
-          !['won', 'lost'].includes(call.status) &&
-          (call.leadQuality === 'hot' || call.urgency === 'high' || call.intent === 'meeting_request')
-        )
-        .slice(0, 10),
+      selectedCall,
+      recentCalls,
+      statusCounts,
+      leadQualityCounts,
+      monthlyCallVolume,
+      intentCounts,
+      urgencyCounts,
+      sentimentCounts,
+      categoryCounts,
+      serviceCounts,
+      topCountries,
+      aiRecommendations: buildRecommendations(recentCalls, partialAnalytics),
+      riskSignals: buildRiskSignals(recentCalls),
+      followUpQueue,
     }
   } catch (err) {
-    console.error('[dashboard]', err)
+    console.error('[dashboard:analytics] Error in getDashboardAnalytics', err)
     return {
       ...EMPTY_ANALYTICS,
       generatedAt: new Date().toISOString(),

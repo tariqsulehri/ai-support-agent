@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,18 +10,19 @@
   /* ── Primary brand color (RGB channels, no rgb() wrapper)
      Override via ?primaryColor=#hex on the /voice embed URL,
      or via postMessage { type: 'voice-agent:theme', colors: { primary: '#hex' } }
-     Defaults: AIScripto Royal Blue #194ad9 */
-  --va-primary:    25 74 217;   /* #194ad9 */
-  --va-primary-dk: 19 60 180;   /* darker #133cb4 */
-  --va-primary-lt: 238 242 255;  /* soft tint */
-  --va-primary-md: 219 229 254;  /* medium tint */
+     Defaults: Royal Blue #0052ff */
+  --va-primary:    0 82 255;    /* #0052ff */
+  --va-primary-dk: 0 71 225;    /* darker #0047e1 */
+  --va-primary-lt: 238 244 255; /* soft tint */
+  --va-primary-md: 219 234 254; /* medium tint */
+  --font-poppins:  'Poppins', sans-serif;
 }
 
 html, body {
-  background-color: #F0F2F5;
-  color: #323130;
+  background-color: #F8FAFC;
+  color: #0F172A;
   min-height: 100dvh;
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont,
+  font-family: var(--font-poppins), 'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont,
     'Inter', 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

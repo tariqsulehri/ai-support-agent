@@ -110,6 +110,36 @@ export async function getTenantSecretMetadata(
   }
 }
 
+export async function getBatchTenantSecretsMetadata(
+  tenantIds: string[],
+  kind: TenantSecretKind
+): Promise<Map<string, TenantSecretPublicMetadata>> {
+  const map = new Map<string, TenantSecretPublicMetadata>()
+  if (!tenantIds.length) return map
+  const db = await getTenantSecretsDb()
+  if (!db) return map
+
+  const normalized = Array.from(new Set(tenantIds.map(normalizeTenantId)))
+  const records = await collection(db)
+    .find(
+      { tenantId: { $in: normalized }, kind, status: 'active' },
+      { projection: { tenantId: 1, kind: 1, status: 1, maskedValue: 1, updatedAt: 1 } }
+    )
+    .toArray()
+
+  for (const record of records) {
+    map.set(record.tenantId, {
+      tenantId: record.tenantId,
+      kind: record.kind,
+      status: record.status,
+      maskedValue: record.maskedValue,
+      updatedAt: record.updatedAt,
+    })
+  }
+
+  return map
+}
+
 export async function getDecryptedTenantSecretFromDb(
   db: Db,
   tenantId: string,

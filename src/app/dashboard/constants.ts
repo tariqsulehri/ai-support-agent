@@ -70,10 +70,10 @@ export const platformTenantTab: TabDefinition = {
 }
 
 export const statusOptions: LeadStatus[] = ['new', 'reviewing', 'qualified', 'proposal', 'won', 'lost']
-export const chartColors = ['#194ad9', '#6e19eb', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#3b82f6']
-export const barClasses = ['bg-[#194ad9]', 'bg-[#6e19eb]', 'bg-cyan-500', 'bg-emerald-500', 'bg-amber-500', 'bg-fuchsia-500', 'bg-blue-500']
+export const chartColors = ['#0052ff', '#6e19eb', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#3b82f6']
+export const barClasses = ['bg-[#0052ff]', 'bg-[#6e19eb]', 'bg-cyan-500', 'bg-emerald-500', 'bg-amber-500', 'bg-fuchsia-500', 'bg-blue-500']
 export const softClasses = [
-  'border-blue-100 bg-blue-50 text-[#194ad9]',
+  'border-blue-100 bg-blue-50 text-[#0052ff]',
   'border-purple-100 bg-purple-50 text-[#6e19eb]',
   'border-cyan-100 bg-cyan-50 text-cyan-800',
   'border-emerald-100 bg-emerald-50 text-emerald-800',

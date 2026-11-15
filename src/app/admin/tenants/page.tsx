@@ -265,20 +265,20 @@ function TenantTable({ tenants }: { tenants: ManagedTenantSummary[] }) {
                   <td className="px-4 py-3"><StatusBadge status={tenant.status} /></td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <Link href={`/admin/tenants/${tenant.tenantId}`} className="rounded-md bg-cyan-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-cyan-700">
+                      <Link href={`/admin/tenants/${tenant.tenantId}`} className="rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] px-3.5 py-1.5 text-xs font-bold text-white shadow-[0_2px_6px_rgba(0,82,255,0.3)] hover:from-[#085bf6] hover:to-[#0039be] transition">
                         Manage
                       </Link>
                       {tenant.status === 'active' ? (
                         <form action={disableTenantAction}>
                           <input type="hidden" name="tenantId" value={tenant.tenantId} />
-                          <button className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100">
+                          <button className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 shadow-2xs transition">
                             Disable
                           </button>
                         </form>
                       ) : tenant.status === 'disabled' ? (
                         <form action={enableTenantAction}>
                           <input type="hidden" name="tenantId" value={tenant.tenantId} />
-                          <button className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100">
+                          <button className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 shadow-2xs transition">
                             Enable
                           </button>
                         </form>
@@ -286,7 +286,7 @@ function TenantTable({ tenants }: { tenants: ManagedTenantSummary[] }) {
                       {tenant.status !== 'archived' && (
                         <form action={archiveTenantAction}>
                           <input type="hidden" name="tenantId" value={tenant.tenantId} />
-                          <button className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                          <button className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs transition">
                             Archive
                           </button>
                         </form>
@@ -306,43 +306,57 @@ function TenantTable({ tenants }: { tenants: ManagedTenantSummary[] }) {
 
 function CreateTenantPanel({ suggestedEmbedToken }: { suggestedEmbedToken: string }) {
   return (
-    <section className="overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)] ring-1 ring-slate-900/5">
-      <div className="h-1 bg-[linear-gradient(90deg,#0891b2,#10b981,#f59e0b)]" />
-      <div className="p-5">
-      <h2 className="text-lg font-semibold">Create Tenant</h2>
-      <p className="mt-1 text-sm leading-6 text-slate-500">
-        Creates the tenant, admin login, allowed domains, subscription, and initial embed token. Tenant secrets are added by tenant admins.
-      </p>
-      <form action={createTenantAction} className="mt-5 grid gap-5 xl:grid-cols-2">
-        <div className="space-y-4">
-          <Field label="Tenant ID" name="tenantId" required placeholder="acme-support" />
-          <Field label="Company Name" name="companyName" required placeholder="Acme Inc." />
-          <Field label="Agent Name" name="agentName" placeholder="Acme Assistant" />
-          <TextArea label="Allowed Domains" name="domains" placeholder="https://example.com&#10;https://app.example.com" />
-          <TextArea label="Services" name="services" placeholder="Customer Support&#10;Sales Inquiry&#10;Booking" />
-          <TextArea label="Greeting" name="greeting" rows={3} placeholder="Hi, I am Acme Assistant. How can I help you today?" />
-          <Field label="Tone" name="tone" placeholder="friendly, professional, and helpful" />
+    <section className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_20px_-4px_rgba(15,23,42,0.06),0_1px_3px_rgba(0,0,0,0.03)]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200/80 bg-gradient-to-r from-blue-50/40 via-white to-white px-6 py-4">
+        <div>
+          <h2 className="text-base font-bold text-slate-950 font-sans tracking-tight">Create Tenant</h2>
+          <p className="mt-0.5 text-xs text-slate-500 font-medium">
+            Creates the tenant, admin login, allowed domains, subscription, and initial embed token.
+          </p>
         </div>
-        <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <SelectField label="Subscription" name="subscriptionStatus" options={TENANT_SUBSCRIPTION_STATUSES} defaultValue="trial" />
-            <SelectField label="Plan Type" name="subscriptionType" options={TENANT_SUBSCRIPTION_TYPES} defaultValue="free" />
-            <SelectField label="Billing Cycle" name="billingCycle" options={TENANT_BILLING_CYCLES} defaultValue="monthly" />
+        <button
+          form="create-tenant-form"
+          type="submit"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] px-5 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] hover:from-[#085bf6] hover:to-[#0039be] transition-all duration-150 active:scale-[0.98] cursor-pointer shrink-0"
+        >
+          <span>Create Tenant</span>
+          <span>✓</span>
+        </button>
+      </div>
+      <div className="p-6">
+        <form id="create-tenant-form" action={createTenantAction} className="grid gap-5 xl:grid-cols-2">
+          <div className="space-y-4">
+            <Field label="Tenant ID" name="tenantId" required placeholder="acme-support" />
+            <Field label="Company Name" name="companyName" required placeholder="Acme Inc." />
+            <Field label="Agent Name" name="agentName" placeholder="Acme Assistant" />
+            <TextArea label="Allowed Domains" name="domains" placeholder="https://example.com&#10;https://app.example.com" />
+            <TextArea label="Services" name="services" placeholder="Customer Support&#10;Sales Inquiry&#10;Booking" />
+            <TextArea label="Greeting" name="greeting" rows={3} placeholder="Hi, I am Acme Assistant. How can I help you today?" />
+            <Field label="Tone" name="tone" placeholder="friendly, professional, and helpful" />
           </div>
-          <Field label="Embed Token" name="embedToken" required defaultValue={suggestedEmbedToken} autoComplete="off" />
-          <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 p-4">
-            <p className="mb-3 text-sm font-semibold text-slate-800">Tenant Admin Login</p>
-            <div className="space-y-4">
-              <Field label="Admin Name" name="adminName" placeholder="Tenant Admin" />
-              <Field label="Admin Email" name="adminEmail" type="email" placeholder="admin@example.com" autoComplete="off" />
-              <Field label="Admin Password" name="adminPassword" type="password" placeholder="Minimum 4 chars in development" autoComplete="new-password" />
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <SelectField label="Subscription" name="subscriptionStatus" options={TENANT_SUBSCRIPTION_STATUSES} defaultValue="trial" />
+              <SelectField label="Plan Type" name="subscriptionType" options={TENANT_SUBSCRIPTION_TYPES} defaultValue="free" />
+              <SelectField label="Billing Cycle" name="billingCycle" options={TENANT_BILLING_CYCLES} defaultValue="monthly" />
             </div>
+            <Field label="Embed Token" name="embedToken" required defaultValue={suggestedEmbedToken} autoComplete="off" />
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-700">Tenant Admin Login</p>
+              <div className="space-y-3">
+                <Field label="Admin Name" name="adminName" placeholder="Tenant Admin" />
+                <Field label="Admin Email" name="adminEmail" type="email" placeholder="admin@example.com" autoComplete="off" />
+                <Field label="Admin Password" name="adminPassword" type="password" placeholder="Minimum 4 chars in development" autoComplete="new-password" />
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="h-10 w-full rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] px-4 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] hover:from-[#085bf6] hover:to-[#0039be] transition-all duration-150 active:scale-[0.98] cursor-pointer"
+            >
+              Create Tenant
+            </button>
           </div>
-          <button className="h-11 w-full rounded-md bg-cyan-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-cyan-700">
-            Create Tenant
-          </button>
-        </div>
-      </form>
+        </form>
       </div>
     </section>
   )
@@ -494,27 +508,26 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
   const aggregateUsage = usageChartLabels.map(([key, label], index) => ({
     label,
     value: usageSummaries.reduce((sum, summary) => sum + (summary.counters[key] ?? 0), 0),
-    color: ['#194ad9', '#6e19eb', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#3b82f6'][index],
+    color: ['#0052ff', '#6e19eb', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#3b82f6'][index],
   }))
 
   return (
     <main className="min-h-dvh bg-[#f6f8fb] px-4 py-8 text-slate-950">
       <div className="mx-auto w-full max-w-7xl">
-        <header className="mb-5 overflow-hidden rounded-lg border border-white/80 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.10)] ring-1 ring-slate-900/5">
-          <div className="h-1 bg-[linear-gradient(90deg,#0891b2,#10b981,#f59e0b)]" />
-          <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-5">
+        <header className="mb-5 overflow-hidden rounded-xl border border-slate-200/90 bg-white p-6 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">Platform Admin</p>
-              <h1 className="mt-1 text-3xl font-semibold text-slate-950">Tenant Management</h1>
-              <p className="mt-2 text-sm text-slate-500">Control tenant access, runtime readiness, subscriptions, and deployment settings.</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#0052ff]">Platform Admin</p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-950 font-sans tracking-tight">Tenant Management</h1>
+              <p className="mt-1 text-xs text-slate-500 font-medium">Control tenant access, runtime readiness, subscriptions, and deployment settings.</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/dashboard" className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Link href="/dashboard" className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition">
                 Dashboard
               </Link>
               <form action="/api/admin/auth/logout" method="post">
                 <input type="hidden" name="next" value="/admin/login" />
-                <button className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                <button className="rounded-lg bg-[#0052ff] hover:bg-[#0047e1] px-4 py-2 text-xs font-bold text-white shadow-xs transition">
                   Sign out
                 </button>
               </form>
@@ -522,18 +535,21 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
           </div>
         </header>
 
-        <section className="mb-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border border-white/80 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Active tenants</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-950">{activeTenants.length}</p>
+        <section className="mb-5 grid gap-3.5 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/50 p-5 shadow-[0_4px_16px_-2px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,1)]">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Active tenants</p>
+            <p className="mt-2 text-3xl font-extrabold text-slate-950 font-sans tabular-nums">{activeTenants.length}</p>
+            <div className="mt-2.5 h-1.5 w-14 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 shadow-xs" />
           </div>
-          <div className="rounded-lg border border-white/80 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Archived</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-950">{archivedTenants.length}</p>
+          <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/50 p-5 shadow-[0_4px_16px_-2px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,1)]">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Archived</p>
+            <p className="mt-2 text-3xl font-extrabold text-slate-950 font-sans tabular-nums">{archivedTenants.length}</p>
+            <div className="mt-2.5 h-1.5 w-14 rounded-full bg-gradient-to-r from-slate-400 to-slate-500 shadow-xs" />
           </div>
-          <div className="rounded-lg border border-white/80 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">OpenAI ready</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-950">{activeTenants.filter((tenant) => tenant.hasOpenAiKey).length}</p>
+          <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white via-white to-slate-50/50 p-5 shadow-[0_4px_16px_-2px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,1)]">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">OpenAI ready</p>
+            <p className="mt-2 text-3xl font-extrabold text-slate-950 font-sans tabular-nums">{activeTenants.filter((tenant) => tenant.hasOpenAiKey).length}</p>
+            <div className="mt-2.5 h-1.5 w-14 rounded-full bg-gradient-to-r from-[#0052ff] to-blue-400 shadow-xs" />
           </div>
         </section>
 
@@ -556,14 +572,18 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
           />
         </section>
 
-        <nav className="mb-5 flex flex-wrap gap-2 rounded-lg border border-white/80 bg-white/90 p-2 shadow-sm ring-1 ring-slate-900/5" aria-label="Tenant admin tabs">
+        <nav className="mb-5 flex flex-wrap gap-2 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xs" aria-label="Tenant admin tabs">
           {tabs.map((tab) => {
             const selected = selectedTab === tab.id
             return (
               <Link
                 key={tab.id}
                 href={`/admin/tenants?tab=${tab.id}`}
-                className={`rounded-md px-4 py-2 text-sm font-semibold transition ${selected ? 'bg-cyan-600 text-white shadow-sm' : 'text-cyan-900 hover:bg-cyan-50 hover:text-cyan-950'}`}
+                className={`rounded-xl px-4 py-2 text-xs font-bold transition-all duration-150 ${
+                  selected
+                    ? 'bg-gradient-to-r from-[#0052ff] to-[#0040d0] text-white shadow-[0_3px_10px_rgba(0,82,255,0.35)] scale-[1.02]'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
               >
                 {tab.label}
               </Link>

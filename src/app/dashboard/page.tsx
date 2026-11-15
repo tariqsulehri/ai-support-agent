@@ -32,18 +32,18 @@ type DashboardPageProps = {
 function dashboardTabHref(tab: string, filters: DashboardFilters): string {
   const params = new URLSearchParams()
   params.set('tab', tab)
-  for (const key of ['q', 'status', 'quality', 'urgency', 'range', 'selectedId'] as const) {
+  for (const key of ['q', 'status', 'quality', 'urgency', 'range', 'selectedId', 'sort', 'limit'] as const) {
     const value = filters[key]
-    if (value && value !== 'all') params.set(key, value)
+    if (value && value !== 'all') params.set(key, String(value))
   }
   return `/dashboard?${params.toString()}`
 }
 
 function dashboardExportHref(filters: DashboardFilters): string {
   const params = new URLSearchParams()
-  for (const key of ['q', 'status', 'quality', 'urgency', 'range'] as const) {
+  for (const key of ['q', 'status', 'quality', 'urgency', 'range', 'sort'] as const) {
     const value = filters[key]
-    if (value && value !== 'all') params.set(key, value)
+    if (value && value !== 'all') params.set(key, String(value))
   }
   const query = params.toString()
   return query ? `/dashboard/export?${query}` : '/dashboard/export'
@@ -133,6 +133,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     urgency: resolvedSearchParams?.urgency,
     range: resolvedSearchParams?.range ?? '30',
     selectedId: resolvedSearchParams?.selectedId,
+    page: resolvedSearchParams?.page ? Number(resolvedSearchParams.page) : 1,
+    limit: resolvedSearchParams?.limit ? Number(resolvedSearchParams.limit) : 10,
+    sort: resolvedSearchParams?.sort ?? 'recent',
   }
 
   const [analytics, tenantDetail, platformTenants] = await Promise.all([
@@ -160,7 +163,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col antialiased">
       {/* Top Application Navbar */}
-      <header className="sticky top-0 z-40 h-14 border-b border-slate-200/90 bg-white px-4 sm:px-6 flex items-center justify-between select-none">
+      <header className="sticky top-0 z-40 h-14 border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between select-none shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
         {/* Left: Dashboard Home Link & Support Agent Logo */}
         <div className="flex items-center gap-4">
           <Link
@@ -185,7 +188,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <Link
             href="/voice"
             target="_blank"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition shadow-xs"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-emerald-200/90 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-3 py-1.5 text-[11px] font-bold text-emerald-800 hover:from-emerald-100 hover:to-emerald-200/70 transition shadow-[0_1px_3px_rgba(16,185,129,0.15)]"
             title="Launch interactive voice agent tester"
           >
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -231,7 +234,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
           {/* User Profile Chip */}
           <div className="flex items-center gap-2.5 pl-1">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0052ff] text-xs font-bold text-white shadow-xs">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#0052ff] to-[#0038b8] text-xs font-bold text-white shadow-[0_2px_6px_rgba(0,82,255,0.35)] ring-2 ring-white">
               {userInitials}
             </div>
             <div className="hidden sm:block text-left">
@@ -268,18 +271,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
       </header>
 
-      {/* Main Layout Area: Left Sidebar + Content */}
+      {/* Main Layout Area: Left Sidebar (CONSTANT & PERSISTENT) + Content */}
       <div className="flex flex-1 min-h-[calc(100vh-3.5rem)]">
-        {/* Left Sidebar Navigation */}
-        <aside className="hidden lg:flex w-60 flex-col justify-between border-r border-slate-200/90 bg-white p-3 shrink-0 select-none">
+        {/* Left Sidebar Navigation — CONSTANT EVERY TIME */}
+        <aside className="w-64 flex flex-col justify-between border-r border-slate-200/80 bg-white/95 backdrop-blur-md shrink-0 select-none shadow-[2px_0_12px_rgba(0,0,0,0.03)] sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto p-4 z-30">
           <div className="space-y-6">
-            <nav className="space-y-1">
+            <nav className="space-y-1.5">
               <Link
                 href={dashboardTabHref('overview', filters)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'overview'
-                    ? 'bg-blue-50/70 text-[#0052ff]'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white text-[#0052ff] shadow-[inset_0_1px_0_rgba(255,255,255,1),0_1px_3px_rgba(0,82,255,0.08)] font-bold border border-blue-200/80'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
                 }`}
               >
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -291,10 +294,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
               <Link
                 href={dashboardTabHref('communications', filters)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'communications'
-                    ? 'bg-blue-50/70 text-[#0052ff]'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white text-[#0052ff] shadow-[inset_0_1px_0_rgba(255,255,255,1),0_1px_3px_rgba(0,82,255,0.08)] font-bold border border-blue-200/80'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
                 }`}
               >
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -309,10 +312,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
               <Link
                 href={dashboardTabHref('leads', filters)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'leads'
-                    ? 'bg-blue-50/70 text-[#0052ff]'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white text-[#0052ff] shadow-[inset_0_1px_0_rgba(255,255,255,1),0_1px_3px_rgba(0,82,255,0.08)] font-bold border border-blue-200/80'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
                 }`}
               >
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -323,10 +326,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
               <Link
                 href={dashboardTabHref('ai', filters)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'ai'
-                    ? 'bg-blue-50/70 text-[#0052ff]'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white text-[#0052ff] shadow-[inset_0_1px_0_rgba(255,255,255,1),0_1px_3px_rgba(0,82,255,0.08)] font-bold border border-blue-200/80'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
                 }`}
               >
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -337,10 +340,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
               <Link
                 href={dashboardTabHref('capabilities', filters)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
                   activeTab === 'capabilities'
-                    ? 'bg-blue-50/70 text-[#0052ff]'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white text-[#0052ff] shadow-[inset_0_1px_0_rgba(255,255,255,1),0_1px_3px_rgba(0,82,255,0.08)] font-bold border border-blue-200/80'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
                 }`}
               >
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -356,7 +359,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <Link
                 href="/voice"
                 target="_blank"
-                className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition"
+                className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition border border-transparent"
               >
                 <div className="flex items-center gap-3">
                   <svg className="h-4 w-4 shrink-0 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
@@ -365,16 +368,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   </svg>
                   <span>Test Voice Agent</span>
                 </div>
-                <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200">LIVE</span>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-200/80 shadow-2xs">LIVE</span>
               </Link>
 
               {session.role === 'platform_admin' && (
                 <Link
                   href={dashboardTabHref('tenants', filters)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
                     activeTab === 'tenants'
-                      ? 'bg-blue-50/70 text-[#0052ff]'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white text-[#0052ff] shadow-[inset_0_1px_0_rgba(255,255,255,1),0_1px_3px_rgba(0,82,255,0.08)] font-bold border border-blue-200/80'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
                   }`}
                 >
                   <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -398,10 +401,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                         ? `/admin/tenants/${session.tenantId}`
                         : dashboardTabHref('configuration', filters)
                   }
-                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
                     activeTab === 'configuration'
-                      ? 'bg-blue-50/70 text-[#0052ff]'
-                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white text-[#0052ff] shadow-[inset_0_1px_0_rgba(255,255,255,1),0_1px_3px_rgba(0,82,255,0.08)] font-bold border border-blue-200/80'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -423,41 +426,41 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   </svg>
                 </Link>
 
-                {/* Sub-tree menu (Actual application options formatted as 1, 2, 3, 4, 5) */}
-                <div className="ml-4 pl-3 border-l-2 border-slate-100 mt-1 space-y-1 text-[11px] font-medium text-slate-600">
+                {/* Sub-tree menu */}
+                <div className="ml-4 pl-3 border-l-2 border-slate-200/80 mt-1.5 space-y-1 text-[11px] font-medium text-slate-600">
                   <Link
                     href={session.tenantId ? `/admin/tenants/${session.tenantId}?tab=overview` : dashboardTabHref('configuration', filters)}
-                    className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 transition"
+                    className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-slate-100/80 transition"
                   >
-                    <span className="text-slate-400 font-mono">1</span>
+                    <span className="text-[#0052ff] font-bold font-mono">1</span>
                     <span>Readiness Checklist</span>
                   </Link>
                   <Link
                     href={session.tenantId ? `/admin/tenants/${session.tenantId}?tab=embed` : dashboardTabHref('configuration', filters)}
-                    className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 transition"
+                    className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-slate-100/80 transition"
                   >
-                    <span className="text-slate-400 font-mono">2</span>
+                    <span className="text-[#0052ff] font-bold font-mono">2</span>
                     <span>Embed & API Keys</span>
                   </Link>
                   <Link
                     href={session.tenantId ? `/admin/tenants/${session.tenantId}?tab=agent` : dashboardTabHref('configuration', filters)}
-                    className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 transition"
+                    className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-slate-100/80 transition"
                   >
-                    <span className="text-slate-400 font-mono">3</span>
+                    <span className="text-[#0052ff] font-bold font-mono">3</span>
                     <span>Agent Persona</span>
                   </Link>
                   <Link
                     href={session.tenantId ? `/admin/tenants/${session.tenantId}?tab=integrations` : dashboardTabHref('configuration', filters)}
-                    className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 transition"
+                    className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-slate-100/80 transition"
                   >
-                    <span className="text-slate-400 font-mono">4</span>
+                    <span className="text-[#0052ff] font-bold font-mono">4</span>
                     <span>OpenAI & MongoDB</span>
                   </Link>
                   <Link
                     href={session.tenantId ? `/admin/tenants/${session.tenantId}?tab=team` : dashboardTabHref('configuration', filters)}
-                    className="flex items-center gap-2 py-1 px-2 rounded hover:bg-slate-50 transition"
+                    className="flex items-center gap-2 py-1 px-2 rounded-lg hover:bg-slate-100/80 transition"
                   >
-                    <span className="text-slate-400 font-mono">5</span>
+                    <span className="text-[#0052ff] font-bold font-mono">5</span>
                     <span>Team Access</span>
                   </Link>
                 </div>
@@ -466,9 +469,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </div>
 
           {/* Bottom Profile Widget in Sidebar */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+          <div className="pt-4 border-t border-slate-200/80 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0052ff] text-xs font-bold text-white shadow-xs">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0052ff] to-[#0038b8] text-xs font-bold text-white shadow-[0_2px_6px_rgba(0,82,255,0.35)] ring-2 ring-white">
                 {userInitials}
               </div>
               <div className="text-left overflow-hidden">
@@ -485,24 +488,34 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         {/* Main Content Area */}
         <main className="flex-1 bg-[#f8fafc]/60 p-4 sm:p-6 lg:p-8 min-w-0 space-y-5 overflow-y-auto">
-          {/* Header Card (matching Image 2 top card) */}
-          <section className="rounded-xl border border-slate-200/90 bg-white p-5 shadow-xs">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Top Title & Header Card */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950 font-sans">
+              Admin Dashboard
+            </h1>
+            <p className="text-xs text-slate-500 font-medium hidden sm:block">
+              AI Voice &amp; Real-time Support Intelligence Control Center
+            </p>
+          </div>
+
+          {/* Header Card with Action Buttons & Tab Details */}
+          <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.06),0_1px_3px_rgba(0,0,0,0.03)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-start sm:items-center gap-3.5">
                 {/* Soft rounded blue square icon */}
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-200/80 bg-blue-50/70 text-[#0052ff]">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50 to-blue-100/60 text-[#0052ff] shadow-[0_2px_8px_rgba(0,82,255,0.12)]">
                   <TabIcon id={activeTab} className="h-5 w-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <h1 className="text-lg font-bold tracking-tight text-slate-950 sm:text-xl">
+                    <h2 className="text-lg font-bold tracking-tight text-slate-950 sm:text-xl font-sans">
                       {activeTabDef.label}
-                    </h1>
-                    <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-[#0052ff]">
+                    </h2>
+                    <span className="inline-flex items-center rounded-full border border-blue-200/90 bg-blue-50/90 px-3 py-0.5 text-[11px] font-bold text-[#0052ff] shadow-[0_1px_2px_rgba(0,82,255,0.1)]">
                       {activeTabDef.badgeText}
                     </span>
                     <span className="text-[11px] text-slate-400 font-medium">
-                      Updated {formatDate(analytics.generatedAt)}
+                      {analytics.pagination.filteredRecords.toLocaleString()} conversations ({analytics.pagination.totalRecords.toLocaleString()} in DB) · Updated {formatDate(analytics.generatedAt)}
                     </span>
                   </div>
                   <p className="mt-0.5 text-xs text-slate-500 font-medium">
@@ -511,30 +524,74 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </div>
               </div>
 
-              {/* Quick Search on Top Right */}
-              <div className="relative shrink-0">
-                <input
-                  type="text"
-                  placeholder="Search callers, leads, records..."
-                  defaultValue={filters.q ?? ''}
-                  className="h-9 w-full sm:w-64 rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-700 placeholder-slate-400 shadow-xs outline-none focus:border-[#0052ff] focus:ring-1 focus:ring-[#0052ff]"
-                />
-                <svg
-                  className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
+              {/* Buttons & Search in Top Header Card */}
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                {/* Toggle Pills: Live Operations vs System */}
+                <div className="inline-flex rounded-xl bg-blue-50/70 p-1 text-xs font-semibold shadow-inner border border-blue-200/60">
+                  <Link
+                    href={dashboardTabHref('overview', filters)}
+                    className={`rounded-lg px-3 py-1.5 transition-all duration-150 ${
+                      activeTab === 'overview'
+                        ? 'bg-gradient-to-r from-[#0052ff] to-[#0042cc] text-white shadow-[0_2px_6px_rgba(0,82,255,0.35)] font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Live Operations
+                  </Link>
+                  <Link
+                    href={
+                      session.tenantId
+                        ? `/admin/tenants/${session.tenantId}`
+                        : dashboardTabHref('configuration', filters)
+                    }
+                    className={`rounded-lg px-3 py-1.5 transition-all duration-150 ${
+                      activeTab === 'configuration' || activeTab === 'tenants'
+                        ? 'bg-gradient-to-r from-[#0052ff] to-[#0042cc] text-white shadow-[0_2px_6px_rgba(0,82,255,0.35)] font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    System
+                  </Link>
+                </div>
+
+                {/* Action Button: Open Setup > */}
+                <Link
+                  href={
+                    session.tenantId
+                      ? `/admin/tenants/${session.tenantId}`
+                      : '/admin/tenants'
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-[#0052ff] to-[#0040d0] hover:from-[#085bf6] hover:to-[#0039be] px-4 py-2 text-xs font-bold text-white shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition-all duration-150 active:scale-[0.98]"
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-                    clipRule="evenodd"
+                  <span>Open Setup</span>
+                  <span className="text-white/80">&gt;</span>
+                </Link>
+
+                {/* Quick Search */}
+                <div className="relative shrink-0">
+                  <input
+                    type="text"
+                    placeholder="Search callers, leads..."
+                    defaultValue={filters.q ?? ''}
+                    className="h-9 w-full sm:w-56 rounded-xl border border-slate-200/90 bg-slate-50/60 pl-8 pr-3 text-xs text-slate-700 placeholder-slate-400 shadow-[inset_0_1px_2px_rgba(0,0,0,0.04)] outline-none focus:bg-white focus:border-[#0052ff] focus:ring-4 focus:ring-[#0052ff]/10 focus:shadow-xs transition-all duration-150"
                   />
-                </svg>
+                  <svg
+                    className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
               </div>
             </div>
           </section>
 
-          {/* Stepped Numbered Pill Tabs Bar (matching Image 2 tab bar) */}
+          {/* Stepped Numbered Pill Tabs Bar */}
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between py-1">
             <nav className="flex flex-wrap items-center gap-2" aria-label="Stepped tabs">
               {tabs.map((tab) => {
@@ -549,18 +606,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     key={tab.id}
                     href={href}
                     prefetch={false}
-                    className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all duration-150 ${
                       selected
-                        ? 'bg-[#0052ff] text-white shadow-xs'
-                        : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700'
+                        ? 'bg-gradient-to-r from-[#0052ff] to-[#0040d0] text-white shadow-[0_3px_10px_rgba(0,82,255,0.35),inset_0_1px_0_rgba(255,255,255,0.25)] font-bold scale-[1.02]'
+                        : 'bg-white border border-slate-200/80 text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-300 hover:shadow-sm'
                     }`}
                   >
                     {/* Number badge */}
                     <span
                       className={`inline-flex h-4 min-w-[16px] items-center justify-center rounded px-1 text-[10px] font-bold ${
                         selected
-                          ? 'bg-white/25 text-white'
-                          : 'bg-slate-200 text-slate-600'
+                          ? 'bg-white/20 text-white shadow-inner font-extrabold'
+                          : 'bg-blue-50 text-[#0052ff] border border-blue-200/70'
                       }`}
                     >
                       {tab.num}
@@ -572,11 +629,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 )
               })}
             </nav>
-
-            {/* Contextual description note on the right (matching Image 2) */}
-            <p className="text-xs text-slate-500 font-medium hidden xl:block">
-              {activeTabDef.description}
-            </p>
           </div>
 
           {/* Filter Bar (matching Image 2 table filter style) */}
@@ -588,8 +640,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
           {/* Tab Views */}
           <div className="space-y-6">
-            {activeTab === 'overview' && <OverviewTab analytics={analytics} />}
-            {activeTab === 'communications' && <CommunicationsTab calls={analytics.recentCalls} />}
+            {activeTab === 'overview' && <OverviewTab analytics={analytics} userName={session.name} />}
+            {activeTab === 'communications' && (
+              <CommunicationsTab
+                calls={analytics.recentCalls}
+                pagination={analytics.pagination}
+              />
+            )}
             {activeTab === 'leads' && <LeadsTab analytics={analytics} />}
             {activeTab === 'ai' && <AiTab analytics={analytics} />}
             {activeTab === 'capabilities' && <CapabilitiesTab />}
