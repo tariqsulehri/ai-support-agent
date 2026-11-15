@@ -4,6 +4,13 @@ import { evaluateCustomerMessage } from '@/lib/ai/conversation-policy'
 import { recordUsageEvent } from '@/lib/observability/usage'
 import { requireTenantRuntime } from '@/lib/api/tenant-runtime'
 import {
+  background,
+  bodyErrorResponse,
+  readJsonBody,
+  sanitizeChatHistory,
+  sanitizeLead,
+} from '@/lib/api/request-guards'
+import {
   assistantClosed,
   displayText,
   extractLead,
@@ -19,30 +26,7 @@ export const dynamic = 'force-dynamic'
 
 const MAX_HISTORY_MESSAGES = 20
 const MAX_MESSAGE_CHARS = 2000
-
-function sanitizeMessages(raw: unknown): ChatMessage[] | null {
-  if (!Array.isArray(raw) || raw.length === 0) return null
-
-  const cleaned: ChatMessage[] = []
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') continue
-    const role = (item as { role?: unknown }).role
-    const content = (item as { content?: unknown }).content
-
-    if ((role === 'user' || role === 'assistant') && typeof content === 'string') {
-      const trimmed = content.trim()
-      if (trimmed.length > 0) {
-        cleaned.push({
-          role,
-          content: trimmed.slice(0, MAX_MESSAGE_CHARS),
-        })
-      }
-    }
-  }
-
-  if (cleaned.length === 0) return null
-  return cleaned.slice(-MAX_HISTORY_MESSAGES)
-}
+const MAX_BODY_BYTES = 256 * 1024
 
 /**
  * Streaming chat endpoint — emits Server-Sent Events.
@@ -59,22 +43,24 @@ export async function POST(req: NextRequest) {
   if (runtime.response) return runtime.response
   const { tenant } = runtime
 
-  await recordUsageEvent({ tenantId: tenant.id, type: 'chat.request' })
-
   let messages: ChatMessage[]
   let existingLead: Partial<LeadData> = {}
   try {
-    const body = await req.json()
-    const sanitized = sanitizeMessages(body.messages)
-    if (!sanitized) throw new Error('Invalid messages array')
-    messages = sanitized
-
-    if (body.lead && typeof body.lead === 'object') {
-      existingLead = body.lead
+    const body = await readJsonBody<{ messages?: unknown; lead?: unknown }>(req, MAX_BODY_BYTES)
+    const sanitized = sanitizeChatHistory(body?.messages, {
+      maxMessages: MAX_HISTORY_MESSAGES,
+      maxContentChars: MAX_MESSAGE_CHARS,
+    })
+    if (!sanitized || sanitized.length === 0) {
+      return new Response('Invalid request body', { status: 400 })
     }
-  } catch {
-    return new Response('Invalid request body', { status: 400 })
+    messages = sanitized
+    existingLead = sanitizeLead(body?.lead)
+  } catch (err) {
+    return bodyErrorResponse(err)
   }
+
+  background(recordUsageEvent({ tenantId: tenant.id, type: 'chat.request' }), 'chat usage')
 
   const encoder = new TextEncoder()
 
@@ -110,16 +96,71 @@ export async function POST(req: NextRequest) {
     return policyResponse(policy.reply)
   }
 
+  let cancelled = false
   const stream = new ReadableStream({
+    cancel() {
+      // Client went away: stop consuming (and paying for) the upstream completion.
+      cancelled = true
+    },
     async start(controller) {
+      let closed = false
+      const safeEnqueue = (payload: object) => {
+        if (closed) return
+        try {
+          controller.enqueue(send(payload))
+        } catch {
+          // Client disconnected; the controller is already closed.
+          closed = true
+        }
+      }
+      const safeClose = () => {
+        if (closed) return
+        closed = true
+        try {
+          controller.close()
+        } catch {
+          // already closed
+        }
+      }
+
+      let accumulated        = ''
+      let visibleAccumulated = ''
+      let sentenceBuffer     = ''
+
+      const finalize = () => {
+        const tail = displayText(sentenceBuffer.trim())
+        if (tail.length > 0) safeEnqueue({ sentence: tail })
+
+        const lead     = extractLead(accumulated)
+        const mergedLead = { ...existingLead, ...(lead ?? {}) }
+        const cleaned  = stripLead(accumulated)
+        const explicitEndCall = cleaned.includes('[END_CALL]')
+        const inferredEndCall = hasRequiredLead(mergedLead) &&
+          (userWantsToEnd(lastUserMessage()) || assistantClosed(cleaned))
+        const endCall  = explicitEndCall || inferredEndCall
+        const fullText = displayText(accumulated)
+
+        if (inferredEndCall && !explicitEndCall) {
+          console.info('[chat] inferred end call', {
+            tenantId: tenant.id,
+            hasLead: true,
+          })
+        }
+
+        if (lead) safeEnqueue({ lead })
+        safeEnqueue({ done: true, fullText, endCall })
+        safeClose()
+      }
+
       try {
         const completion = await streamChatReply(messages, tenant)
 
-        let accumulated        = ''
-        let visibleAccumulated = ''
-        let sentenceBuffer     = ''
-
         for await (const chunk of completion) {
+          if (cancelled || closed) {
+            completion.controller?.abort()
+            closed = true
+            break
+          }
           const token       = chunk.choices[0]?.delta?.content ?? ''
           const finishReason = chunk.choices[0]?.finish_reason
 
@@ -131,46 +172,30 @@ export async function POST(req: NextRequest) {
 
             if (visibleToken) {
               sentenceBuffer += visibleToken
-              controller.enqueue(send({ token: visibleToken }))
+              safeEnqueue({ token: visibleToken })
             }
 
             const { sentences, remainder } = extractSentences(sentenceBuffer)
             sentenceBuffer = remainder
             for (const sentence of sentences) {
               const clean = displayText(sentence)
-              if (clean) controller.enqueue(send({ sentence: clean }))
+              if (clean) safeEnqueue({ sentence: clean })
             }
           }
 
-          if (finishReason === 'stop') {
-            const tail = displayText(sentenceBuffer.trim())
-            if (tail.length > 0) controller.enqueue(send({ sentence: tail }))
-
-            const lead     = extractLead(accumulated)
-            const mergedLead = { ...existingLead, ...(lead ?? {}) }
-            const cleaned  = stripLead(accumulated)
-            const explicitEndCall = cleaned.includes('[END_CALL]')
-            const inferredEndCall = hasRequiredLead(mergedLead) &&
-              (userWantsToEnd(lastUserMessage()) || assistantClosed(cleaned))
-            const endCall  = explicitEndCall || inferredEndCall
-            const fullText = displayText(accumulated)
-
-            if (inferredEndCall && !explicitEndCall) {
-              console.info('[chat] inferred end call', {
-                tenantId: tenant.id,
-                hasLead: true,
-              })
-            }
-
-            if (lead) controller.enqueue(send({ lead }))
-            controller.enqueue(send({ done: true, fullText, endCall }))
-            controller.close()
+          // Any finish reason ('stop', 'length', 'content_filter', ...) ends the turn.
+          if (finishReason) {
+            finalize()
+            break
           }
         }
+
+        // Stream ended without an explicit finish reason: still close cleanly.
+        if (!closed) finalize()
       } catch (err) {
-        console.error('[chat]', err)
-        controller.enqueue(send({ error: 'Chat failed' }))
-        controller.close()
+        console.error('[chat]', err instanceof Error ? err.message : err)
+        safeEnqueue({ error: 'Chat failed' })
+        safeClose()
       }
     },
   })

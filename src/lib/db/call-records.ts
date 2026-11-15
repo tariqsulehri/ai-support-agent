@@ -46,13 +46,14 @@ function hasLeadData(lead: LeadData): boolean {
 }
 
 function conversationRecord(input: SaveCallRecordInput, now: Date): Document {
+  const transcript = input.messages.filter((message) => message.content !== '__GREET__')
   const maturity = calculateMaturityScore({
     status: 'new',
     leadQuality: input.analysis?.classification?.leadQuality,
     urgency: input.analysis?.requirement?.urgency,
     sentiment: input.analysis?.classification?.sentiment,
     lead: input.lead,
-    messageCount: input.messages.length,
+    messageCount: transcript.length,
     hasLead: hasLeadData(input.lead),
   })
 
@@ -79,7 +80,8 @@ function conversationRecord(input: SaveCallRecordInput, now: Date): Document {
       keyPoints: input.summary.keyPoints,
       nextSteps: input.analysis?.nextSteps ?? [],
     },
-    transcript: input.messages.filter((message) => message.content !== '__GREET__'),
+    transcript,
+    messageCount: transcript.length,
     status: 'new',
     statusHistory: [{ status: 'new', changedAt: now }],
     owner: null,
@@ -105,14 +107,16 @@ export async function saveCallRecord(input: SaveCallRecordInput): Promise<SaveCa
     const doc = conversationRecord(input, now)
 
     if (input.conversationId) {
-      await conversationCollection(store).updateOne(
+      // Preserve management fields (owner, notes, follow-up, status history) that staff may
+      // have set while the conversation was live; only seed them on first insert.
+      const { status, statusHistory, owner, followUpAt, notes, createdAt, ...finalFields } = doc
+      const saved = await conversationCollection(store).findOneAndUpdate(
         { 'tenant.id': input.tenant.id, conversationId: input.conversationId },
-        { $set: doc },
-        { upsert: true }
-      )
-      const saved = await conversationCollection(store).findOne(
-        { 'tenant.id': input.tenant.id, conversationId: input.conversationId },
-        { projection: { _id: 1 } }
+        {
+          $set: finalFields,
+          $setOnInsert: { status, statusHistory, owner, followUpAt, notes, createdAt },
+        },
+        { upsert: true, returnDocument: 'after', projection: { _id: 1 } }
       )
       return { saved: true, id: saved?._id?.toString() }
     }
@@ -143,7 +147,7 @@ export async function saveConversationSnapshot(input: SaveConversationSnapshotIn
       hasLead: hasLeadData(input.lead),
     })
 
-    await conversationCollection(store).updateOne(
+    const saved = await conversationCollection(store).findOneAndUpdate(
       {
         'tenant.id': input.tenant.id,
         conversationId: input.conversationId,
@@ -181,6 +185,7 @@ export async function saveConversationSnapshot(input: SaveConversationSnapshotIn
           maturityScore: maturity.score,
           maturityLabel: maturity.label,
           transcript,
+          messageCount: transcript.length,
           source: {
             mode: transcript.some((message) => message.role === 'user') ? 'conversation' : 'unknown',
             language: input.tenant.languageMode,
@@ -188,11 +193,7 @@ export async function saveConversationSnapshot(input: SaveConversationSnapshotIn
           updatedAt: now,
         },
       },
-      { upsert: true }
-    )
-    const saved = await conversationCollection(store).findOne(
-      { 'tenant.id': input.tenant.id, conversationId: input.conversationId },
-      { projection: { _id: 1 } }
+      { upsert: true, returnDocument: 'after', projection: { _id: 1 } }
     )
     return { saved: Boolean(saved), id: saved?._id?.toString() }
   } catch (err) {
@@ -213,29 +214,40 @@ export async function updateCallRecordStatus(
     const stores = await getConversationStoresForScope(scope)
     if (stores.length === 0) return { saved: false, error: 'Conversation database is not configured.' }
 
-    const existing = await getCallRecordById(id, scope)
+    const existing = await getCallRecordById(id, scope, {
+      classification: 1,
+      requirement: 1,
+      lead: 1,
+      user: 1,
+      hasLead: 1,
+      messageCount: 1,
+      transcriptLength: { $size: { $ifNull: ['$transcript', []] } },
+      'tenant.id': 1,
+    })
+    if (!existing) {
+      return { saved: false, id, error: 'Call record was not found or access denied.' }
+    }
     const maturity = calculateMaturityScore({
       status,
       leadQuality: existing?.classification?.leadQuality,
       urgency: existing?.requirement?.urgency,
       sentiment: existing?.classification?.sentiment,
       lead: existing?.lead ?? existing?.user,
-      messageCount: Array.isArray(existing?.transcript) ? existing.transcript.length : 0,
-      hasLead: existing?.hasLead,
+      messageCount: existing.messageCount ?? existing.transcriptLength ?? 0,
+      hasLead: existing.hasLead,
     })
 
+    const now = new Date()
     const update: Document = {
       $set: {
         status,
         maturityScore: maturity.score,
         maturityLabel: maturity.label,
-        updatedAt: new Date(),
+        updatedAt: now,
       },
       $push: {
-        statusHistory: {
-          status,
-          changedAt: new Date(),
-        },
+        // Bounded history so documents cannot grow without limit.
+        statusHistory: { $each: [{ status, changedAt: now }], $slice: -50 },
       },
     }
     for (const store of stores) {
@@ -270,9 +282,9 @@ export async function updateCallRecordManagement(
     const followUpAt = input.followUpAt?.trim() ? new Date(input.followUpAt) : null
     const update: Document = {
       $set: {
-        owner: input.owner?.trim() || null,
+        owner: input.owner?.trim().slice(0, 120) || null,
         followUpAt: followUpAt && !Number.isNaN(followUpAt.getTime()) ? followUpAt : null,
-        notes: input.notes?.trim() || null,
+        notes: input.notes?.trim().slice(0, 5000) || null,
         updatedAt: new Date(),
       },
     }
@@ -299,7 +311,8 @@ export async function updateCallRecordManagement(
 
 export async function getCallRecordById(
   id: string,
-  scope?: DashboardAccessScope
+  scope?: DashboardAccessScope,
+  projection?: Document
 ): Promise<Document | null> {
   if (!ObjectId.isValid(id)) return null
 
@@ -309,7 +322,10 @@ export async function getCallRecordById(
 
     const query = scopedRecordQuery(id, scope)
     for (const store of stores) {
-      const record = await conversationCollection(store).findOne(query)
+      const record = await conversationCollection(store).findOne(
+        query,
+        projection ? { projection } : undefined
+      )
       if (record) {
         assertTenantAccess(record.tenant?.id, scope)
         return record

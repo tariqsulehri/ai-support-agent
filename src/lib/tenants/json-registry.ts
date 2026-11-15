@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'crypto'
 import tenantsRaw from '@/data/tenants.json'
 import type { TenantConfig } from './types'
 import type { ResolutionHeaders, ResolutionOptions } from './registry'
@@ -20,6 +21,13 @@ for (const tenant of tenants) {
     const origin = normalizeOrigin(domain)
     if (origin) byDomain.set(origin, tenant)
   }
+}
+
+/** Constant-time string comparison (hash first so lengths always match). */
+function safeEqualString(a: string, b: string): boolean {
+  const left = createHash('sha256').update(a, 'utf8').digest()
+  const right = createHash('sha256').update(b, 'utf8').digest()
+  return timingSafeEqual(left, right)
 }
 
 export function getJsonTenantById(id: string): TenantConfig | null {
@@ -52,7 +60,7 @@ export function resolveJsonTenantFromHeaders(
   if (h.tenantId) {
     const tenant = getJsonTenantById(h.tenantId)
     if (!tenant) return null
-    if (enforceToken && tenant.token && tenant.token !== h.token) return null
+    if (enforceToken && tenant.token && !(h.token && safeEqualString(tenant.token, h.token))) return null
     return tenant
   }
 

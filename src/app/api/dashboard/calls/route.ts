@@ -1,64 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getVerifiedSession, dashboardScopeForSession } from '@/lib/auth/session'
-import { getDashboardAnalytics, type DashboardFilters } from '@/lib/dashboard/analytics'
-export { OPTIONS } from '@/lib/utils/cors'
+import { getDashboardAnalytics } from '@/lib/dashboard/analytics'
+import type { DashboardFilters } from '@/lib/dashboard/types'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * GET /api/dashboard/calls
- * High-performance paginated API endpoint for communications and leads.
- * Query Parameters:
- *   - page: integer (default: 1)
- *   - limit: integer (default: 10, max: 100)
- *   - sort: 'recent' | 'created_desc' | 'created_asc' | 'maturity_desc' | 'quality_desc'
- *   - q: text search query
- *   - status: 'all' | 'new' | 'reviewing' | 'qualified' | 'proposal' | 'won' | 'lost'
- *   - quality: 'all' | 'hot' | 'warm' | 'cold' | 'unknown'
- *   - urgency: 'all' | 'high' | 'medium' | 'low' | 'unknown'
- *   - range: 'all' | 'today' | '7' | '30' | '90'
+ * GET /api/dashboard/calls — authenticated, same-origin JSON endpoint.
+ * Query: page, limit (≤100), sort (recent|created_desc|created_asc|maturity_desc),
+ * q, status, quality, urgency, range (all|today|7|30|90), summary=1 to include KPI counters.
+ * Session-cookie authenticated, so it intentionally exposes no CORS preflight handler.
  */
 export async function GET(req: NextRequest) {
   const session = await getVerifiedSession()
   if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
   }
 
-  const { searchParams } = req.nextUrl
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
-  const limit = Math.max(1, Math.min(100, parseInt(searchParams.get('limit') || '10', 10) || 10))
-  const sort = searchParams.get('sort') || 'recent'
-
+  const sp = req.nextUrl.searchParams
   const filters: DashboardFilters = {
-    q: searchParams.get('q') ?? undefined,
-    status: searchParams.get('status') ?? undefined,
-    quality: searchParams.get('quality') ?? undefined,
-    urgency: searchParams.get('urgency') ?? undefined,
-    range: searchParams.get('range') ?? undefined,
-    selectedId: searchParams.get('selectedId') ?? undefined,
-    page,
-    limit,
-    sort,
+    q: sp.get('q') ?? undefined,
+    status: sp.get('status') ?? undefined,
+    quality: sp.get('quality') ?? undefined,
+    urgency: sp.get('urgency') ?? undefined,
+    range: sp.get('range') ?? undefined,
+    page: sp.get('page') ?? undefined,
+    limit: sp.get('limit') ?? undefined,
+    sort: sp.get('sort') ?? undefined,
   }
+  const includeSummary = sp.get('summary') === '1'
 
   const analytics = await getDashboardAnalytics(filters, {
     scope: dashboardScopeForSession(session),
+    sections: { list: true, aggregates: includeSummary, followUps: includeSummary, followUpQueue: false, selected: false },
   })
 
-  return NextResponse.json({
-    records: analytics.recentCalls,
-    pagination: analytics.pagination,
-    summary: {
-      totalCalls: analytics.totalCalls,
-      filteredCalls: analytics.filteredCalls,
-      callsWithLead: analytics.callsWithLead,
-      hotLeads: analytics.hotLeads,
-      qualifiedPipeline: analytics.qualifiedPipeline,
-      openFollowUps: analytics.openFollowUps,
-      conversionReadiness: analytics.conversionReadiness,
+  return NextResponse.json(
+    {
+      records: analytics.recentCalls,
+      pagination: analytics.pagination,
+      ...(includeSummary && {
+        summary: {
+          totalCalls: analytics.totalCalls,
+          filteredCalls: analytics.filteredCalls,
+          callsWithLead: analytics.callsWithLead,
+          hotLeads: analytics.hotLeads,
+          qualifiedPipeline: analytics.qualifiedPipeline,
+          openFollowUps: analytics.openFollowUps,
+          conversionReadiness: analytics.conversionReadiness,
+        },
+      }),
+      generatedAt: analytics.generatedAt,
     },
-    generatedAt: analytics.generatedAt,
-  })
+    { headers: { 'Cache-Control': 'private, no-store' } }
+  )
 }
-

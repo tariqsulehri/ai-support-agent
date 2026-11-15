@@ -1,4 +1,6 @@
 import { randomBytes } from 'crypto'
+import { lookup } from 'dns/promises'
+import { isIP } from 'net'
 import type { Collection, Db } from 'mongodb'
 import { getMongoDb, isMongoConfigured } from '@/lib/db/mongodb'
 import { getAuthUserByEmail, listAuthUsersForTenant, upsertAuthUser } from '@/lib/auth/users'
@@ -8,6 +10,7 @@ import { createSignedEmbedToken } from '@/lib/security/embed-tokens'
 import { mintClientApiKey } from '@/lib/security/client-keys'
 import { normalizeOrigin, normalizeTenantId } from './normalize'
 import { ensureTenantRegistryIndexes } from './db-registry'
+import { invalidateTenantCache } from './tenant-cache'
 import { getTenantSecretMetadata, getBatchTenantSecretsMetadata, upsertTenantSecretInDb, type TenantSecretPublicMetadata } from './secrets'
 import {
   TENANT_COLLECTIONS,
@@ -48,6 +51,9 @@ export type ManagedTenantSummary = {
   domains: string[]
   updatedAt: Date
   hasOpenAiKey: boolean
+  seats: number | null
+  /** ISO date (YYYY-MM-DD) or null. */
+  expiresAt: string | null
 }
 
 export type ManagedTenantDetail = {
@@ -116,8 +122,117 @@ async function getManagementDb(): Promise<Db> {
   if (!isMongoConfigured()) throw new Error('MongoDB is required for tenant management.')
   const db = await getMongoDb()
   if (!db) throw new Error('MongoDB is required for tenant management.')
-  await ensureTenantRegistryIndexes(db)
+  await ensureTenantRegistryIndexes(db).catch((err) => {
+    console.warn('[tenants:management] index creation failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+  })
   return db
+}
+
+// ── Outbound fetch guard (domain verification) ──────────────────────────────────
+const VERIFICATION_TIMEOUT_MS = 8000
+const VERIFICATION_MAX_BYTES = 512 * 1024
+const VERIFICATION_MAX_REDIRECTS = 3
+
+function isPrivateIPv4(address: string): boolean {
+  const parts = address.split('.').map(Number)
+  if (parts.length !== 4 || parts.some((p) => !Number.isInteger(p) || p < 0 || p > 255)) return true
+  const [a, b] = parts
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) || // CGNAT
+    (a === 169 && b === 254) || // link-local / cloud metadata
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 192 && b === 0) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    a >= 224 // multicast + reserved
+  )
+}
+
+function isPrivateAddress(address: string): boolean {
+  const family = isIP(address)
+  if (family === 4) return isPrivateIPv4(address)
+  if (family === 6) {
+    const lower = address.toLowerCase()
+    if (lower === '::' || lower === '::1') return true
+    const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)
+    if (mapped) return isPrivateIPv4(mapped[1])
+    return (
+      lower.startsWith('fc') || lower.startsWith('fd') || // unique local
+      lower.startsWith('fe8') || lower.startsWith('fe9') || lower.startsWith('fea') || lower.startsWith('feb') || // link-local
+      lower.startsWith('ff') // multicast
+    )
+  }
+  return true
+}
+
+/**
+ * Domain verification fetches a tenant-supplied origin from the server. Refuse
+ * targets that resolve to loopback/private/link-local addresses so the feature
+ * cannot be used for SSRF against internal services or cloud metadata.
+ * (Local origins are allowed outside production for development.)
+ */
+async function assertPublicFetchTarget(target: URL): Promise<void> {
+  if (target.protocol !== 'https:' && target.protocol !== 'http:') {
+    throw new Error('Domain verification only supports http(s) origins.')
+  }
+  if (process.env.NODE_ENV !== 'production') return
+
+  const hostname = target.hostname.replace(/^\[|\]$/g, '')
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    throw new Error('Domain verification target is not publicly routable.')
+  }
+  const addresses = isIP(hostname)
+    ? [{ address: hostname }]
+    : await lookup(hostname, { all: true, verbatim: true })
+  if (!addresses.length || addresses.some((entry) => isPrivateAddress(entry.address))) {
+    throw new Error('Domain verification target is not publicly routable.')
+  }
+}
+
+async function readBoundedText(res: Response, maxBytes: number): Promise<string> {
+  if (!res.body) return ''
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    if (!value) continue
+    const remaining = maxBytes - total
+    chunks.push(value.byteLength > remaining ? value.subarray(0, remaining) : value)
+    total += Math.min(value.byteLength, remaining)
+    if (total >= maxBytes) {
+      await reader.cancel().catch(() => undefined)
+      break
+    }
+  }
+  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk))).toString('utf8')
+}
+
+async function fetchVerificationResource(url: string): Promise<{ ok: boolean; body: string }> {
+  let current = new URL(url)
+  for (let hop = 0; hop <= VERIFICATION_MAX_REDIRECTS; hop++) {
+    await assertPublicFetchTarget(current)
+    const res = await fetch(current, {
+      cache: 'no-store',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(VERIFICATION_TIMEOUT_MS),
+    })
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location')
+      await res.body?.cancel().catch(() => undefined)
+      if (!location) return { ok: false, body: '' }
+      current = new URL(location, current)
+      continue
+    }
+    return { ok: res.ok, body: await readBoundedText(res, VERIFICATION_MAX_BYTES) }
+  }
+  throw new Error('Domain verification followed too many redirects.')
 }
 
 export function generateEmbedToken(tenantId?: string): string {
@@ -278,7 +393,17 @@ export async function listManagedTenants(): Promise<ManagedTenantSummary[]> {
   const c = collections(db)
 
   // 1. Fetch tenants with index sort
-  const tenants = await c.tenants.find({}).sort({ createdAt: 1 }).toArray()
+  const tenants = await c.tenants
+    .find(
+      {},
+      {
+        projection: {
+          tenantId: 1, companyName: 1, status: 1, subscription: 1, updatedAt: 1, createdAt: 1,
+        },
+      }
+    )
+    .sort({ createdAt: 1 })
+    .toArray()
   if (!tenants.length) return []
 
   const tenantIds = tenants.map((t) => t.tenantId)
@@ -315,6 +440,11 @@ export async function listManagedTenants(): Promise<ManagedTenantSummary[]> {
       domains: domainsByTenant.get(tenant.tenantId) ?? [],
       updatedAt: tenant.updatedAt,
       hasOpenAiKey: secretsByTenant.has(tenant.tenantId),
+      seats: typeof subscription?.seats === 'number' ? subscription.seats : null,
+      expiresAt:
+        subscription?.expiresAt instanceof Date && !Number.isNaN(subscription.expiresAt.getTime())
+          ? subscription.expiresAt.toISOString().slice(0, 10)
+          : null,
     }
   })
 }
@@ -354,6 +484,7 @@ export async function getManagedTenantDetail(tenantId: string): Promise<ManagedT
     )
     tenant.clientApiKey = generatedKey
     tenant.clientApiKeyCreatedAt = now
+    invalidateTenantCache()
   }
 
   return { tenant, settings, domains, users, openAiSecret, databaseUrlSecret, smtpPasswordSecret }
@@ -402,6 +533,7 @@ export async function createManagedTenant(input: CreateManagedTenantInput): Prom
     createdAt: now,
     updatedAt: now,
   })
+  invalidateTenantCache()
 
   if (input.adminEmail?.trim() && input.adminPassword?.trim()) {
     await createManagedTenantUser({
@@ -444,11 +576,13 @@ export async function updateManagedTenantSettings(input: UpdateManagedTenantSett
       }
     ),
   ])
+  invalidateTenantCache()
 }
 
 export async function updateManagedTenantDomains(tenantId: string, domains: string[]): Promise<void> {
   const db = await getManagementDb()
   await replaceTenantDomains(db, tenantId, domains)
+  invalidateTenantCache()
 }
 
 export async function verifyManagedTenantDomain(input: {
@@ -486,20 +620,14 @@ export async function verifyManagedTenantDomain(input: {
 
   try {
     if (input.method === 'well-known') {
-      const res = await fetch(`${origin}/.well-known/voice-agent-verification.txt`, {
-        cache: 'no-store',
-        signal: AbortSignal.timeout(8000),
-      })
-      const body = await res.text()
+      const res = await fetchVerificationResource(`${origin}/.well-known/voice-agent-verification.txt`)
+      const body = res.body
       if (!res.ok || !body.includes(token)) {
         await fail('Verification file was not found or did not contain the expected token.')
       }
     } else {
-      const res = await fetch(origin, {
-        cache: 'no-store',
-        signal: AbortSignal.timeout(8000),
-      })
-      const body = await res.text()
+      const res = await fetchVerificationResource(origin)
+      const body = res.body
       if (!res.ok || !body.includes(token)) {
         await fail('Homepage meta tag was not found or did not contain the expected token.')
       }
@@ -521,6 +649,7 @@ export async function verifyManagedTenantDomain(input: {
       },
     }
   )
+  invalidateTenantCache()
 
   const verified = await c.domains.findOne({ tenantId, origin })
   if (!verified) throw new Error('Verified domain could not be loaded.')
@@ -547,6 +676,7 @@ export async function archiveManagedTenant(tenantId: string): Promise<void> {
       { $set: { status: 'disabled', updatedAt: now } }
     ),
   ])
+  invalidateTenantCache()
 }
 
 export async function disableManagedTenant(tenantId: string): Promise<void> {
@@ -558,6 +688,7 @@ export async function disableManagedTenant(tenantId: string): Promise<void> {
     { tenantId: assertTenantId(tenantId) },
     { $set: { status: 'disabled', updatedAt: now } }
   )
+  invalidateTenantCache()
 }
 
 export async function enableManagedTenant(tenantId: string): Promise<void> {
@@ -572,6 +703,7 @@ export async function enableManagedTenant(tenantId: string): Promise<void> {
       $unset: { archivedAt: '' },
     }
   )
+  invalidateTenantCache()
 }
 
 export async function activateManagedTenant(tenantId: string): Promise<void> {
@@ -586,6 +718,7 @@ export async function activateManagedTenant(tenantId: string): Promise<void> {
       $unset: { archivedAt: '' },
     }
   )
+  invalidateTenantCache()
 }
 
 export async function updateManagedTenantSubscription(input: {
@@ -618,6 +751,7 @@ export async function updateManagedTenantSubscription(input: {
       } satisfies Partial<TenantRecord>,
     }
   )
+  invalidateTenantCache()
 }
 
 export async function updateManagedTenantOpenAiKey(tenantId: string, openaiApiKey: string): Promise<TenantSecretPublicMetadata> {
@@ -714,6 +848,7 @@ export async function updateManagedTenantEmailNotifications(input: UpdateManaged
       } satisfies Partial<TenantAgentSettingsRecord>,
     }
   )
+  invalidateTenantCache()
 
   if (input.password?.trim()) {
     await upsertTenantSecretInDb(db, {
@@ -742,6 +877,7 @@ export async function updateManagedTenantEmbedToken(tenantId: string, embedToken
     createdAt: now,
     updatedAt: now,
   })
+  invalidateTenantCache()
 }
 
 export async function createManagedTenantUser(input: {
@@ -800,6 +936,7 @@ export async function renewManagedTenantClientApiKey(tenantId: string): Promise<
       }
     ),
   ])
+  invalidateTenantCache()
 
   return newKey
 }

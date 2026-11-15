@@ -4,7 +4,7 @@ export function SupportAgentVisual({
   className?: string
 }) {
   return (
-    <div className={`relative flex items-center justify-center select-none ${className}`}>
+    <div aria-hidden="true" className={`relative flex items-center justify-center select-none ${className}`}>
       {/* Background glow halo */}
       <div className="absolute h-48 w-48 rounded-full bg-white/15 blur-2xl pointer-events-none" />
 
@@ -14,7 +14,7 @@ export function SupportAgentVisual({
         className="w-full h-full drop-shadow-2xl"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        aria-label="Support Agent Conversational AI"
+        aria-hidden="true"
       >
         {/* Outer orbital rings */}
         <circle cx="120" cy="120" r="95" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeDasharray="4 6" />

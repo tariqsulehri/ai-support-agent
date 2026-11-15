@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import type { Collection, Db } from 'mongodb'
 import { getMongoDb, isMongoConfigured } from '@/lib/db/mongodb'
-import { hashPassword, verifyPassword } from './password'
+import { burnPasswordVerification, hashPassword, verifyPasswordAsync } from './password'
 import { AUTH_COLLECTIONS, type AuthRole, type AuthUserRecord } from './types'
 
 type CreateUserInput = {
@@ -77,11 +77,17 @@ export async function upsertAuthUser(input: CreateUserInput): Promise<AuthUserRe
 export async function authenticateUser(email: string, password: string): Promise<AuthUserRecord | null> {
   const db = await getAuthDb()
   const user = await collection(db).findOne({ email: normalizeEmail(email), status: 'active' })
-  if (!user || !verifyPassword(password, user.passwordHash)) return null
+  if (!user) {
+    // Equalize timing with the found-user path to avoid account enumeration.
+    await burnPasswordVerification(password)
+    return null
+  }
+  if (!(await verifyPasswordAsync(password, user.passwordHash))) return null
 
+  const now = new Date()
   await collection(db).updateOne(
     { userId: user.userId },
-    { $set: { lastLoginAt: new Date(), updatedAt: new Date() } }
+    { $set: { lastLoginAt: now, updatedAt: now } }
   )
 
   return user

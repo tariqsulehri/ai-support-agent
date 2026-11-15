@@ -20,6 +20,9 @@ const envSchema = z.object({
 
   // Embed security
   EMBED_AUTH_ENABLED: z.enum(['true', 'false']).default('false'),
+  // Optional maximum age for signed embed tokens (emb.*). Unset = tokens never expire
+  // (backwards compatible); set e.g. 365 to force periodic rotation of embed snippets.
+  EMBED_TOKEN_MAX_AGE_DAYS: z.coerce.number().int().positive().optional(),
 
   // Default fallback tenant (used when no tenant is specified in URL query or headers)
   DEFAULT_TENANT_ID: z.string().default('ai-scripto'),

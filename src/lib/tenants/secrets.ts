@@ -3,6 +3,7 @@ import { getMongoDb, isMongoConfigured } from '@/lib/db/mongodb'
 import { decryptSecret, encryptSecret, maskSecret, secretFingerprint } from '@/lib/security/encryption'
 import { TENANT_COLLECTIONS, type TenantSecretKind, type TenantSecretRecord } from './db-types'
 import { normalizeTenantId } from './normalize'
+import { invalidateTenantCache } from './tenant-cache'
 
 type UpsertTenantSecretInput = {
   tenantId: string
@@ -22,20 +23,38 @@ function collection(db: Db): Collection<TenantSecretRecord> {
   return db.collection<TenantSecretRecord>(TENANT_COLLECTIONS.secrets)
 }
 
-export async function ensureTenantSecretIndexes(db: Db): Promise<void> {
-  await Promise.all([
-    collection(db).createIndex({ tenantId: 1, kind: 1 }, { unique: true }),
-    collection(db).createIndex({ tenantId: 1 }),
-    collection(db).createIndex({ kind: 1 }),
-    collection(db).createIndex({ status: 1 }),
-    collection(db).createIndex({ valueFingerprint: 1 }),
-  ])
+// createIndex is idempotent but costs a round trip per index; run it once per
+// Db per process. A failed attempt is forgotten so the next call retries.
+const secretIndexes = new WeakMap<Db, Promise<void>>()
+
+export function ensureTenantSecretIndexes(db: Db): Promise<void> {
+  let pending = secretIndexes.get(db)
+  if (!pending) {
+    pending = Promise.all([
+      collection(db).createIndex({ tenantId: 1, kind: 1 }, { unique: true }),
+      collection(db).createIndex({ tenantId: 1 }),
+      collection(db).createIndex({ kind: 1 }),
+      collection(db).createIndex({ status: 1 }),
+      collection(db).createIndex({ valueFingerprint: 1 }),
+    ]).then(() => undefined)
+    secretIndexes.set(db, pending)
+    pending.catch(() => {
+      if (secretIndexes.get(db) === pending) secretIndexes.delete(db)
+    })
+  }
+  return pending
 }
 
 async function getTenantSecretsDb(): Promise<Db | null> {
   if (!isMongoConfigured()) return null
   const db = await getMongoDb()
-  if (db) await ensureTenantSecretIndexes(db)
+  if (db) {
+    await ensureTenantSecretIndexes(db).catch((err) => {
+      console.warn('[tenant-secrets] index creation failed', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    })
+  }
   return db
 }
 
@@ -50,7 +69,7 @@ export async function upsertTenantSecretInDb(
   db: Db,
   input: UpsertTenantSecretInput
 ): Promise<TenantSecretPublicMetadata> {
-  await ensureTenantSecretIndexes(db)
+  await ensureTenantSecretIndexes(db).catch(() => undefined)
   const value = input.value.trim()
   if (!value) throw new Error('Tenant secret value cannot be empty.')
 
@@ -78,6 +97,7 @@ export async function upsertTenantSecretInDb(
     },
     { upsert: true }
   )
+  invalidateTenantCache()
 
   return {
     tenantId: record.tenantId,
@@ -95,10 +115,13 @@ export async function getTenantSecretMetadata(
   const db = await getTenantSecretsDb()
   if (!db) return null
 
-  const record = await collection(db).findOne({
-    tenantId: normalizeTenantId(tenantId),
-    kind,
-  })
+  const record = await collection(db).findOne(
+    {
+      tenantId: normalizeTenantId(tenantId),
+      kind,
+    },
+    { projection: { tenantId: 1, kind: 1, status: 1, maskedValue: 1, updatedAt: 1 } }
+  )
   if (!record) return null
 
   return {
@@ -140,6 +163,62 @@ export async function getBatchTenantSecretsMetadata(
   return map
 }
 
+function decryptRecord(record: TenantSecretRecord): string | null {
+  try {
+    return decryptSecret({
+      ciphertext: record.ciphertext,
+      iv: record.iv,
+      authTag: record.authTag,
+      algorithm: record.algorithm,
+      keyVersion: record.keyVersion,
+    })
+  } catch (err) {
+    console.warn(`[tenant-secrets] Failed to decrypt ${record.kind} for tenant ${record.tenantId}`, {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+/**
+ * Fetches and decrypts several secret kinds in a single query. `tenantIds` is
+ * ordered by preference (e.g. [tenantId, slug]); for each kind the first id
+ * with a decryptable active secret wins.
+ */
+export async function getDecryptedTenantSecretsFromDb(
+  db: Db,
+  tenantIds: string[],
+  kinds: TenantSecretKind[]
+): Promise<Partial<Record<TenantSecretKind, string>>> {
+  const ids = Array.from(new Set(tenantIds.filter(Boolean).map(normalizeTenantId)))
+  if (!ids.length || !kinds.length) return {}
+
+  const records = await collection(db)
+    .find(
+      { tenantId: { $in: ids }, kind: { $in: kinds }, status: 'active' },
+      {
+        projection: {
+          tenantId: 1, kind: 1, ciphertext: 1, iv: 1, authTag: 1, algorithm: 1, keyVersion: 1,
+        },
+      }
+    )
+    .toArray()
+
+  const result: Partial<Record<TenantSecretKind, string>> = {}
+  for (const kind of kinds) {
+    for (const id of ids) {
+      const record = records.find((r) => r.kind === kind && r.tenantId === id)
+      if (!record) continue
+      const value = decryptRecord(record)
+      if (value) {
+        result[kind] = value
+        break
+      }
+    }
+  }
+  return result
+}
+
 export async function getDecryptedTenantSecretFromDb(
   db: Db,
   tenantId: string,
@@ -153,20 +232,7 @@ export async function getDecryptedTenantSecretFromDb(
 
   if (!record) return null
 
-  try {
-    return decryptSecret({
-      ciphertext: record.ciphertext,
-      iv: record.iv,
-      authTag: record.authTag,
-      algorithm: record.algorithm,
-      keyVersion: record.keyVersion,
-    })
-  } catch (err) {
-    console.warn(`[tenant-secrets] Failed to decrypt ${kind} for tenant ${tenantId}`, {
-      error: err instanceof Error ? err.message : String(err),
-    })
-    return null
-  }
+  return decryptRecord(record)
 }
 
 export async function getDecryptedTenantSecret(

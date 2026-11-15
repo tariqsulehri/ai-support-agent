@@ -21,13 +21,13 @@ export const baseTabs: TabDefinition[] = [
     label: 'Overview',
     num: 1,
     description: 'Executive summary of voice-agent conversations, lead readiness, and volume metrics.',
-    badgeText: 'Live Metrics',
+    badgeText: 'Metrics',
   },
   {
     id: 'communications',
     label: 'Communications',
     num: 2,
-    description: 'The lookup table of completed calls, audio transcripts, and sentiment signals.',
+    description: 'Recorded conversations with transcripts, summaries, and sentiment signals.',
     badgeText: 'Call Intelligence',
   },
   {
@@ -41,14 +41,14 @@ export const baseTabs: TabDefinition[] = [
     id: 'ai',
     label: 'AI Assisted',
     num: 4,
-    description: 'Key insights, automated risk evaluations, and AI next-step recommendations.',
+    description: 'Recommendations, risk signals, and the priority follow-up queue derived from your data.',
     badgeText: 'Automation Layer',
   },
   {
     id: 'capabilities',
     label: 'Capabilities',
     num: 5,
-    description: 'Engine architecture, speech recognition models, and telephony integrations.',
+    description: 'What the voice agent and dashboard can do, and the technology behind them.',
     badgeText: 'Platform Core',
   },
 ]

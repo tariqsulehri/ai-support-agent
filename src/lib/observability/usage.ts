@@ -41,14 +41,20 @@ function collection(db: Db): Collection<TenantUsageSummary> {
 }
 
 async function ensureIndexes(db: Db): Promise<void> {
-  indexesReady ??= (async () => {
+  if (indexesReady) return indexesReady
+  const pending = (async () => {
     await Promise.all([
       collection(db).createIndex({ tenantId: 1 }, { unique: true }),
       collection(db).createIndex({ updatedAt: -1 }),
     ])
   })()
+  indexesReady = pending
+  // Forget a failed attempt so the next write retries instead of failing forever.
+  pending.catch(() => {
+    if (indexesReady === pending) indexesReady = null
+  })
 
-  return indexesReady
+  return pending
 }
 
 function counterKey(type: UsageEventType): string {

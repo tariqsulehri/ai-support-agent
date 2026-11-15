@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -15,7 +13,6 @@
   --va-primary-dk: 0 71 225;    /* darker #0047e1 */
   --va-primary-lt: 238 244 255; /* soft tint */
   --va-primary-md: 219 234 254; /* medium tint */
-  --font-poppins:  'Poppins', sans-serif;
 }
 
 html, body {

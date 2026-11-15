@@ -1,3 +1,4 @@
+import { canEmailLead, recordLeadEmail } from './lead-email-guard'
 import nodemailer from 'nodemailer'
 import { emailStyles } from '@/lib/email/email-styles'
 import type { CallSummary, ChatHistory, LeadData } from '@/types'
@@ -249,10 +250,16 @@ export async function sendCallSummaryEmail(
     ? input.lead.email.trim()
     : undefined
 
-  const recipients = compactRecipients([
-    ...config.recipients,
-    config.sendToLeadEmail ? leadEmail : null,
-  ])
+  const staffRecipients = compactRecipients(config.recipients)
+  // Visitor-supplied address: separate message (so staff addresses are never disclosed
+  // to the visitor) and rate-limited per address/tenant to prevent SMTP relay abuse.
+  const leadAllowed = Boolean(
+    config.sendToLeadEmail &&
+      leadEmail &&
+      !staffRecipients.includes(leadEmail) &&
+      (await canEmailLead(input.tenant.id, leadEmail).catch(() => false))
+  )
+  const recipients = leadAllowed && leadEmail ? [...staffRecipients, leadEmail] : staffRecipients
 
   if (recipients.length === 0) {
     console.info('[call-email] skipped: no valid recipient', {
@@ -272,6 +279,12 @@ export async function sendCallSummaryEmail(
     ...config.transport,
     auth: { user: config.user, pass: config.pass },
   })
+  const message = {
+    from: `"${config.fromName}" <${config.fromEmail}>`,
+    subject: `Voice agent summary - ${input.tenant.companyName}`,
+    text: renderText(input),
+    html: renderHtml(input),
+  }
 
   try {
     console.info('[call-email] sending email', {
@@ -280,21 +293,20 @@ export async function sendCallSummaryEmail(
       transport: describeTransport(config.transport),
     })
 
-    const info = await transporter.sendMail({
-      from: `"${config.fromName}" <${config.fromEmail}>`,
-      to: recipients,
-      subject: `Voice agent summary - ${input.tenant.companyName}`,
-      text: renderText(input),
-      html: renderHtml(input),
-    })
+    const [staffInfo, leadInfo] = await Promise.all([
+      staffRecipients.length ? transporter.sendMail({ ...message, to: staffRecipients }) : null,
+      leadAllowed && leadEmail ? transporter.sendMail({ ...message, to: leadEmail }) : null,
+    ])
+    if (leadInfo && leadEmail) await recordLeadEmail(input.tenant.id, leadEmail)
+    const messageId = staffInfo?.messageId ?? leadInfo?.messageId
 
     console.info('[call-email] email sent', {
       tenantId: input.tenant.id,
       recipients: recipients.map(maskEmail),
-      messageId: info.messageId,
+      messageId,
     })
 
-    return { sent: true, recipients, messageId: info.messageId, skippedLeadEmail }
+    return { sent: true, recipients, messageId, skippedLeadEmail }
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
     console.error('[call-email] email failed', {

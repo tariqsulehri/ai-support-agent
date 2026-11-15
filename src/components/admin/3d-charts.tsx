@@ -581,17 +581,21 @@ export function GlossyBarChart({
             const share = toPercent(item.value, effectiveTotal)
             const width = Math.max(share, item.value > 0 ? 12 : 0)
             return (
-              <div key={item.label} className="grid gap-2 sm:grid-cols-[92px_1fr_42px] sm:items-center">
+              <div key={item.label} className="grid gap-2 sm:grid-cols-[92px_1fr_auto] sm:items-center">
                 <span className="text-sm font-semibold text-slate-700">{item.label}</span>
                 <div className="glossy-bar-track h-9" role="img" aria-label={`${item.label}: ${item.value} of ${effectiveTotal}`}>
                   <div
                     className="glossy-bar-face flex h-9 items-center justify-end rounded-md px-3 text-xs font-bold text-white"
                     style={{ width: `${width}%`, '--bar-color': item.color } as CSSProperties}
                   >
-                    {item.value > 0 ? `${Math.round(share)}%` : ''}
+                    {/* Only label bars wide enough to hold the text legibly. */}
+                    {item.value > 0 && width >= 22 ? `${Math.round(share)}%` : ''}
                   </div>
                 </div>
-                <span className="text-sm font-semibold text-slate-950">{item.value}</span>
+                <span className="text-sm font-semibold tabular-nums text-slate-950">
+                  {item.value}
+                  {item.value > 0 && width < 22 && <span className="ml-1 text-xs font-medium text-slate-400">{Math.round(share)}%</span>}
+                </span>
               </div>
             )
           }) : <p className="text-sm text-slate-500">No data yet.</p>}

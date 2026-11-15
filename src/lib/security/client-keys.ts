@@ -14,15 +14,33 @@ export interface ClientKeyPayload {
   v: number // Schema version
 }
 
+const DEV_FALLBACK_SECRET = 'voiceagent_default_master_server_secret_32bytes_min'
+
+let cachedServerKey: { raw: string; key: Buffer } | null = null
+
 function resolveServerKey(): Buffer {
-  const raw = (
+  const configured = (
     process.env.ENCRYPTION_KEY ||
     env.PLATFORM_ENCRYPTION_KEY ||
     env.AUTH_SECRET ||
     process.env.AUTH_SECRET ||
-    'voiceagent_default_master_server_secret_32bytes_min'
+    ''
   ).trim()
 
+  // The fallback is public (it lives in source control); using it in production
+  // would let anyone forge client API keys for any tenant.
+  if (!configured && process.env.NODE_ENV === 'production') {
+    throw new Error('ENCRYPTION_KEY, PLATFORM_ENCRYPTION_KEY or AUTH_SECRET must be configured for client API keys.')
+  }
+  const raw = configured || DEV_FALLBACK_SECRET
+
+  if (cachedServerKey?.raw === raw) return cachedServerKey.key
+  const key = deriveServerKey(raw)
+  cachedServerKey = { raw, key }
+  return key
+}
+
+function deriveServerKey(raw: string): Buffer {
   // 1. Direct 64-character hex (32 bytes)
   if (/^[0-9a-fA-F]{64}$/.test(raw)) {
     return Buffer.from(raw, 'hex')
@@ -85,7 +103,7 @@ export function mintClientApiKey(tenantId: string, kid?: string): string {
  * - Payload structure is invalid or not type: 'client_publishable'
  */
 export function decryptClientApiKey(apiKey: string | undefined | null): ClientKeyPayload | null {
-  if (!apiKey || typeof apiKey !== 'string' || !apiKey.startsWith(CLIENT_API_KEY_PREFIX)) {
+  if (!apiKey || typeof apiKey !== 'string' || apiKey.length > 2048 || !apiKey.startsWith(CLIENT_API_KEY_PREFIX)) {
     return null
   }
 

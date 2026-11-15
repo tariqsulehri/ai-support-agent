@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { primeAudio } from '@/lib/utils/audio-unlock'
+import { isAbortError } from './voice-agent-http'
 
 interface UseAudioPlayerOptions {
   requestHeaders?: Record<string, string>
@@ -20,23 +21,20 @@ export interface UseAudioPlayerReturn {
   stopAll:               () => void
 }
 
-const TTS_FETCH_TIMEOUT_MS = 30_000
+const TTS_FETCH_TIMEOUT_MS      = 30_000
 const AUDIO_PLAYBACK_TIMEOUT_MS = 45_000
-
-function isAbortError(err: unknown): boolean {
-  if (!err) return false
-  if (err instanceof DOMException && err.name === 'AbortError') return true
-  if (err instanceof Error) {
-    return /abort|aborted|canceled|cancelled/i.test(err.message) || err.name === 'AbortError'
-  }
-  return typeof err === 'string' && /abort|aborted|canceled|cancelled/i.test(err)
-}
+const URL_REVOKE_DELAY_MS       = 5_000
+const GESTURE_EVENTS = ['click', 'pointerdown', 'keydown', 'touchstart'] as const
 
 function isAutoplayBlocked(err: unknown): boolean {
   if (!err) return false
   if (err instanceof DOMException && err.name === 'NotAllowedError') return true
   const msg = err instanceof Error ? err.message : String(err)
   return /notallowed|allowed|interact|gesture|play\(\)/i.test(msg)
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
 }
 
 /** A queued sentence whose audio is fetched eagerly, before its turn to play. */
@@ -59,9 +57,12 @@ interface PendingAutoplayAudio {
  * playing the next clip is already in hand.
  *
  * If browser autoplay policy blocks unmuted speech prior to user interaction,
- * the player stashes the buffered clip, cleanly releases the queue lock (so
- * app state remains responsive), and plays the audio instantly the moment
- * any user gesture (click, tap, key) occurs.
+ * the player stashes the buffered clip, pauses the queue (so app state remains
+ * responsive), and resumes from that clip the moment any user gesture occurs.
+ *
+ * Every queue run is tagged with a generation number. stopAll() bumps the
+ * generation and settles the in-flight clip, so a stale loop can never keep
+ * playing alongside a fresh one after a quick stop → play.
  */
 export function useAudioPlayer({
   requestHeaders,
@@ -73,45 +74,57 @@ export function useAudioPlayer({
   const [isAutoplayBlockedState, setIsAutoplayBlockedState] = useState(false)
   const [currentlyPlayingText, setCurrentlyPlayingText] = useState<string | null>(null)
 
-  const queueRef               = useRef<SpeechJob[]>([])
-  const playingRef             = useRef(false)
-  const currentAudio           = useRef<HTMLAudioElement | null>(null)
-  const abortRef               = useRef(false)
-  const inFlightControllersRef  = useRef<Set<AbortController>>(new Set())
-  const activeUrlsRef          = useRef<Set<string>>(new Set())
-  const pendingAutoplayRef     = useRef<PendingAutoplayAudio | null>(null)
+  const queueRef              = useRef<SpeechJob[]>([])
+  const playingRef            = useRef(false)
+  const generationRef         = useRef(0)
+  const cancelCurrentRef      = useRef<(() => void) | null>(null)
+  const inFlightControllersRef = useRef<Set<AbortController>>(new Set())
+  const activeUrlsRef         = useRef<Set<string>>(new Set())
+  const revokeTimersRef       = useRef<Set<number>>(new Set())
+  const pendingAutoplayRef    = useRef<PendingAutoplayAudio | null>(null)
+  const disarmGestureRef      = useRef<(() => void) | null>(null)
+  const unmountedRef          = useRef(false)
 
-  const requestHeadersRef = useRef<Record<string, string>>(requestHeaders ?? {})
-  requestHeadersRef.current = requestHeaders ?? {}
-
+  // Latest props in refs: callbacks stay stable and async code reads fresh values.
+  const requestHeadersRef  = useRef<Record<string, string>>(requestHeaders ?? {})
   const onPlaybackStartRef = useRef(onPlaybackStart)
-  onPlaybackStartRef.current = onPlaybackStart
-
-  const onPlaybackEndRef = useRef(onPlaybackEnd)
-  onPlaybackEndRef.current = onPlaybackEnd
-
+  const onPlaybackEndRef   = useRef(onPlaybackEnd)
   const onPlaybackErrorRef = useRef(onPlaybackError)
-  onPlaybackErrorRef.current = onPlaybackError
+  useEffect(() => {
+    requestHeadersRef.current  = requestHeaders ?? {}
+    onPlaybackStartRef.current = onPlaybackStart
+    onPlaybackEndRef.current   = onPlaybackEnd
+    onPlaybackErrorRef.current = onPlaybackError
+  })
 
-  const createSafeObjectUrl = useCallback((blob: Blob): string => {
+  // ── Object URL bookkeeping ─────────────────────────────────────────────────
+  const createObjectUrl = useCallback((blob: Blob): string => {
     const url = URL.createObjectURL(blob)
     activeUrlsRef.current.add(url)
     return url
   }, [])
 
-  const revokeSafeObjectUrl = useCallback((url: string) => {
+  const revokeObjectUrl = useCallback((url: string) => {
     if (!url) return
     // Allow the browser media pipeline time to finish before revocation
-    window.setTimeout(() => {
-      try {
-        URL.revokeObjectURL(url)
-      } catch {
-        // ignore
-      }
+    const timer = window.setTimeout(() => {
+      revokeTimersRef.current.delete(timer)
+      URL.revokeObjectURL(url)
       activeUrlsRef.current.delete(url)
-    }, 5_000)
+    }, URL_REVOKE_DELAY_MS)
+    revokeTimersRef.current.add(timer)
   }, [])
 
+  const releaseAudio = useCallback((audio: HTMLAudioElement, url: string) => {
+    audio.onended = null
+    audio.onerror = null
+    audio.pause()
+    audio.removeAttribute('src')
+    audio.load()
+    revokeObjectUrl(url)
+  }, [revokeObjectUrl])
+
+  // ── TTS fetch ──────────────────────────────────────────────────────────────
   const fetchBlob = useCallback(async (text: string): Promise<Blob> => {
     const controller = new AbortController()
     inFlightControllersRef.current.add(controller)
@@ -137,80 +150,121 @@ export function useAudioPlayer({
     }
   }, [])
 
-  // ── Immediately play any stashed audio when user interacts ────────────────
+  const disarmGesture = useCallback(() => {
+    disarmGestureRef.current?.()
+    disarmGestureRef.current = null
+  }, [])
+
+  const markIdle = useCallback(() => {
+    playingRef.current = false
+    setIsPlaying(false)
+    setCurrentlyPlayingText(null)
+    onPlaybackEndRef.current?.()
+  }, [])
+
+  /**
+   * Plays one clip to completion. Resolves with:
+   *  - 'done'    when it ended, errored or was cancelled
+   *  - 'blocked' when autoplay policy refused it (clip is stashed)
+   */
+  const playClip = useCallback(
+    (audio: HTMLAudioElement, url: string, text: string, generation: number): Promise<'done' | 'blocked'> =>
+      new Promise((resolve) => {
+        let settled = false
+        const settle = (outcome: 'done' | 'blocked', error?: string) => {
+          if (settled) return
+          settled = true
+          window.clearTimeout(timeout)
+          if (cancelCurrentRef.current === cancel) cancelCurrentRef.current = null
+          if (outcome === 'done') releaseAudio(audio, url)
+          if (error && generation === generationRef.current) onPlaybackErrorRef.current?.(error)
+          resolve(outcome)
+        }
+        const cancel = () => settle('done')
+        cancelCurrentRef.current = cancel
+
+        const timeout = window.setTimeout(() => settle('done'), AUDIO_PLAYBACK_TIMEOUT_MS)
+        audio.onended = () => settle('done')
+        audio.onerror = () => settle('done', 'Audio could not be decoded')
+
+        if (!audio.src) audio.src = url
+        try { audio.currentTime = 0 } catch { /* not seekable yet */ }
+
+        playingRef.current = true
+        setIsPlaying(true)
+        setCurrentlyPlayingText(text)
+        onPlaybackStartRef.current?.()
+
+        audio.play().catch((err) => {
+          if (settled) return
+          if (isAutoplayBlocked(err)) {
+            settle('blocked')
+            return
+          }
+          settle('done', isAbortError(err) ? undefined : errorMessage(err))
+        })
+      }),
+    [releaseAudio],
+  )
+
+  // Forward reference so the gesture handler can resume the queue.
+  const processQueueRef = useRef<() => void>(() => {})
+
+  // ── Play stashed (autoplay-blocked) audio, then resume the queue ──────────
   const playPendingAudio = useCallback(() => {
     const pending = pendingAutoplayRef.current
-    if (!pending || abortRef.current) return
+    if (!pending || unmountedRef.current) return
 
     pendingAutoplayRef.current = null
+    disarmGesture()
     setIsAutoplayBlockedState(false)
     primeAudio()
 
-    const { audio, url, text } = pending
-    currentAudio.current = audio
-    playingRef.current = true
-    setIsPlaying(true)
-    setCurrentlyPlayingText(text)
-    onPlaybackStartRef.current?.()
-
-    const finish = () => {
-      currentAudio.current = null
-      playingRef.current = false
-      setIsPlaying(false)
-      setCurrentlyPlayingText(null)
-      audio.onended = null
-      audio.onerror = null
-      audio.pause()
-      audio.src = ''
-      revokeSafeObjectUrl(url)
-      onPlaybackEndRef.current?.()
-    }
-
-    audio.onended = finish
-    audio.onerror = finish
-
-    try {
-      audio.currentTime = 0
-    } catch {
-      // ignore
-    }
-
-    audio.play().catch((err) => {
-      if (!isAbortError(err)) {
-        console.warn('[voice playback] user interaction playback failed:', err)
+    const generation = generationRef.current
+    // play() is invoked synchronously inside the gesture (Safari requirement).
+    void playClip(pending.audio, pending.url, pending.text, generation).then((outcome) => {
+      if (generation !== generationRef.current) return
+      if (outcome === 'blocked') {
+        // Still blocked — keep it stashed for the next gesture.
+        pendingAutoplayRef.current = pending
+        setIsAutoplayBlockedState(true)
+        markIdle()
+        return
       }
-      finish()
+      playingRef.current = false
+      if (queueRef.current.length > 0) processQueueRef.current()
+      else markIdle()
     })
-  }, [revokeSafeObjectUrl])
+  }, [disarmGesture, markIdle, playClip])
 
   // ── Arm one-time document gesture listener ────────────────────────────────
   const armUserInteractionUnlock = useCallback(() => {
-    const handleGesture = () => {
-      window.removeEventListener('click', handleGesture, true)
-      window.removeEventListener('pointerdown', handleGesture, true)
-      window.removeEventListener('keydown', handleGesture, true)
-      window.removeEventListener('touchstart', handleGesture, true)
+    if (disarmGestureRef.current) return // already armed
 
-      if (pendingAutoplayRef.current) {
-        playPendingAudio()
+    const handleGesture = () => {
+      disarmGesture()
+      if (pendingAutoplayRef.current) playPendingAudio()
+    }
+    for (const type of GESTURE_EVENTS) {
+      window.addEventListener(type, handleGesture, { capture: true, passive: true })
+    }
+    disarmGestureRef.current = () => {
+      for (const type of GESTURE_EVENTS) {
+        window.removeEventListener(type, handleGesture, { capture: true })
       }
     }
-
-    window.addEventListener('click', handleGesture, { capture: true, once: true, passive: true })
-    window.addEventListener('pointerdown', handleGesture, { capture: true, once: true, passive: true })
-    window.addEventListener('keydown', handleGesture, { capture: true, once: true, passive: true })
-    window.addEventListener('touchstart', handleGesture, { capture: true, once: true, passive: true })
-  }, [playPendingAudio])
+  }, [disarmGesture, playPendingAudio])
 
   // ── Queue processor ────────────────────────────────────────────────────────
   const processQueue = useCallback(async () => {
-    if (playingRef.current) return
+    if (playingRef.current || pendingAutoplayRef.current) return
     if (queueRef.current.length === 0) return
 
+    const generation = generationRef.current
+    const isStale = () => generation !== generationRef.current || unmountedRef.current
     playingRef.current = true
-    abortRef.current   = false
 
-    while (queueRef.current.length > 0 && !abortRef.current) {
+    while (queueRef.current.length > 0 && !isStale()) {
       const job = queueRef.current.shift()
       if (!job) continue
 
@@ -219,152 +273,106 @@ export function useAudioPlayer({
         // Fetch was kicked off at enqueue time — usually ready by now
         blob = await job.blob
       } catch (err) {
-        if (abortRef.current || isAbortError(err)) {
-          continue
-        }
-        onPlaybackErrorRef.current?.(err instanceof Error ? err.message : String(err))
+        if (!isStale() && !isAbortError(err)) onPlaybackErrorRef.current?.(errorMessage(err))
         continue
       }
+      if (isStale()) return
 
-      if (abortRef.current) break
+      const url   = createObjectUrl(blob)
+      const audio = new Audio()
+      const outcome = await playClip(audio, url, job.text, generation)
+      if (isStale()) return
 
-      const url = createSafeObjectUrl(blob)
-      let playbackError: string | null = null
-
-      await new Promise<void>((resolve) => {
-        const audio = new Audio()
-        currentAudio.current = audio
-        let settled = false
-
-        const finish = (isAutoplay = false) => {
-          if (settled) return
-          settled = true
-          window.clearTimeout(timeout)
-          audio.onended = null
-          audio.onerror = null
-
-          if (!isAutoplay) {
-            currentAudio.current = null
-            audio.pause()
-            audio.src = ''
-            revokeSafeObjectUrl(url)
-          }
-
-          resolve()
-        }
-
-        const timeout = window.setTimeout(() => finish(false), AUDIO_PLAYBACK_TIMEOUT_MS)
-
-        audio.onended = () => finish(false)
-        audio.onerror = () => finish(false)
-
-        audio.src = url
-        setIsPlaying(true)
-        setCurrentlyPlayingText(job.text)
-        onPlaybackStartRef.current?.()
-
-        audio.play().catch((err) => {
-          if (isAutoplayBlocked(err)) {
-            // Autoplay blocked by browser policy prior to user interaction.
-            // Stash the loaded audio element so user gesture triggers it with zero lag.
-            pendingAutoplayRef.current = { audio, url, text: job.text }
-            setIsAutoplayBlockedState(true)
-            setIsPlaying(false)
-            setCurrentlyPlayingText(null)
-            onPlaybackEndRef.current?.()
-            armUserInteractionUnlock()
-            finish(true)
-            return
-          }
-
-          if (!abortRef.current && !isAbortError(err)) {
-            playbackError = err instanceof Error ? err.message : String(err)
-          }
-          finish(false)
-        })
-      })
-
-      if (playbackError && !abortRef.current && !isAbortError(playbackError)) {
-        onPlaybackErrorRef.current?.(playbackError)
+      if (outcome === 'blocked') {
+        // Stash the loaded clip; the rest of the queue waits for a gesture.
+        pendingAutoplayRef.current = { audio, url, text: job.text }
+        setIsAutoplayBlockedState(true)
+        armUserInteractionUnlock()
+        markIdle()
+        return
       }
     }
 
-    if (!pendingAutoplayRef.current) {
-      playingRef.current = false
-      setIsPlaying(false)
-      setCurrentlyPlayingText(null)
-      onPlaybackEndRef.current?.()
-    }
-  }, [createSafeObjectUrl, revokeSafeObjectUrl, armUserInteractionUnlock])
+    if (!isStale()) markIdle()
+  }, [armUserInteractionUnlock, createObjectUrl, markIdle, playClip])
+
+  useEffect(() => {
+    processQueueRef.current = () => { void processQueue() }
+  }, [processQueue])
 
   const enqueue = useCallback(
     (text: string) => {
-      if (!text.trim()) return
+      if (!text.trim() || unmountedRef.current) return
       const blob = fetchBlob(text)
-      blob.catch(() => {}) // swallow unhandled rejection if aborted
+      blob.catch(() => {}) // handled in processQueue; avoid unhandled rejection
       queueRef.current.push({ text, blob })
-      processQueue()
+      void processQueue()
     },
-    [fetchBlob, processQueue]
+    [fetchBlob, processQueue],
   )
+
+  const stopAll = useCallback(() => {
+    generationRef.current += 1
+    queueRef.current = []
+    disarmGesture()
+
+    // Abort all in-flight TTS requests
+    for (const controller of inFlightControllersRef.current) {
+      controller.abort(new Error('Audio playback stopped'))
+    }
+    inFlightControllersRef.current.clear()
+
+    // Drop any stashed autoplay clip
+    const pending = pendingAutoplayRef.current
+    if (pending) {
+      pendingAutoplayRef.current = null
+      setIsAutoplayBlockedState(false)
+      releaseAudio(pending.audio, pending.url)
+    }
+
+    // Settle the clip that is playing right now (releases its element + URL)
+    cancelCurrentRef.current?.()
+    cancelCurrentRef.current = null
+
+    playingRef.current = false
+    setIsPlaying(false)
+    setCurrentlyPlayingText(null)
+  }, [disarmGesture, releaseAudio])
 
   const playMessage = useCallback(
     (text: string) => {
       if (!text.trim()) return
 
       // If this exact text is stashed as pending autoplay audio, play it immediately from memory
-      if (pendingAutoplayRef.current && pendingAutoplayRef.current.text === text) {
+      if (pendingAutoplayRef.current?.text === text) {
         playPendingAudio()
         return
       }
 
-      // Otherwise stop any active playback and enqueue this message to play
+      // Otherwise stop any active playback and play this message. Show it as
+      // "playing" right away so the click has instant feedback while TTS loads.
       stopAll()
+      primeAudio()
+      setCurrentlyPlayingText(text)
       enqueue(text)
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [playPendingAudio, enqueue]
+    [enqueue, playPendingAudio, stopAll],
   )
 
-  const stopAll = useCallback(() => {
-    abortRef.current = true
-    queueRef.current = []
-
-    // Abort all in-flight fetch requests
-    for (const controller of inFlightControllersRef.current) {
-      try {
-        controller.abort(new Error('Audio playback stopped'))
-      } catch {
-        // ignore
-      }
+  // Full teardown on unmount: no audio may outlive the widget.
+  useEffect(() => {
+    unmountedRef.current = false
+    const activeUrls   = activeUrlsRef.current
+    const revokeTimers = revokeTimersRef.current
+    return () => {
+      unmountedRef.current = true
+      stopAll()
+      for (const timer of revokeTimers) window.clearTimeout(timer)
+      revokeTimers.clear()
+      for (const url of activeUrls) URL.revokeObjectURL(url)
+      activeUrls.clear()
     }
-    inFlightControllersRef.current.clear()
-
-    // Clear pending autoplay buffer if any
-    if (pendingAutoplayRef.current) {
-      const pending = pendingAutoplayRef.current
-      pendingAutoplayRef.current = null
-      setIsAutoplayBlockedState(false)
-      pending.audio.pause()
-      pending.audio.src = ''
-      revokeSafeObjectUrl(pending.url)
-    }
-
-    if (currentAudio.current) {
-      const audio = currentAudio.current
-      currentAudio.current = null
-      audio.onended = null
-      audio.onerror = null
-      audio.pause()
-      audio.src = ''
-    }
-
-    playingRef.current = false
-    setIsPlaying(false)
-    setCurrentlyPlayingText(null)
-  }, [revokeSafeObjectUrl])
-
-  useEffect(() => stopAll, [stopAll])
+  }, [stopAll])
 
   return {
     isPlaying,

@@ -32,12 +32,18 @@ function decodeEncryptionKey(raw: string): Buffer {
   )
 }
 
+let cachedKey: { raw: string; key: Buffer } | null = null
+
 function getEncryptionKey(): Buffer {
-  if (!env.PLATFORM_ENCRYPTION_KEY) {
+  const raw = env.PLATFORM_ENCRYPTION_KEY
+  if (!raw) {
     throw new Error('PLATFORM_ENCRYPTION_KEY is required for tenant secret encryption.')
   }
 
-  return decodeEncryptionKey(env.PLATFORM_ENCRYPTION_KEY)
+  if (cachedKey?.raw === raw) return cachedKey.key
+  const key = decodeEncryptionKey(raw)
+  cachedKey = { raw, key }
+  return key
 }
 
 export function encryptSecret(plaintext: string): EncryptedValue {

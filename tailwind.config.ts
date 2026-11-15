@@ -51,11 +51,21 @@ const config: Config = {
           amber:     '#F7630C',
         },
       },
+      // Tailwind v3 lacks the v4 `xs`/`2xs` scale used throughout the UI; define it so
+      // those utilities actually render instead of being silently dropped.
       boxShadow: {
+        '2xs': '0 1px rgba(15, 23, 42, 0.05)',
+        xs: '0 1px 2px 0 rgba(15, 23, 42, 0.06)',
         card:   '0 2px 8px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.06)',
         bubble: '0 1px 2px rgba(0,0,0,0.08)',
         header: '0 2px 6px rgba(0,0,0,0.12)',
         input:  '0 -1px 0 #EDEBE9',
+      },
+      borderRadius: {
+        xs: '0.125rem',
+      },
+      dropShadow: {
+        xs: '0 1px 1px rgba(0, 0, 0, 0.08)',
       },
       keyframes: {
         pulse_dot: {

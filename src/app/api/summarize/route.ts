@@ -5,12 +5,52 @@ import { saveCallRecord } from '@/lib/db/call-records'
 import { analyzeConversation, emptyLead, fallbackAnalysis } from '@/lib/ai/analyze-conversation'
 import { recordUsageEvent } from '@/lib/observability/usage'
 import { requireTenantRuntime } from '@/lib/api/tenant-runtime'
+import {
+  background,
+  bodyErrorResponse,
+  readJsonBody,
+  sanitizeChatHistory,
+  sanitizeConversationId,
+  sanitizeLead,
+} from '@/lib/api/request-guards'
 import type { CallSummary, ChatHistory, LeadData } from '@/types'
 import type { TenantConfig } from '@/lib/tenants/types'
 export { OPTIONS } from '@/lib/utils/cors'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+
+const MAX_BODY_BYTES = 1024 * 1024
+const MAX_MESSAGES = 300
+const MAX_MESSAGE_CHARS = 4000
+/** Upper bound on transcript characters sent to the summarizer model. */
+const MAX_TRANSCRIPT_CHARS = 60_000
+
+type FinishResult = Awaited<ReturnType<typeof finishCall>>
+
+/**
+ * The summarize endpoint is called by the public embed client. Strip internal
+ * details (tenant recipient addresses, SMTP / database error messages) from
+ * the delivery status before returning it.
+ */
+function publicDeliveryStatus({ email, database }: FinishResult): Pick<CallSummary, 'email' | 'database'> {
+  return {
+    email: email.sent
+      ? { sent: true }
+      : { sent: false, ...(email.error ? { error: 'Summary email was not sent.' } : {}) },
+    database: database.saved
+      ? { saved: true, id: database.id }
+      : { saved: false, error: 'Call record was not saved.' },
+  }
+}
+
+function sanitizeKeyPoints(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((point): point is string => typeof point === 'string' && point.trim().length > 0)
+    .map((point) => point.trim().slice(0, 500))
+    .slice(0, 10)
+}
 
 function hasEmail(value: string | null | undefined): boolean {
   return Boolean(value?.trim())
@@ -50,7 +90,7 @@ async function finishCall({
     dbError: database.error,
   })
 
-  await recordUsageEvent({
+  background(recordUsageEvent({
     tenantId: tenant.id,
     type: 'conversation.completed',
     metadata: {
@@ -58,7 +98,7 @@ async function finishCall({
       emailSent: email.sent,
       dbSaved: database.saved,
     },
-  })
+  }), 'summarize usage')
 
   return { email, database }
 }
@@ -79,15 +119,19 @@ export async function POST(req: NextRequest) {
   let conversationId: string | undefined
   let lead: LeadData = emptyLead()
   try {
-    const body = await req.json()
-    conversationId = typeof body.conversationId === 'string' ? body.conversationId.trim() || undefined : undefined
-    messages = body.messages
-    if (body.lead && typeof body.lead === 'object') {
-      lead = { ...emptyLead(), ...body.lead }
+    const body = await readJsonBody<{ conversationId?: unknown; messages?: unknown; lead?: unknown }>(req, MAX_BODY_BYTES)
+    conversationId = sanitizeConversationId(body?.conversationId)
+    const sanitized = sanitizeChatHistory(body?.messages, {
+      maxMessages: MAX_MESSAGES,
+      maxContentChars: MAX_MESSAGE_CHARS,
+    })
+    if (!sanitized) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
-    if (!Array.isArray(messages)) throw new Error()
-  } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    messages = sanitized
+    lead = { ...emptyLead(), ...sanitizeLead(body?.lead) }
+  } catch (err) {
+    return bodyErrorResponse(err)
   }
 
   const conversation = messages.filter((m) => m.content !== '__GREET__')
@@ -105,24 +149,27 @@ export async function POST(req: NextRequest) {
     }
     const analysis = fallbackAnalysis(lead, briefSummary.summary)
     const enrichedSummary: CallSummary = { ...briefSummary, analysis }
-    const { email, database } = await finishCall({
+    const delivery = await finishCall({
       tenant,
       conversationId,
       lead: analysis.user,
       summary: enrichedSummary,
       messages,
     })
-    return NextResponse.json({ ...briefSummary, analysis, email, database })
+    return NextResponse.json({ ...briefSummary, analysis, ...publicDeliveryStatus(delivery) })
   }
 
   const agentLabel = tenant.agentName
-  const transcript = conversation
+  let transcript = conversation
     .map((m) => `${m.role === 'user' ? 'Visitor' : agentLabel}: ${m.content}`)
     .join('\n')
-
-  const openai = getOpenAIClient(tenant)
+  if (transcript.length > MAX_TRANSCRIPT_CHARS) {
+    // Keep the most recent part of very long calls.
+    transcript = transcript.slice(-MAX_TRANSCRIPT_CHARS)
+  }
 
   try {
+    const openai = getOpenAIClient(tenant)
     const completion = await openai.chat.completions.create({
       model:           'gpt-4o-mini',
       max_tokens:      500,
@@ -144,16 +191,21 @@ Return only valid JSON matching this shape: { "summary": "...", "keyPoints": [".
       ],
     })
 
-    const raw    = completion.choices[0].message.content ?? '{}'
-    const parsed = JSON.parse(raw)
+    const raw    = completion.choices[0]?.message?.content ?? '{}'
+    let parsed: { summary?: unknown; keyPoints?: unknown } = {}
+    try {
+      parsed = JSON.parse(raw) ?? {}
+    } catch {
+      parsed = {}
+    }
 
     const summary: CallSummary = {
-      summary:   parsed.summary   ?? '',
-      keyPoints: parsed.keyPoints ?? [],
+      summary:   typeof parsed.summary === 'string' ? parsed.summary : '',
+      keyPoints: sanitizeKeyPoints(parsed.keyPoints),
     }
     const analysis = await analyzeConversation({ tenant, lead, messages, summary: summary.summary })
     const enrichedSummary: CallSummary = { ...summary, analysis }
-    const { email, database } = await finishCall({
+    const delivery = await finishCall({
       tenant,
       conversationId,
       lead: analysis.user,
@@ -161,9 +213,9 @@ Return only valid JSON matching this shape: { "summary": "...", "keyPoints": [".
       messages,
     })
 
-    return NextResponse.json({ ...summary, analysis, email, database })
+    return NextResponse.json({ ...summary, analysis, ...publicDeliveryStatus(delivery) })
   } catch (err) {
-    console.error('[summarize]', err)
+    console.error('[summarize]', err instanceof Error ? err.message : err)
     return NextResponse.json({ error: 'Summarization failed' }, { status: 500 })
   }
 }

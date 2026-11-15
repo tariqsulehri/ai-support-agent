@@ -57,10 +57,13 @@ export function ThemeProvider({ initial }: { initial?: ThemeColors }) {
     if (initial) applyTheme(initial)
 
     // Tell parent we're ready — it can reply with voice-agent:theme
-    window.parent?.postMessage({ type: 'voice-agent:ready' }, '*')
+    const isEmbedded = window.parent && window.parent !== window
+    if (isEmbedded) window.parent.postMessage({ type: 'voice-agent:ready' }, '*')
 
     function onMessage(e: MessageEvent) {
-      if (e.data?.type === 'voice-agent:theme' && e.data.colors) {
+      // Only the embedding page may restyle the widget.
+      if (!isEmbedded || e.source !== window.parent) return
+      if (e.data?.type === 'voice-agent:theme' && e.data.colors && typeof e.data.colors === 'object') {
         applyTheme(e.data.colors as ThemeColors)
       }
     }

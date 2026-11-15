@@ -3,6 +3,9 @@ import { setSessionCookie } from '@/lib/auth/session'
 import { authenticateUser } from '@/lib/auth/users'
 import type { AuthUserRecord } from '@/lib/auth/types'
 import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from '@/lib/auth/rate-limiter'
+import { safeRelativePath } from '@/lib/auth/redirect'
+import { MAX_PASSWORD_LENGTH } from '@/lib/auth/password'
+import { getClientIp } from '@/lib/api/request-guards'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -22,9 +25,16 @@ function defaultNext(scope: LoginScope): string {
 }
 
 function safeNext(value: FormDataEntryValue | null, scope: LoginScope): string {
-  const fallback = defaultNext(scope)
-  const next = typeof value === 'string' ? value : fallback
-  return next.startsWith('/') && !next.startsWith('//') ? next : fallback
+  return safeRelativePath(value, defaultNext(scope))
+}
+
+const MAX_EMAIL_LENGTH = 320
+
+function redirectWithError(req: NextRequest, scope: LoginScope, error: string, next: string): NextResponse {
+  const url = new URL(loginPath(scope), req.url)
+  url.searchParams.set('error', error)
+  url.searchParams.set('next', next)
+  return NextResponse.redirect(url, { status: 303 })
 }
 
 function canUseLoginScope(user: AuthUserRecord, scope: LoginScope): boolean {
@@ -34,13 +44,15 @@ function canUseLoginScope(user: AuthUserRecord, scope: LoginScope): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  const clientIp =
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    req.headers.get('x-real-ip') ||
-    '127.0.0.1'
+  const clientIp = getClientIp(req)
 
-  const formData = await req.formData()
-  const email = String(formData.get('email') ?? '').trim()
+  let formData: FormData
+  try {
+    formData = await req.formData()
+  } catch {
+    return redirectWithError(req, 'platform', 'invalid', defaultNext('platform'))
+  }
+  const email = String(formData.get('email') ?? '').trim().slice(0, MAX_EMAIL_LENGTH)
   const password = String(formData.get('password') ?? '')
   const scope = loginScope(formData.get('scope'))
   const next = safeNext(formData.get('next'), scope)
@@ -48,19 +60,25 @@ export async function POST(req: NextRequest) {
   // Rate limit check before costly scrypt password verification
   const rateLimit = checkLoginRateLimit(clientIp, email)
   if (!rateLimit.allowed) {
-    const url = new URL(loginPath(scope), req.url)
-    url.searchParams.set('error', 'rate_limit')
-    url.searchParams.set('next', next)
-    return NextResponse.redirect(url, { status: 303 })
+    return redirectWithError(req, scope, 'rate_limit', next)
   }
 
-  const user = await authenticateUser(email, password)
+  if (!email || !password || password.length > MAX_PASSWORD_LENGTH) {
+    recordFailedLogin(clientIp, email)
+    return redirectWithError(req, scope, 'invalid', next)
+  }
+
+  let user: AuthUserRecord | null
+  try {
+    user = await authenticateUser(email, password)
+  } catch (err) {
+    console.error('[auth] login failed', err instanceof Error ? err.message : err)
+    return redirectWithError(req, scope, 'unavailable', next)
+  }
+
   if (!user || !canUseLoginScope(user, scope)) {
     recordFailedLogin(clientIp, email)
-    const url = new URL(loginPath(scope), req.url)
-    url.searchParams.set('error', user ? 'role' : 'invalid')
-    url.searchParams.set('next', next)
-    return NextResponse.redirect(url, { status: 303 })
+    return redirectWithError(req, scope, user ? 'role' : 'invalid', next)
   }
 
   resetLoginRateLimit(clientIp, email)

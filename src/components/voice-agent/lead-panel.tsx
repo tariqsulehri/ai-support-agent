@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import type { LeadData, CallSummary } from '@/types'
 
 interface LeadPanelProps {
@@ -19,53 +20,49 @@ const FIELDS: { key: keyof LeadData; label: string; icon: React.ReactNode }[] = 
 const hasAny = (lead: LeadData) =>
   Object.values(lead).some(v => v !== null && v !== '')
 
-export function LeadPanel({ lead, callSummary }: LeadPanelProps) {
-  if (!hasAny(lead) && !callSummary) return null
+export const LeadPanel = memo(function LeadPanel({ lead, callSummary }: LeadPanelProps) {
+  const hasLead = hasAny(lead)
+  if (!hasLead && !callSummary) return null
 
   return (
-    <div className="w-full flex flex-col gap-3">
+    <div className="w-full mt-3 flex flex-col gap-3">
 
-      {/* Contact info */}
-      {hasAny(lead) && (
+      {/* Contact info — only fields the visitor actually provided */}
+      {hasLead && (
         <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-          <div className="px-5 py-3 border-b border-surface-border flex items-center gap-2">
-            <div className="w-1.5 h-4 rounded-full bg-ms-teal" />
+          <div className="px-4 sm:px-5 py-3 border-b border-surface-border flex items-center gap-2">
+            <div className="w-1.5 h-4 rounded-full bg-ms-teal" aria-hidden="true" />
             <h3 className="text-xs font-semibold text-ms-text uppercase tracking-wider">
               Contact Details
             </h3>
           </div>
-          <div className="px-5 py-3 flex flex-col gap-2.5">
+          <dl className="px-4 sm:px-5 py-3 flex flex-col gap-2.5">
             {FIELDS.map(({ key, label, icon }) => {
               const value = lead[key]
               return (
-                <div key={key} className="flex items-center gap-3">
-                  <span className="text-ms-muted w-4 shrink-0">{icon}</span>
-                  <span className="text-xs text-ms-muted w-14 shrink-0">{label}</span>
-                  {value ? (
-                    <span className="text-sm text-ms-text font-medium truncate flex-1">{value}</span>
-                  ) : (
-                    <span className="text-xs text-ms-muted italic flex-1">—</span>
-                  )}
-                  {value && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-ms-green shrink-0" />
-                  )}
+                <div key={key} className="flex items-center gap-3 min-w-0">
+                  <span className="text-ms-muted w-4 shrink-0" aria-hidden="true">{icon}</span>
+                  <dt className="text-xs text-ms-muted w-14 shrink-0">{label}</dt>
+                  <dd className={`flex-1 min-w-0 truncate ${value ? 'text-sm text-ms-text font-medium' : 'text-xs text-ms-muted'}`}>
+                    {value || <span aria-label="Not provided">—</span>}
+                  </dd>
                 </div>
               )
             })}
-          </div>
+          </dl>
         </div>
       )}
 
       {/* Call summary */}
       {callSummary && (
         <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-          <div className="px-5 py-3 border-b border-surface-border flex items-center gap-2">
-            <div className="w-1.5 h-4 rounded-full bg-ms-teal" />
+          <div className="px-4 sm:px-5 py-3 border-b border-surface-border flex items-center gap-2">
+            <div className="w-1.5 h-4 rounded-full bg-ms-teal" aria-hidden="true" />
             <h3 className="text-xs font-semibold text-ms-text uppercase tracking-wider">
               Conversation Summary
             </h3>
           </div>
-          <div className="px-5 py-4">
+          <div className="px-4 sm:px-5 py-4">
             <p className="text-sm text-ms-sub leading-relaxed">{callSummary.summary}</p>
 
             {callSummary.keyPoints.length > 0 && (
@@ -88,7 +85,7 @@ export function LeadPanel({ lead, callSummary }: LeadPanelProps) {
       )}
     </div>
   )
-}
+})
 
 // ── Inline SVG icons ───────────────────────────────────────────────────────────
 function UserIcon() {

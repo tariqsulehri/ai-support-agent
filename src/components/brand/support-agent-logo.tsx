@@ -11,7 +11,7 @@ export function SupportAgentLogo({
     <div className={`flex items-center gap-2.5 select-none ${className}`}>
       {/* Icon: Voice soundwave inside rounded badge */}
       <div
-        className={`flex h-8 w-8 items-center justify-center rounded-xl shadow-xs ${
+        className={`flex h-8 w-8 items-center justify-center rounded-xl shadow-sm ${
           isLight
             ? 'bg-white text-[#0052ff]'
             : 'bg-[#0052ff] text-white'

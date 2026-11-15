@@ -18,6 +18,13 @@ export async function getMongoDb(): Promise<Db | null> {
     appName: 'voiceagent',
     serverSelectionTimeoutMS: 5000,
     connectTimeoutMS: 5000,
+    maxPoolSize: 20,
+    minPoolSize: 1,
+  }).catch((err) => {
+    // Never cache a failed connection: the next request should retry instead of
+    // inheriting a permanently rejected promise.
+    globalForMongo.__voiceAgentMongoClient = undefined
+    throw err
   })
 
   const client = await globalForMongo.__voiceAgentMongoClient

@@ -44,15 +44,33 @@ async function synthesizeOpenAI(text: string, voice: OpenAIVoice, tenant?: Tenan
 }
 
 // ── ElevenLabs TTS ─────────────────────────────────────────────────────────────
+type ElevenLabsClientInstance = InstanceType<typeof import('@elevenlabs/elevenlabs-js').ElevenLabsClient>
+
+let elevenLabsClient: { apiKey: string; client: Promise<ElevenLabsClientInstance> } | null = null
+
+/** Reuses one client (and its HTTP agent) per API key instead of one per request. */
+function getElevenLabsClient(apiKey: string): Promise<ElevenLabsClientInstance> {
+  if (elevenLabsClient?.apiKey === apiKey) return elevenLabsClient.client
+  const client = import('@elevenlabs/elevenlabs-js').then(
+    ({ ElevenLabsClient }) => new ElevenLabsClient({ apiKey })
+  )
+  const entry = { apiKey, client }
+  elevenLabsClient = entry
+  client.catch(() => {
+    if (elevenLabsClient === entry) elevenLabsClient = null
+  })
+  return client
+}
+
 async function synthesizeElevenLabs(text: string): Promise<Buffer> {
   if (!env.ELEVENLABS_API_KEY) {
     throw new Error('ELEVENLABS_API_KEY is missing. Add it to .env.local or set ttsProvider to "openai".')
   }
 
-  const { ElevenLabsClient } = await import('@elevenlabs/elevenlabs-js')
-  const { Readable } = await import('stream')
-
-  const client = new ElevenLabsClient({ apiKey: env.ELEVENLABS_API_KEY })
+  const [client, { Readable }] = await Promise.all([
+    getElevenLabsClient(env.ELEVENLABS_API_KEY),
+    import('stream'),
+  ])
 
   const audioStream = await client.textToSpeech.convert(env.ELEVENLABS_VOICE_ID, {
     text,

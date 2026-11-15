@@ -8,16 +8,21 @@
  *   "word.word gmail.com"    (@ dropped entirely)
  *   "word dot word at gmail dot com"  (all symbols spoken as words)
  */
+const EMAIL_CONTEXT_RE = /@|\b(e-?mail|mail|gmail|hotmail|outlook|yahoo|icloud|com|net|org|io|edu|gov|dev)\b/i
+
 export function normalizeSpeechTranscript(text: string): string {
   let result = text
 
   // ── Step 1: "dot" spoken as a word in domain/email context ────────────────
   // "gmail dot com" → "gmail.com"  |  "tariq dot sulehri" → "tariq.sulehri"
-  // Only between alphanumeric tokens (avoids replacing "dot" in normal sentences)
-  result = result.replace(
-    /([a-zA-Z0-9_+-])\s+dot\s+([a-zA-Z0-9])/gi,
-    '$1.$2'
-  )
+  // Only between alphanumeric tokens, and only when the utterance looks like it
+  // contains an email/domain (so "polka dot dress" is left alone).
+  if (EMAIL_CONTEXT_RE.test(result)) {
+    result = result.replace(
+      /([a-zA-Z0-9_+-])\s+dot\s+([a-zA-Z0-9])/gi,
+      '$1.$2'
+    )
+  }
 
   // ── Step 2: spaces around @ ────────────────────────────────────────────────
   // "word @ word" → "word@word"
@@ -37,7 +42,7 @@ export function normalizeSpeechTranscript(text: string): string {
   // Guard: local must contain . _ or - so we don't join normal word pairs
   result = result.replace(
     /([a-zA-Z0-9][a-zA-Z0-9._-]*[._-][a-zA-Z0-9._-]+)\s+([a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?)/g,
-    (match) => (match.includes('@') ? match : match.replace(' ', '@'))
+    (match) => (match.includes('@') ? match : match.replace(/\s+/, '@'))
   )
 
   // ── Step 5: stray space between domain and TLD ────────────────────────────

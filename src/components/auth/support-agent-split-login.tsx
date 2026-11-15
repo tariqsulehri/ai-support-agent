@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { SupportAgentLogo } from '@/components/brand/support-agent-logo'
 import { SupportAgentVisual } from '@/components/auth/support-agent-visual'
+import { Spinner } from '@/components/admin/action-form'
 
 interface SupportAgentSplitLoginProps {
   scope: 'tenant' | 'platform'
@@ -19,15 +20,34 @@ export function SupportAgentSplitLogin({
   errorMessage,
 }: SupportAgentSplitLoginProps) {
   const [showPassword, setShowPassword] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const isPlatform = scope === 'platform'
 
+  // Reset the pending state if the page is restored from the back/forward cache.
+  useEffect(() => {
+    const reset = (event: PageTransitionEvent) => {
+      if (event.persisted) setSubmitting(false)
+    }
+    window.addEventListener('pageshow', reset)
+    return () => window.removeEventListener('pageshow', reset)
+  }, [])
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    // Native POST to the auth route; block duplicate submissions while it is in flight.
+    if (submitting) {
+      event.preventDefault()
+      return
+    }
+    setSubmitting(true)
+  }
+
   return (
-    <main className="min-h-screen w-screen flex flex-col md:flex-row bg-[#121417] text-white overflow-x-hidden select-none">
+    <main className="min-h-dvh w-full flex flex-col md:flex-row bg-[#121417] text-white overflow-x-hidden">
       {/* ── Left Pane: 38% Royal Blue Hero ─────────────────────────────────── */}
-      <section className="relative flex flex-col justify-between w-full md:w-[42%] lg:w-[38%] min-h-[480px] md:min-h-screen bg-[#0052ff] p-8 sm:p-12 lg:p-14 text-white shrink-0 overflow-hidden">
+      <section className="relative flex flex-col justify-between w-full md:w-[42%] lg:w-[38%] md:min-h-dvh bg-[#0052ff] p-6 sm:p-12 lg:p-14 text-white shrink-0 overflow-hidden">
         {/* Soft radial glow highlights */}
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/10 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-blue-900/30 blur-3xl pointer-events-none" />
+        <div aria-hidden="true" className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+        <div aria-hidden="true" className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-blue-900/30 blur-3xl pointer-events-none" />
 
         {/* Brand Logo Header */}
         <div className="relative z-10">
@@ -35,19 +55,19 @@ export function SupportAgentSplitLogin({
         </div>
 
         {/* Hero Title & Subhead */}
-        <div className="relative z-10 my-auto py-8">
+        <div className="relative z-10 my-auto py-6 md:py-8">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/80">
             ENTERPRISE CONVERSATIONAL AI
           </p>
-          <h1 className="mt-3 text-3xl sm:text-4xl lg:text-[40px] font-bold tracking-tight leading-[1.15]">
+          <h1 className="mt-3 text-2xl sm:text-4xl lg:text-[40px] font-bold tracking-tight leading-[1.15]">
             Support Agent – intelligence, vocalized<span className="text-[#60a5fa]">.</span>
           </h1>
           <p className="mt-3 text-sm sm:text-base text-white/90 font-normal">
-            Real-time AI voice engagement, automated lead qualification, and instant CRM sync.
+            Real-time AI voice engagement, automated lead capture, and email lead alerts for your team.
           </p>
 
           {/* Voice Waveform AI Graphic */}
-          <div className="mt-8 flex justify-center md:justify-start">
+          <div className="mt-8 hidden justify-center sm:flex md:justify-start">
             <SupportAgentVisual className="h-48 w-48 sm:h-56 sm:w-56 drop-shadow-2xl" />
           </div>
         </div>
@@ -61,7 +81,7 @@ export function SupportAgentSplitLogin({
       </section>
 
       {/* ── Right Pane: 62% Deep Dark Charcoal Form ───────────────────────── */}
-      <section className="flex flex-1 flex-col items-center justify-center p-6 sm:p-12 lg:p-16 min-h-[500px]">
+      <section className="flex flex-1 flex-col items-center justify-center p-6 sm:p-12 lg:p-16">
         <div className="w-full max-w-sm sm:max-w-md space-y-7">
           {/* Header */}
           <div>
@@ -75,9 +95,9 @@ export function SupportAgentSplitLogin({
 
           {/* Error Alert */}
           {error && (
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-300">
+            <div role="alert" className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3.5 text-xs text-rose-300">
               <div className="flex items-center gap-2">
-                <svg className="h-4 w-4 shrink-0 text-rose-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg aria-hidden="true" className="h-4 w-4 shrink-0 text-rose-400" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
                 </svg>
                 <span className="font-semibold">{errorMessage || 'Invalid credentials. Please try again.'}</span>
@@ -86,7 +106,7 @@ export function SupportAgentSplitLogin({
           )}
 
           {/* Form */}
-          <form action="/api/admin/auth/login" method="post" className="space-y-4">
+          <form action="/api/admin/auth/login" method="post" onSubmit={handleSubmit} aria-busy={submitting} className="space-y-4">
             <input type="hidden" name="scope" value={scope} />
             <input type="hidden" name="next" value={next} />
 
@@ -96,7 +116,7 @@ export function SupportAgentSplitLogin({
                 htmlFor="email"
                 className="block text-[11px] font-bold uppercase tracking-wider text-slate-400"
               >
-                USERNAME
+                Email
               </label>
               <div className="relative">
                 <input
@@ -105,7 +125,7 @@ export function SupportAgentSplitLogin({
                   type="email"
                   required
                   autoComplete="email"
-                  placeholder="Enter your username"
+                  placeholder="you@company.com"
                   className="w-full h-11 rounded-lg border border-slate-700/80 bg-[#1c1f24] px-3.5 text-xs sm:text-sm text-white placeholder-slate-500 outline-none transition focus:border-[#0052ff] focus:ring-2 focus:ring-[#0052ff]/30"
                 />
               </div>
@@ -117,11 +137,11 @@ export function SupportAgentSplitLogin({
                 htmlFor="password"
                 className="block text-[11px] font-bold uppercase tracking-wider text-slate-400"
               >
-                PASSWORD
+                Password
               </label>
               <div className="relative">
                 {/* Lock icon on left */}
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
                   <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 2a4 4 0 00-4 4v2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1V6a4 4 0 00-4-4zm2 6V6a2 2 0 10-4 0v2h4z" clipRule="evenodd" />
                   </svg>
@@ -139,8 +159,9 @@ export function SupportAgentSplitLogin({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-500 hover:text-slate-300 transition"
-                  title={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute inset-y-0 right-0 flex items-center rounded-r-lg px-3.5 text-slate-500 outline-none transition hover:text-slate-300 focus-visible:text-white focus-visible:ring-2 focus-visible:ring-[#0052ff]/50"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? (
                     <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -161,9 +182,12 @@ export function SupportAgentSplitLogin({
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full h-11 rounded-lg bg-[#0052ff] hover:bg-[#0043d9] text-xs sm:text-sm font-semibold text-white shadow-md transition active:scale-[0.99]"
+                disabled={submitting}
+                aria-busy={submitting}
+                className="inline-flex w-full h-11 items-center justify-center gap-2 rounded-lg bg-[#0052ff] hover:bg-[#0043d9] text-xs sm:text-sm font-semibold text-white shadow-md outline-none transition focus-visible:ring-4 focus-visible:ring-[#0052ff]/40 active:scale-[0.99] disabled:cursor-wait disabled:opacity-80"
               >
-                Sign In
+                {submitting && <Spinner className="h-4 w-4" />}
+                {submitting ? 'Signing in…' : 'Sign In'}
               </button>
             </div>
           </form>

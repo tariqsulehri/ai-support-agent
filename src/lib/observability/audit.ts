@@ -55,7 +55,8 @@ function collection(db: Db): Collection<AuditRecord> {
 }
 
 async function ensureIndexes(db: Db): Promise<void> {
-  indexesReady ??= (async () => {
+  if (indexesReady) return indexesReady
+  const pending = (async () => {
     await Promise.all([
       collection(db).createIndex({ tenantId: 1, createdAt: -1 }),
       collection(db).createIndex({ action: 1, createdAt: -1 }),
@@ -68,8 +69,13 @@ async function ensureIndexes(db: Db): Promise<void> {
         : Promise.resolve(),
     ])
   })()
+  indexesReady = pending
+  // Forget a failed attempt so the next write retries instead of failing forever.
+  pending.catch(() => {
+    if (indexesReady === pending) indexesReady = null
+  })
 
-  return indexesReady
+  return pending
 }
 
 function safeMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {

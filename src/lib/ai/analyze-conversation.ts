@@ -97,11 +97,15 @@ export function fallbackAnalysis(lead: LeadData, summary = ''): ConversationAnal
   }
 }
 
+/** Bounds model input (and cost) for very long calls; the most recent turns are kept. */
+const MAX_TRANSCRIPT_CHARS = 60_000
+
 function transcriptText(messages: ChatHistory, agentName: string): string {
-  return messages
+  const text = messages
     .filter((message) => message.content !== '__GREET__')
     .map((message) => `${message.role === 'user' ? 'Visitor' : agentName}: ${message.content}`)
     .join('\n')
+  return text.length > MAX_TRANSCRIPT_CHARS ? text.slice(-MAX_TRANSCRIPT_CHARS) : text
 }
 
 export async function analyzeConversation({

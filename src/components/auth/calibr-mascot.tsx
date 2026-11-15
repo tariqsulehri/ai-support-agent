@@ -5,6 +5,7 @@ export function CalibrOwlMascot({ className = 'h-52 w-52' }: { className?: strin
       className={className}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      role="img"
       aria-label="Calibr Owl Mascot"
     >
       {/* Soft shadow */}

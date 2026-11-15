@@ -11,7 +11,10 @@ type RateBucket = {
 
 type RateLimitGlobal = typeof globalThis & {
   __voiceAgentRateBuckets?: Map<string, RateBucket>
+  __voiceAgentRateBucketsSweptAt?: number
 }
+
+const SWEEP_INTERVAL_MS = 30_000
 
 const globalForRateLimit = globalThis as RateLimitGlobal
 
@@ -64,12 +67,17 @@ function rateLimitError(tenant: TenantConfig, action: RuntimeAction): string | n
   const key = `${tenant.id}:${bucketStart}`
   const buckets = globalForRateLimit.__voiceAgentRateBuckets ??= new Map<string, RateBucket>()
 
-  for (const [bucketKey, bucket] of buckets.entries()) {
-    if (bucket.resetAt < now) buckets.delete(bucketKey)
+  // Sweep expired buckets periodically rather than scanning the whole map on
+  // every request.
+  if (now - (globalForRateLimit.__voiceAgentRateBucketsSweptAt ?? 0) >= SWEEP_INTERVAL_MS) {
+    globalForRateLimit.__voiceAgentRateBucketsSweptAt = now
+    for (const [bucketKey, bucket] of buckets.entries()) {
+      if (bucket.resetAt < now) buckets.delete(bucketKey)
+    }
   }
 
   const current = buckets.get(key) ?? { count: 0, resetAt: bucketStart + windowMs }
-  const limit = PLAN_LIMITS[tenant.subscription?.type ?? 'free']
+  const limit = PLAN_LIMITS[tenant.subscription?.type ?? 'free'] ?? PLAN_LIMITS.free
   current.count += 1
   buckets.set(key, current)
 

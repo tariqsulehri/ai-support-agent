@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { getAuthUserById } from './users'
-import { SESSION_COOKIE_NAME, type AuthSession, type DashboardAccessScope } from './types'
+import { LEGACY_SESSION_COOKIE_NAME, SESSION_COOKIE_NAME, readSessionCookie, type AuthSession, type DashboardAccessScope } from './types'
 import { createSessionToken, verifySessionToken } from './token'
 
 export { createSessionToken, verifySessionToken }
@@ -8,7 +8,7 @@ export const SESSION_TTL_SECONDS = 60 * 60 * 8
 
 export async function getCurrentSession(): Promise<AuthSession | null> {
   const cookieStore = await cookies()
-  return await verifySessionToken(cookieStore.get(SESSION_COOKIE_NAME)?.value)
+  return await verifySessionToken(readSessionCookie(cookieStore))
 }
 
 export async function getVerifiedSession(): Promise<AuthSession | null> {
@@ -27,27 +27,29 @@ export async function getVerifiedSession(): Promise<AuthSession | null> {
   }
 }
 
+const COOKIE_BASE = {
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: process.env.NODE_ENV === 'production',
+  path: '/',
+}
+
 export async function setSessionCookie(session: Omit<AuthSession, 'exp'>): Promise<void> {
   const cookieStore = await cookies()
   const token = await createSessionToken(session)
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: SESSION_TTL_SECONDS,
-  })
+  cookieStore.set(SESSION_COOKIE_NAME, token, { ...COOKIE_BASE, maxAge: SESSION_TTL_SECONDS })
+  // Migrate: drop the legacy cookie once the hardened one is issued.
+  if (LEGACY_SESSION_COOKIE_NAME !== SESSION_COOKIE_NAME && cookieStore.get(LEGACY_SESSION_COOKIE_NAME)) {
+    cookieStore.set(LEGACY_SESSION_COOKIE_NAME, '', { ...COOKIE_BASE, maxAge: 0 })
+  }
 }
 
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies()
-  cookieStore.set(SESSION_COOKIE_NAME, '', {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: 0,
-  })
+  cookieStore.set(SESSION_COOKIE_NAME, '', { ...COOKIE_BASE, maxAge: 0 })
+  if (LEGACY_SESSION_COOKIE_NAME !== SESSION_COOKIE_NAME) {
+    cookieStore.set(LEGACY_SESSION_COOKIE_NAME, '', { ...COOKIE_BASE, maxAge: 0 })
+  }
 }
 
 export function dashboardScopeForSession(session: AuthSession): DashboardAccessScope {

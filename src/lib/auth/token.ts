@@ -47,15 +47,28 @@ function toBufferSource(bytes: Uint8Array): BufferSource {
   return bytes as unknown as BufferSource
 }
 
+// importKey is comparatively expensive and runs on every request (middleware +
+// session reads). Cache the imported key per secret; reset on failure so one
+// rejected import does not poison the process.
+let cachedKey: { secret: string; key: Promise<CryptoKey> } | null = null
+
 async function getHmacKey(): Promise<CryptoKey> {
   const secret = authSecret()
-  return await crypto.subtle.importKey(
+  if (cachedKey?.secret === secret) return cachedKey.key
+
+  const key = crypto.subtle.importKey(
     'raw',
     toBufferSource(textEncode(secret)),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign', 'verify']
   )
+  const entry = { secret, key }
+  cachedKey = entry
+  key.catch(() => {
+    if (cachedKey === entry) cachedKey = null
+  })
+  return key
 }
 
 async function signPayload(payload: string): Promise<string> {
@@ -96,7 +109,10 @@ export async function createSessionToken(input: Omit<AuthSession, 'exp'>): Promi
 export async function verifySessionToken(token: string | undefined): Promise<AuthSession | null> {
   if (!token) return null
 
-  const [payload, signature] = token.split('.')
+  if (token.length > 8192) return null
+  const parts = token.split('.')
+  if (parts.length !== 2) return null
+  const [payload, signature] = parts
   if (!payload || !signature) return null
 
   const isValid = await verifyPayloadSignature(payload, signature)
@@ -106,6 +122,7 @@ export async function verifySessionToken(token: string | undefined): Promise<Aut
     const decodedText = textDecode(base64urlDecode(payload))
     const parsed = JSON.parse(decodedText) as AuthSession
     if (!parsed.userId || !parsed.email || !parsed.role || !parsed.exp) return null
+    if (typeof parsed.exp !== 'number' || !Number.isFinite(parsed.exp)) return null
     if (parsed.exp < Math.floor(Date.now() / 1000)) return null
 
     // For any tenant-scoped user, tenantId MUST be present in the token payload

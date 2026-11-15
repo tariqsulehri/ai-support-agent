@@ -1,100 +1,94 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { canMutateDashboard, getVerifiedSession } from '@/lib/auth/session'
-import {
-  generateClientApiKey,
-  generateEmbedToken,
-  getManagedTenantDetail,
-  embedSnippet,
-} from '@/lib/tenants/management'
+import { embedSnippet, generateEmbedToken, getManagedTenantDetail } from '@/lib/tenants/management'
+import { maskClientApiKey } from '@/lib/security/client-keys'
 import type { AuthSession } from '@/lib/auth/types'
 import { TenantDetailView } from './tenant-detail-view'
+import { toTabKey, toTenantDetailData, toViewerInfo, type TenantPermissions } from './_components/types'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 type TenantDetailPageProps = {
   params: Promise<{ tenantId: string }>
-  searchParams?: Promise<{ error?: string; saved?: string; created?: string; tab?: string }>
+  searchParams?: Promise<{ created?: string; tab?: string }>
 }
 
-function canAccessTenant(session: AuthSession, targetTenantId: string, resolvedTenantId?: string): boolean {
+const normalize = (value: string) => value.toLowerCase().trim()
+
+function canAccessTenant(session: AuthSession, requestedId: string, resolvedTenantId?: string): boolean {
   if (session.role === 'platform_admin') return true
   if (!session.tenantId) return false
-  const userTenant = session.tenantId.toLowerCase().trim()
-  return (
-    userTenant === targetTenantId.toLowerCase().trim() ||
-    (resolvedTenantId ? userTenant === resolvedTenantId.toLowerCase().trim() : false)
-  )
+  const own = normalize(session.tenantId)
+  return own === normalize(requestedId) || (resolvedTenantId ? own === normalize(resolvedTenantId) : false)
 }
 
-function canManageTenant(session: AuthSession, targetTenantId: string): boolean {
-  return (
-    session.role === 'platform_admin' ||
-    (session.tenantId?.toLowerCase() === targetTenantId.toLowerCase() && canMutateDashboard(session))
-  )
-}
-
-function canManageTenantSecrets(session: AuthSession, targetTenantId: string): boolean {
-  return (
-    session.role === 'platform_admin' ||
-    (session.tenantId?.toLowerCase() === targetTenantId.toLowerCase() &&
-      (session.role === 'tenant_owner' || session.role === 'tenant_admin'))
-  )
+function permissionsFor(session: AuthSession, tenantId: string): TenantPermissions {
+  const isPlatformAdmin = session.role === 'platform_admin'
+  const ownsTenant = Boolean(session.tenantId) && normalize(session.tenantId ?? '') === normalize(tenantId)
+  return {
+    canManage: isPlatformAdmin || (ownsTenant && canMutateDashboard(session)),
+    canSetDomains: isPlatformAdmin,
+  }
 }
 
 export default async function TenantDetailPage({ params, searchParams }: TenantDetailPageProps) {
-  const { tenantId } = await params
-  const session = await getVerifiedSession()
-  if (!session) redirect(`/tenant/login?next=/admin/tenants/${encodeURIComponent(tenantId)}`)
-
-  const [detail, pageParams, headerStore] = await Promise.all([
-    getManagedTenantDetail(tenantId),
+  const [{ tenantId }, pageParams, headerStore, session] = await Promise.all([
+    params,
     searchParams,
     headers(),
+    getVerifiedSession(),
   ])
+  if (!session) redirect(`/tenant/login?next=${encodeURIComponent(`/admin/tenants/${tenantId}`)}`)
 
-  if (!canAccessTenant(session, tenantId, detail?.tenant?.tenantId)) {
+  // Reject cross-tenant requests before touching tenant data (a tenant user
+  // may only open their own tenant id/slug).
+  if (session.role !== 'platform_admin' && !session.tenantId) {
     redirect('/dashboard?tab=overview&error=access_denied')
   }
 
-  if (!detail) {
-    redirect(session.role === 'platform_admin' ? '/admin/tenants' : '/dashboard?tab=overview&error=tenant_not_found')
+  let detail: Awaited<ReturnType<typeof getManagedTenantDetail>>
+  try {
+    detail = await getManagedTenantDetail(tenantId)
+  } catch {
+    // assertTenantId throws on malformed ids.
+    detail = null
   }
+
+  if (!detail || !canAccessTenant(session, tenantId, detail.tenant.tenantId)) {
+    if (session.role === 'platform_admin') redirect('/admin/tenants')
+    redirect(`/dashboard?tab=overview&error=${detail ? 'access_denied' : 'tenant_not_found'}`)
+  }
+
+  const resolvedId = detail.tenant.tenantId
+  const permissions = permissionsFor(session, resolvedId)
 
   const baseUrl =
     process.env.AGENT_BASE_URL?.trim() ||
     `${headerStore.get('x-forwarded-proto') ?? 'http'}://${headerStore.get('host') ?? 'localhost:3000'}`
 
-  const clientApiKey = detail.tenant.clientApiKey || generateClientApiKey(detail.tenant.tenantId)
-  const clientKeySnippet = embedSnippet({
-    baseUrl,
-    tenantId: detail.tenant.tenantId,
-    clientKey: clientApiKey,
-  })
-  const legacySnippet = embedSnippet({ baseUrl, tenantId: detail.tenant.tenantId })
-  const suggestedEmbedToken = generateEmbedToken(detail.tenant.tenantId)
-
-  const mutable = canManageTenant(session, detail.tenant.tenantId)
-  const canEditSecrets = canManageTenantSecrets(session, detail.tenant.tenantId)
-  const canSetDomains = session.role === 'platform_admin'
+  // getManagedTenantDetail always persists a client key when missing.
+  const clientApiKey = detail.tenant.clientApiKey ?? ''
+  const maskedClientApiKey = clientApiKey ? maskClientApiKey(clientApiKey) : 'Not issued'
 
   return (
     <TenantDetailView
-      detail={detail}
-      session={session}
-      baseUrl={baseUrl}
-      clientApiKey={clientApiKey}
-      clientKeySnippet={clientKeySnippet}
-      legacySnippet={legacySnippet}
-      suggestedEmbedToken={suggestedEmbedToken}
-      mutable={mutable}
-      canEditSecrets={canEditSecrets}
-      canSetDomains={canSetDomains}
-      initialTab={pageParams?.tab || 'overview'}
-      errorParam={pageParams?.error}
-      savedParam={pageParams?.saved}
-      createdParam={pageParams?.created}
+      data={toTenantDetailData(detail, permissions)}
+      viewer={toViewerInfo(session)}
+      permissions={permissions}
+      voiceUrl={`${baseUrl}/voice?tenant=${encodeURIComponent(resolvedId)}`}
+      initialTab={toTabKey(pageParams?.tab)}
+      created={Boolean(pageParams?.created)}
+      embed={{
+        clientApiKey,
+        maskedClientApiKey,
+        snippet: embedSnippet({ baseUrl, tenantId: resolvedId, clientKey: clientApiKey || undefined }),
+        maskedSnippet: embedSnippet({ baseUrl, tenantId: resolvedId, clientKey: clientApiKey ? maskedClientApiKey : undefined }),
+        legacySnippet: embedSnippet({ baseUrl, tenantId: resolvedId }),
+        // A signed embed token is a live credential: only mint it for managers.
+        suggestedEmbedToken: permissions.canManage ? generateEmbedToken(resolvedId) : null,
+      }}
     />
   )
 }

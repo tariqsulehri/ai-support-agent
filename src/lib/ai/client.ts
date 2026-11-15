@@ -3,7 +3,10 @@ import { env } from '@/lib/config/env'
 import { OPENAI_KEY_NOT_CONFIGURED } from '@/lib/tenants/runtime-configuration'
 import type { TenantConfig } from '@/lib/tenants/types'
 
+// One client per distinct API key (clients hold connection pools). Bounded so
+// rotated keys do not accumulate forever.
 const clients = new Map<string, OpenAI>()
+const MAX_CACHED_CLIENTS = 100
 
 function getApiKey(tenant?: TenantConfig): string {
   // If a tenant is provided, the API key must be derived from tenant information stored in the database
@@ -52,7 +55,11 @@ export function getOpenAIClient(tenant?: TenantConfig): OpenAI {
   const cached = clients.get(apiKey)
   if (cached) return cached
 
-  const client = new OpenAI({ apiKey })
+  const client = new OpenAI({ apiKey, timeout: 60_000, maxRetries: 2 })
+  if (clients.size >= MAX_CACHED_CLIENTS) {
+    const oldest = clients.keys().next().value
+    if (oldest !== undefined) clients.delete(oldest)
+  }
   clients.set(apiKey, client)
   return client
 }

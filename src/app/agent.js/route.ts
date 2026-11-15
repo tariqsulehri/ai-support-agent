@@ -1,13 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
+const FALLBACK_BASE_URL = "https://ai-support-agent-navy.vercel.app";
+// Host header values are attacker-controllable; only accept plain host[:port].
+const HOST_PATTERN = /^[a-z0-9.-]+(:\d{1,5})?$|^\[[0-9a-f:.]+\](:\d{1,5})?$/i;
+
+function resolveBaseUrl(req: NextRequest): string {
+    const configured = process.env.AGENT_BASE_URL?.trim();
+    if (configured) {
+        try {
+            const url = new URL(configured);
+            if (url.protocol === "https:" || url.protocol === "http:") {
+                return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
+            }
+        } catch {
+            // fall through to request-derived origin
+        }
+    }
+
     // Derive the host the loader was fetched from so the iframe always points at
-    // the live deployment. AGENT_BASE_URL overrides it (e.g. a custom domain).
-    const proto = req.headers.get("x-forwarded-proto") ?? "https";
-    const host = req.headers.get("host");
-    const baseUrl =
-        process.env.AGENT_BASE_URL?.trim() ||
-        (host ? `${proto}://${host}` : "https://ai-support-agent-navy.vercel.app");
+    // the live deployment.
+    const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+    const proto = forwardedProto === "http" || forwardedProto === "https" ? forwardedProto : "https";
+    const host = req.headers.get("host")?.trim();
+    if (host && HOST_PATTERN.test(host)) return `${proto}://${host}`;
+    return FALLBACK_BASE_URL;
+}
+
+export async function GET(req: NextRequest) {
+    // Embedded into a JS string literal below: JSON-encode so no character in
+    // the value can terminate the string and inject script.
+    const baseUrl = JSON.stringify(resolveBaseUrl(req)).slice(1, -1);
 
     const js = `
 (function () {
@@ -57,7 +79,11 @@ export async function GET(req: NextRequest) {
       if (!res.ok || !data.session) {
         throw new Error(data.error || "Domain is not verified for this tenant");
       }
-      return data.session;
+      return data;
+    }).catch(function (err) {
+      // Allow a later click to retry instead of caching the failure forever.
+      sessionPromise = null;
+      throw err;
     });
 
     return sessionPromise;
@@ -138,8 +164,11 @@ export async function GET(req: NextRequest) {
 
       if (!isLoaded) {
         let session = "";
+        let resolvedTenant = tenant;
         try {
-          session = await getEmbedSession();
+          const data = await getEmbedSession();
+          session = data.session;
+          resolvedTenant = tenant || data.tenantId || "";
         } catch (err) {
           console.error("AI Agent:", err && err.message ? err.message : err);
           return;
@@ -147,7 +176,7 @@ export async function GET(req: NextRequest) {
 
         const url = new URL("${baseUrl}/voice");
 
-        url.searchParams.set("tenant", tenant);
+        if (resolvedTenant) url.searchParams.set("tenant", resolvedTenant);
         url.searchParams.set("session", session);
         url.searchParams.set("v", String(Date.now()));
         if (token) url.searchParams.set("token", token);
@@ -186,7 +215,8 @@ export async function GET(req: NextRequest) {
 
     return new NextResponse(js, {
         headers: {
-            "Content-Type": "application/javascript",
+            "Content-Type": "application/javascript; charset=utf-8",
+            "X-Content-Type-Options": "nosniff",
             "Cache-Control": "no-store, max-age=0, must-revalidate"
         }
     });

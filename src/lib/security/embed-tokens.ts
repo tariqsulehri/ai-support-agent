@@ -54,18 +54,30 @@ export function createSignedEmbedToken(tenantId: string): string {
  * Returns null if the signature is invalid, token is tampered with, or tenantId is missing.
  */
 export function verifySignedEmbedToken(token: string | undefined): SignedEmbedTokenPayload | null {
-  if (!token || !token.startsWith('emb.')) return null
+  if (!token || typeof token !== 'string' || !token.startsWith('emb.') || token.length > 4096) return null
   const parts = token.slice(4).split('.')
   if (parts.length !== 2) return null
 
   const [payload, signature] = parts
-  if (!payload || !signature || !safeEqual(signature, sign(payload))) return null
+  if (!payload || !signature) return null
+
+  try {
+    // sign() throws when no signing secret is configured; treat as "not verified"
+    // rather than letting a 500 escape from every embed request.
+    if (!safeEqual(signature, sign(payload))) return null
+  } catch {
+    return null
+  }
 
   try {
     const parsed = JSON.parse(unbase64url(payload)) as SignedEmbedTokenPayload
     if (!parsed.tenantId || typeof parsed.tenantId !== 'string' || !parsed.tenantId.trim()) {
       return null
     }
+    if (typeof parsed.createdAt !== 'number' || !Number.isFinite(parsed.createdAt)) return null
+    if (parsed.createdAt > Math.floor(Date.now() / 1000) + 300) return null // issued in the future
+    const maxAgeDays = env.EMBED_TOKEN_MAX_AGE_DAYS
+    if (maxAgeDays && Date.now() / 1000 - parsed.createdAt > maxAgeDays * 86_400) return null
     return parsed
   } catch {
     return null
