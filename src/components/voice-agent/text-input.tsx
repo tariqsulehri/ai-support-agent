@@ -135,7 +135,7 @@ export const TextInput = memo(forwardRef<TextInputHandle, TextInputProps>(
           </button>
         </div>
         {emailError && (
-          <p id={errorId} role="alert" className="text-[11px] text-ms-red px-1">{emailError}</p>
+          <p id={errorId} role="alert" className="text-xs text-ms-red px-1">{emailError}</p>
         )}
       </div>
     )

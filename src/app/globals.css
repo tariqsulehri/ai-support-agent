@@ -5,14 +5,89 @@
 :root {
   color-scheme: light;
 
-  /* ── Primary brand color (RGB channels, no rgb() wrapper)
-     Override via ?primaryColor=#hex on the /voice embed URL,
-     or via postMessage { type: 'voice-agent:theme', colors: { primary: '#hex' } }
-     Defaults: Royal Blue #0052ff */
+  /* ── Semantic Design Tokens (RGB channels for opacity support) ── */
+  --bg:            248 250 252;  /* #f8fafc */
+  --surface:       255 255 255;  /* #ffffff */
+  --surface-2:     241 245 249;  /* #f1f5f9 */
+  --surface-3:     226 232 240;  /* #e2e8f0 */
+  --surface-inv:   15 23 42;     /* #0f172a */
+
+  --border:        226 232 240;  /* #e2e8f0 */
+  --border-2:      148 163 184;  /* #94a3b8 */
+
+  --text-1:        15 23 42;     /* #0f172a */
+  --text-2:        71 85 105;    /* #475569 */
+  --text-3:        100 116 139;  /* #64748b */
+  --text-inv:      255 255 255;  /* #ffffff */
+
+  --accent:        0 82 255;     /* #0052ff */
+  --accent-h:      0 71 225;     /* #0047e1 */
+  --accent-soft:   238 244 255;  /* #eef4ff */
+  --accent-txt:    0 82 255;     /* #0052ff */
+  --accent-fg:     255 255 255;  /* #ffffff */
+  --accent-ring:   0 82 255;
+
+  --success:       21 128 61;    /* #15803d */
+  --success-soft:  220 252 231;  /* #dcfce7 */
+  --success-fg:    255 255 255;
+
+  --warning:       161 98 7;     /* #a16207 */
+  --warning-soft:  254 249 195;  /* #fef9c3 */
+  --warning-fg:    255 255 255;
+
+  --danger:        185 28 28;    /* #b91c1c */
+  --danger-soft:   254 226 226;  /* #fee2e2 */
+  --danger-fg:     255 255 255;
+
+  --info:          0 82 255;     /* #0052ff */
+  --info-soft:     238 244 255;
+
+  /* Backward-compatible legacy variables */
   --va-primary:    0 82 255;    /* #0052ff */
   --va-primary-dk: 0 71 225;    /* darker #0047e1 */
   --va-primary-lt: 238 244 255; /* soft tint */
   --va-primary-md: 219 234 254; /* medium tint */
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg:            20 20 20;     /* #141414 */
+  --surface:       27 27 27;     /* #1b1b1b */
+  --surface-2:     36 36 36;     /* #242424 */
+  --surface-3:     46 46 46;     /* #2e2e2e */
+  --surface-inv:   255 255 255;
+
+  --border:        51 51 51;     /* #333333 */
+  --border-2:      107 107 107;  /* #6b6b6b */
+
+  --text-1:        255 255 255;  /* #ffffff */
+  --text-2:        209 209 209;  /* #d1d1d1 */
+  --text-3:        164 164 164;  /* #a4a4a4 */
+  --text-inv:      15 23 42;
+
+  --accent:        0 82 255;
+  --accent-h:      47 107 230;
+  --accent-soft:   10 42 102;
+  --accent-txt:    106 153 242;
+  --accent-fg:     255 255 255;
+  --accent-ring:   57 119 237;
+
+  --success:       74 222 128;
+  --success-soft:  5 46 22;
+  --success-fg:    20 20 20;
+
+  --warning:       250 204 21;
+  --warning-soft:  69 26 3;
+  --warning-fg:    20 20 20;
+
+  --danger:        248 113 113;
+  --danger-soft:   69 10 10;
+  --danger-fg:     20 20 20;
+
+  --info:          106 153 242;
+  --info-soft:     10 42 102;
 }
 
 html, body {

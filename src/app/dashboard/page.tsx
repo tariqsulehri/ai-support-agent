@@ -107,23 +107,23 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       searchQuery={filters.q}
       setupHref={setupHref}
     >
-      <section className="flex flex-col gap-4 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3.5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-[#0052ff]">
-            <Icon name={activeTab} className="h-5 w-5" />
+      <section className="flex flex-col gap-2.5 rounded-xl border border-slate-200/90 bg-white px-4 py-3 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-[#0052ff]">
+            <Icon name={activeTab} className="h-4 w-4" />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-semibold tracking-tight text-slate-950 sm:text-xl">{activeTabDef.label}</h1>
-              <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-[#0052ff]">
+              <h1 className="text-base font-bold tracking-tight text-slate-950 sm:text-lg">{activeTabDef.label}</h1>
+              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-[#0052ff]">
                 {activeTabDef.badgeText}
               </span>
             </div>
-            <p className="mt-0.5 text-xs text-slate-500">{activeTabDef.description}</p>
+            <p className="text-xs text-slate-500">{activeTabDef.description}</p>
           </div>
         </div>
         {showFilters && analytics.configured && (
-          <p className="shrink-0 text-[11px] text-slate-400">
+          <p className="shrink-0 text-xs text-slate-400">
             {analytics.filteredCalls.toLocaleString()} of {analytics.totalCalls.toLocaleString()} conversations · Updated{' '}
             <LocalTime iso={analytics.generatedAt} />
           </p>
@@ -132,7 +132,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
 
       {showFilters && <FilterBar exportHref={hrefWith('/dashboard/export', null, filters)} />}
 
-      <div className="space-y-6">
+      <div className="space-y-3.5">
         {activeTab === 'overview' && <OverviewTab analytics={analytics} userName={session.name} />}
         {activeTab === 'communications' && (
           <CommunicationsTab calls={analytics.recentCalls} pagination={analytics.pagination} canEdit={canEdit} />

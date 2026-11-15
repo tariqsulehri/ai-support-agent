@@ -13,7 +13,7 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
         <h1 className="text-base font-semibold text-slate-950">The dashboard could not load</h1>
         <p className="mt-2 text-xs text-slate-500">
           This is usually a temporary database or network issue. Your data is safe.
-          {error.digest && <span className="mt-1 block font-mono text-[10px] text-slate-400">Ref: {error.digest}</span>}
+          {error.digest && <span className="mt-1 block font-mono text-xs text-slate-400">Ref: {error.digest}</span>}
         </p>
         <button
           type="button"

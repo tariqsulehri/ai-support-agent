@@ -83,7 +83,7 @@ export function EmbedTab({
       >
         <div className="space-y-3">
           <CodeBlock>{maskedSnippet}</CodeBlock>
-          <p className="text-[11px] text-slate-500">The key is masked above; “Copy Snippet” copies the full value.</p>
+          <p className="text-xs text-slate-500">The key is masked above; “Copy Snippet” copies the full value.</p>
 
           <div className="space-y-1.5 rounded-xl border border-slate-100 bg-slate-50 p-3.5 text-xs text-slate-600">
             <p className="font-bold text-slate-900">Deployment steps</p>
@@ -134,12 +134,12 @@ export function EmbedTab({
             <MutedNote>Allowed domains are configured by platform administrators.</MutedNote>
           )}
 
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 space-y-2.5">
             <SectionHeading>Assigned domain status</SectionHeading>
             {data.domains.length === 0 ? (
               <p className="text-xs text-slate-500">No domains assigned yet.</p>
             ) : (
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {data.domains.map((domain) => (
                   <DomainRow key={domain.origin} domain={domain} tenantId={tenantId} canVerify={permissions.canManage} />
                 ))}
@@ -228,7 +228,7 @@ function DomainRow({
         <div className="space-y-2 rounded-xl border border-slate-200/80 bg-white p-3 text-xs text-slate-600">
           <p className="font-semibold text-slate-800">Verification token</p>
           <CodeBlock tone="light">{token}</CodeBlock>
-          <p className="text-[11px] leading-relaxed text-slate-500">
+          <p className="text-xs leading-relaxed text-slate-500">
             Option A: upload the token to{' '}
             <span className="break-all font-mono text-slate-700">/.well-known/voice-agent-verification.txt</span>
             <br />

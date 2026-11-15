@@ -24,7 +24,7 @@ function SecretStatus({
           {secret ? secret.maskedValue : emptyText}
         </p>
         {secret?.updatedAt && (
-          <p className="mt-0.5 text-[11px] text-slate-500">Updated {formatDate(secret.updatedAt, true)}</p>
+          <p className="mt-0.5 text-xs text-slate-500">Updated {formatDate(secret.updatedAt, true)}</p>
         )}
       </div>
       {secret ? <Pill tone="emerald">Configured</Pill> : <Pill tone="amber">Not set</Pill>}

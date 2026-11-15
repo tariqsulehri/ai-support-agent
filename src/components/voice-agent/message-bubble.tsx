@@ -8,7 +8,7 @@ export function Avatar({ initials }: { initials: string }) {
     <div
       aria-hidden="true"
       className="w-7 h-7 rounded-full bg-ms-teal flex items-center justify-center
-                 text-white text-[10px] font-semibold shrink-0 mb-0.5"
+                 text-white text-xs font-semibold shrink-0 mb-0.5"
     >
       {initials}
     </div>
@@ -68,7 +68,7 @@ export const MessageBubble = memo(function MessageBubble({
       <div className={`flex justify-end msg-enter ${spacing}`}>
         <div className="flex min-w-0 max-w-[85%] flex-col items-end gap-0.5">
           {showMeta && (
-            <span className="text-[11px] text-ms-muted font-medium mr-0.5">You</span>
+            <span className="text-xs text-ms-muted font-medium mr-0.5">You</span>
           )}
           <div className="whitespace-pre-wrap break-words bg-ms-blue rounded-2xl rounded-br-sm px-4 py-2.5
                           text-sm text-white leading-relaxed shadow-bubble [overflow-wrap:anywhere]">
@@ -86,7 +86,7 @@ export const MessageBubble = memo(function MessageBubble({
 
       <div className="flex min-w-0 max-w-[85%] flex-col gap-0.5">
         {showMeta && (
-          <span className="text-[11px] text-ms-muted font-medium ml-0.5 truncate">{agentName}</span>
+          <span className="text-xs text-ms-muted font-medium ml-0.5 truncate">{agentName}</span>
         )}
         <div className="whitespace-pre-wrap break-words bg-white border border-surface-border rounded-2xl rounded-bl-sm
                         px-4 py-2.5 shadow-bubble text-sm text-ms-text leading-relaxed [overflow-wrap:anywhere]">
@@ -103,7 +103,7 @@ export const MessageBubble = memo(function MessageBubble({
               onClick={onStop}
               aria-label="Stop audio playback"
               aria-pressed="true"
-              className={`self-start inline-flex items-center gap-1.5 text-[11px] font-medium text-ms-teal bg-ms-teal-lt border border-ms-teal-md px-2 py-0.5 rounded-full transition-colors mt-1 hover:bg-ms-teal-md ${focusRing}`}
+              className={`self-start inline-flex items-center gap-1.5 text-xs font-medium text-ms-teal bg-ms-teal-lt border border-ms-teal-md px-2 py-0.5 rounded-full transition-colors mt-1 hover:bg-ms-teal-md ${focusRing}`}
             >
               <span className="inline-flex gap-0.5 items-end h-3" aria-hidden="true">
                 <span className="w-0.5 h-3 bg-ms-teal animate-pulse" />
@@ -117,7 +117,7 @@ export const MessageBubble = memo(function MessageBubble({
               type="button"
               onClick={() => onPlay(content)}
               aria-label="Play greeting audio"
-              className={`self-start inline-flex items-center gap-1.5 text-[11px] font-semibold text-white bg-ms-blue hover:bg-ms-blue-dk px-2.5 py-1 rounded-full shadow-sm transition-colors mt-1 ${focusRing}`}
+              className={`self-start inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-ms-blue hover:bg-ms-blue-dk px-2.5 py-1 rounded-full shadow-sm transition-colors mt-1 ${focusRing}`}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d={SPEAKER_PATH} />
@@ -129,7 +129,7 @@ export const MessageBubble = memo(function MessageBubble({
               type="button"
               onClick={() => onPlay(content)}
               aria-label="Listen to message"
-              className={`self-start inline-flex items-center gap-1.5 text-[11px] text-ms-muted hover:text-ms-teal transition-colors px-1.5 py-0.5 rounded hover:bg-white/60 mt-0.5 ${focusRing}`}
+              className={`self-start inline-flex items-center gap-1.5 text-xs text-ms-muted hover:text-ms-teal transition-colors px-1.5 py-0.5 rounded hover:bg-white/60 mt-0.5 ${focusRing}`}
             >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d={SPEAKER_PATH} />

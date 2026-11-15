@@ -21,17 +21,17 @@ export const btnSecondary = cx(
   btnBase,
   'h-9 px-4 border border-slate-200 bg-white text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-300'
 )
-export const btnGhost = cx(btnBase, 'h-8 w-8 text-slate-500 hover:bg-slate-100 hover:text-slate-900')
+export const btnGhost = cx(btnBase, 'h-9 w-9 text-slate-500 hover:bg-slate-100 hover:text-slate-900')
 
-export const fieldLabel = 'mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500'
+export const fieldLabel = 'mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500'
 
 export const inputBase = cx(
   'w-full rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder:text-slate-400 shadow-xs',
   'outline-none transition-colors hover:border-slate-300 focus:border-[#0052ff] focus:ring-2 focus:ring-[#0052ff]/15',
   'disabled:opacity-60'
 )
-export const input = cx(inputBase, 'h-10 px-3')
-export const select = cx(inputBase, 'h-10 px-3 cursor-pointer')
+export const input = cx(inputBase, 'h-9 px-3')
+export const select = cx(inputBase, 'h-9 px-3 cursor-pointer')
 
 export const sectionTitle = 'text-base font-semibold tracking-tight text-slate-950'
 export const muted = 'text-xs text-slate-500'

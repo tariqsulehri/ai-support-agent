@@ -11,7 +11,7 @@ export default function TenantDetailLoading() {
             ))}
           </div>
         </div>
-        <main className="min-w-0 flex-1 space-y-5 p-4 sm:p-6 lg:p-8">
+        <main className="min-w-0 flex-1 space-y-3.5 p-3.5 sm:p-4 lg:p-5">
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 sm:p-6">
             <div className="flex items-center gap-3.5">
               <div className="h-12 w-12 animate-pulse rounded-xl bg-blue-50" />

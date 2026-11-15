@@ -39,22 +39,22 @@ export function TenantDetailView({ data, viewer, permissions, voiceUrl, initialT
         <div className="flex min-w-0 flex-1">
           <DetailSidebar viewer={viewer} tenantId={tenant.tenantId} voiceUrl={voiceUrl} />
 
-          <main className="min-w-0 flex-1 space-y-5 p-4 sm:p-6 lg:p-8">
+          <main className="min-w-0 flex-1 space-y-3.5 p-3.5 sm:p-4 lg:p-5">
             {created && (
               <div
                 role="status"
-                className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800"
+                className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-medium text-emerald-800"
               >
                 <CheckCircleIcon className="h-4 w-4 shrink-0 text-emerald-600" />
                 Tenant created successfully.
               </div>
             )}
 
-            <section className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-[0_4px_20px_-4px_rgba(15,23,42,0.06),0_1px_3px_rgba(0,0,0,0.03)] sm:p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex min-w-0 items-start gap-3.5 sm:items-center">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-200/80 bg-blue-50 text-[#0052ff]">
-                    <ActiveTabIcon className="h-6 w-6" />
+            <section className="rounded-xl border border-slate-200/90 bg-white px-4 py-3 shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-200/80 bg-blue-50 text-[#0052ff]">
+                    <ActiveTabIcon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">

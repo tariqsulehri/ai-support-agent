@@ -44,7 +44,7 @@ export function SupportAgentLogo({
           Agent
         </span>
         <span
-          className={`ml-0.5 rounded px-1.5 py-0.5 text-[9px] font-extrabold tracking-widest uppercase ${
+          className={`ml-0.5 rounded px-1.5 py-0.5 text-xs font-extrabold tracking-widest uppercase ${
             isLight
               ? 'bg-white/20 text-white'
               : 'bg-blue-50 text-[#0052ff] border border-blue-200/80'

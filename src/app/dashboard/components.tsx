@@ -54,18 +54,18 @@ export function HeroBannerCard({ userName, analytics }: { userName?: string; ana
   const captureRate = percent(analytics.callsWithLead, analytics.filteredCalls)
 
   return (
-    <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0052ff] to-[#0b3ec4] p-6 text-white shadow-[0_8px_30px_rgba(0,82,255,0.2)] sm:p-7">
+    <section className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#0052ff] to-[#0b3ec4] p-4 text-white shadow-[0_4px_20px_rgba(0,82,255,0.18)] sm:p-5">
       <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
-      <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
-        <div className="max-w-2xl flex-1 space-y-4">
+      <div className="relative flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+        <div className="max-w-2xl flex-1 space-y-2.5">
           <div>
-            <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Welcome back, {firstName}</h2>
-            <p className="mt-0.5 text-xs font-medium text-blue-100">
+            <h2 className="text-lg font-bold tracking-tight sm:text-xl">Welcome back, {firstName}</h2>
+            <p className="text-xs font-medium text-blue-100">
               {analytics.filteredCalls.toLocaleString()} conversations in the selected period
             </p>
           </div>
 
-          <div className="rounded-xl bg-white p-4 text-slate-900 shadow-sm">
+          <div className="rounded-xl bg-white p-3 text-slate-900 shadow-xs">
             <p className="text-xs font-medium leading-snug">
               <span className="font-semibold">
                 {analytics.callsWithLead.toLocaleString()} of {analytics.filteredCalls.toLocaleString()}
@@ -73,7 +73,7 @@ export function HeroBannerCard({ userName, analytics }: { userName?: string; ana
               conversations captured contact details ({captureRate}% capture rate).
             </p>
             <div
-              className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100"
+              className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
               role="progressbar"
               aria-label="Lead capture rate"
               aria-valuenow={captureRate}
@@ -82,7 +82,7 @@ export function HeroBannerCard({ userName, analytics }: { userName?: string; ana
             >
               <div className="h-full rounded-full bg-[#0052ff] transition-[width] duration-500" style={{ width: `${captureRate}%` }} />
             </div>
-            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-slate-500">
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-500">
               <span>{analytics.hotLeads.toLocaleString()} hot leads</span>
               <span>
                 {analytics.overdueFollowUps > 0
@@ -93,16 +93,16 @@ export function HeroBannerCard({ userName, analytics }: { userName?: string; ana
           </div>
         </div>
 
-        <dl className="flex shrink-0 items-center gap-8 sm:gap-10 lg:border-l lg:border-white/20 lg:pl-8">
+        <dl className="flex shrink-0 items-center gap-6 sm:gap-8 lg:border-l lg:border-white/20 lg:pl-6">
           <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wider text-blue-100">Pipeline</dt>
-            <dd className="mt-1 text-3xl font-bold tabular-nums sm:text-4xl">{analytics.qualifiedPipeline.toLocaleString()}</dd>
-            <dd className="mt-0.5 text-[11px] text-blue-100/90">qualified, proposal or won</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-blue-100">Pipeline</dt>
+            <dd className="mt-0.5 text-2xl font-bold tabular-nums sm:text-3xl">{analytics.qualifiedPipeline.toLocaleString()}</dd>
+            <dd className="text-xs text-blue-100/90">qualified, proposal or won</dd>
           </div>
           <div>
-            <dt className="text-[11px] font-semibold uppercase tracking-wider text-blue-100">Readiness</dt>
-            <dd className="mt-1 text-3xl font-bold tabular-nums sm:text-4xl">{readiness}%</dd>
-            <dd className="mt-0.5 text-[11px] text-blue-100/90">weighted conversion score</dd>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-blue-100">Readiness</dt>
+            <dd className="mt-0.5 text-2xl font-bold tabular-nums sm:text-3xl">{readiness}%</dd>
+            <dd className="text-xs text-blue-100/90">weighted conversion score</dd>
           </div>
         </dl>
       </div>
@@ -204,7 +204,7 @@ export function TranscriptPreview({ call, limit = 6 }: { call: DashboardCall; li
 
   return (
     <details className="group rounded-xl border border-slate-200/80 bg-slate-50/70">
-      <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-800 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-2.5 text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-800 [&::-webkit-details-marker]:hidden">
         <span>Transcript · {call.messageCount} message{call.messageCount === 1 ? '' : 's'}</span>
         <span className="transition-transform group-open:rotate-180" aria-hidden="true">▾</span>
       </summary>
@@ -219,7 +219,7 @@ export function TranscriptPreview({ call, limit = 6 }: { call: DashboardCall; li
                   isUser ? 'rounded-tr-sm border border-slate-200 bg-white text-slate-900' : 'rounded-tl-sm border border-blue-100 bg-blue-50 text-slate-800'
                 )}
               >
-                <span className={cx('mb-0.5 block text-[10px] font-semibold', isUser ? 'text-slate-500' : 'text-[#0052ff]')}>
+                <span className={cx('mb-0.5 block text-xs font-semibold', isUser ? 'text-slate-500' : 'text-[#0052ff]')}>
                   {isUser ? 'Visitor' : 'Agent'}
                 </span>
                 <p className="whitespace-pre-wrap break-words">{message.content}</p>
@@ -228,7 +228,7 @@ export function TranscriptPreview({ call, limit = 6 }: { call: DashboardCall; li
           )
         })}
         {remaining > 0 && (
-          <li className="pt-1 text-center text-[11px] font-medium text-slate-400">
+          <li className="pt-1 text-center text-xs font-medium text-slate-400">
             + {remaining} more message{remaining === 1 ? '' : 's'} — open the lead workspace for the full transcript
           </li>
         )}
@@ -249,9 +249,9 @@ function MetaRow({ label, children }: { label: string; children: React.ReactNode
 export function CommunicationCard({ call, canEdit = true }: { call: DashboardCall; canEdit?: boolean }) {
   const finalized = isConversationFinalized(call)
   return (
-    <article className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] transition-colors hover:border-blue-200 sm:p-6">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 flex-1 space-y-3.5">
+    <article className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] transition-colors hover:border-blue-200 sm:p-4">
+      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1 space-y-2.5">
           <LeadIdentity call={call} />
           <div className="flex flex-wrap gap-1.5">
             <Badge tone={toneForQuality(call.leadQuality)}>{formatLabel(call.leadQuality)}</Badge>
@@ -260,13 +260,13 @@ export function CommunicationCard({ call, canEdit = true }: { call: DashboardCal
             <Badge tone={finalized ? 'good' : 'warn'}>{finalized ? 'Finalized' : 'In progress'}</Badge>
           </div>
 
-          <p className="rounded-xl border-l-4 border-l-[#0052ff] bg-slate-50 p-3.5 text-xs leading-relaxed text-slate-700">{call.summary}</p>
+          <p className="rounded-lg border-l-4 border-l-[#0052ff] bg-slate-50 p-2.5 text-xs leading-relaxed text-slate-700">{call.summary}</p>
 
           {call.keyPoints.length > 0 && (
-            <ul className="grid gap-2 text-xs sm:grid-cols-2">
+            <ul className="grid gap-1.5 text-xs sm:grid-cols-2">
               {call.keyPoints.slice(0, 4).map((point, i) => (
-                <li key={i} className="flex items-start gap-2 rounded-xl border border-slate-200/80 p-3 text-slate-800">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0052ff]" aria-hidden="true" />
+                <li key={i} className="flex items-start gap-1.5 rounded-lg border border-slate-200/80 p-2 text-slate-800">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#0052ff]" aria-hidden="true" />
                   <span>{point}</span>
                 </li>
               ))}
@@ -276,8 +276,8 @@ export function CommunicationCard({ call, canEdit = true }: { call: DashboardCal
           <TranscriptPreview call={call} />
         </div>
 
-        <aside className="flex w-full shrink-0 flex-col gap-3 rounded-xl border border-slate-200/90 bg-slate-50/60 p-4 lg:w-64">
-          <dl className="space-y-2">
+        <aside className="flex w-full shrink-0 flex-col gap-2.5 rounded-xl border border-slate-200/90 bg-slate-50/60 p-3 lg:w-60">
+          <dl className="space-y-1.5">
             <MetaRow label="Created">
               <LocalTime iso={call.createdAt} className="font-medium text-slate-700" />
             </MetaRow>
@@ -296,7 +296,7 @@ export function CommunicationCard({ call, canEdit = true }: { call: DashboardCal
               </MetaRow>
             )}
           </dl>
-          <div className="space-y-2 border-t border-slate-200/70 pt-3">
+          <div className="space-y-1.5 border-t border-slate-200/70 pt-2.5">
             <OptimisticStatusForm callId={call.id} initialStatus={call.status} readOnly={!canEdit} />
             <Link href={`/dashboard?tab=leads&selectedId=${call.id}`} className={cx(btnPrimary, 'w-full')}>
               Open lead workspace →
@@ -313,13 +313,29 @@ export function CommunicationList({
   canEdit = true,
   emptyTitle = 'No conversations found',
   emptyDescription = 'No conversations match the current filters. Try widening the date range.',
+  clearFiltersHref,
 }: {
   calls: DashboardCall[]
   canEdit?: boolean
   emptyTitle?: string
   emptyDescription?: string
+  clearFiltersHref?: string
 }) {
-  if (calls.length === 0) return <EmptyState title={emptyTitle} description={emptyDescription} />
+  if (calls.length === 0) {
+    return (
+      <EmptyState
+        title={emptyTitle}
+        description={emptyDescription}
+        action={
+          clearFiltersHref ? (
+            <Link href={clearFiltersHref} className={btnPrimary}>
+              Clear filters
+            </Link>
+          ) : undefined
+        }
+      />
+    )
+  }
   return (
     <div className="space-y-4">
       {calls.map((call) => (
@@ -352,39 +368,39 @@ export function LeadDetailPanel({ call, canEdit = true }: { call: DashboardCall 
 
   return (
     <Panel>
-      <div className="flex flex-col gap-3 bg-gradient-to-r from-[#0052ff] to-[#1e3a8a] p-6 text-white">
+      <div className="flex flex-col gap-2.5 bg-gradient-to-r from-[#0052ff] to-[#1e3a8a] p-4 text-white sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-blue-200">Lead workspace</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-blue-200">Lead workspace</span>
           <LeadStarRating score={call.maturityScore} label={call.maturityLabel} />
         </div>
-        <h2 className="text-2xl font-bold tracking-tight">{leadDisplayName(call)}</h2>
+        <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{leadDisplayName(call)}</h2>
         <p className="max-w-2xl text-xs leading-relaxed text-blue-100">{call.lead.purpose || call.summary}</p>
       </div>
 
-      <div className="grid gap-6 p-6 xl:grid-cols-2">
-        <div className="space-y-5">
+      <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-2">
+        <div className="space-y-3.5">
           <div className="flex flex-wrap gap-1.5">
             <Badge tone={toneForQuality(call.leadQuality)}>{formatLabel(call.leadQuality)}</Badge>
             <Badge tone={toneForUrgency(call.urgency)}>{formatLabel(call.urgency)} urgency</Badge>
             <Badge tone={emailStatusTone(call)}>{emailStatusLabel(call)}</Badge>
           </div>
 
-          <dl className="grid gap-2.5 text-xs sm:grid-cols-2">
+          <dl className="grid gap-2 text-xs sm:grid-cols-2">
             {facts.map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3">
-                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
-                <dd className={cx('mt-1 break-words font-semibold', value ? 'text-slate-900' : 'text-slate-400')}>{value || 'Not captured'}</dd>
+              <div key={label} className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-2.5">
+                <dt className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
+                <dd className={cx('mt-0.5 break-words font-semibold', value ? 'text-slate-900' : 'text-slate-400')}>{value || 'Not captured'}</dd>
               </div>
             ))}
           </dl>
 
           {call.nextSteps.length > 0 && (
             <div>
-              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">AI next steps</h3>
-              <ul className="space-y-2 text-xs">
+              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">AI next steps</h3>
+              <ul className="space-y-1.5 text-xs">
                 {call.nextSteps.map((step, i) => (
-                  <li key={i} className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-emerald-950">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+                  <li key={i} className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-950">
+                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
                     <span>{step}</span>
                   </li>
                 ))}
@@ -395,13 +411,13 @@ export function LeadDetailPanel({ call, canEdit = true }: { call: DashboardCall 
           <TranscriptPreview call={call} limit={call.transcript.length} />
         </div>
 
-        <div className="space-y-5 rounded-2xl border border-slate-200/90 bg-slate-50/50 p-5">
+        <div className="space-y-4 rounded-xl border border-slate-200/90 bg-slate-50/50 p-4">
           <div>
-            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Pipeline status</h3>
+            <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Pipeline status</h3>
             <OptimisticStatusForm callId={call.id} initialStatus={call.status} readOnly={!canEdit} />
           </div>
-          <div className="border-t border-slate-200/70 pt-4">
-            <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Management follow-up</h3>
+          <div className="border-t border-slate-200/70 pt-3.5">
+            <h3 className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Management follow-up</h3>
             <LeadManagementForm
               key={call.id}
               callId={call.id}
@@ -414,7 +430,7 @@ export function LeadDetailPanel({ call, canEdit = true }: { call: DashboardCall 
 
           {call.statusHistory.length > 0 && (
             <div className="border-t border-slate-200/70 pt-4">
-              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status history</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Status history</h3>
               <ol className="space-y-1.5 text-xs">
                 {call.statusHistory
                   .slice(-5)

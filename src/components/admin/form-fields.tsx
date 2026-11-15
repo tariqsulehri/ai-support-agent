@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 import { formatLabel } from '@/lib/admin/forms'
 
-const labelText = 'text-[11px] font-semibold uppercase tracking-wide text-slate-500'
+const labelText = 'text-xs font-semibold uppercase tracking-wide text-slate-500'
 const controlBase =
-  'mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#0052ff] focus:ring-4 focus:ring-[#0052ff]/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
+  'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#0052ff] focus:ring-4 focus:ring-[#0052ff]/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
 
 function Hint({ children }: { children?: ReactNode }) {
   if (!children) return null
-  return <span className="mt-1 block text-[11px] leading-relaxed text-slate-500">{children}</span>
+  return <span className="mt-1 block text-xs leading-relaxed text-slate-500">{children}</span>
 }
 
 export function Field({

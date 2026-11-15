@@ -22,13 +22,48 @@ const config: Config = {
         ],
       },
       colors: {
-        // Page / shell
+        // Semantic design system tokens (Standard 01 §2.1)
+        canvas: 'rgb(var(--bg) / <alpha-value>)',
         surface: {
-          DEFAULT: '#F0F2F5',
+          DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
+          2:       'rgb(var(--surface-2) / <alpha-value>)',
+          3:       'rgb(var(--surface-3) / <alpha-value>)',
+          inv:     'rgb(var(--surface-inv) / <alpha-value>)',
           card:    '#FFFFFF',
           raised:  '#F3F2F1',
           border:  '#EDEBE9',
           hover:   '#F5F5F5',
+        },
+        border: {
+          DEFAULT: 'rgb(var(--border) / <alpha-value>)',
+          2:       'rgb(var(--border-2) / <alpha-value>)',
+        },
+        content: {
+          1:   'rgb(var(--text-1) / <alpha-value>)',
+          2:   'rgb(var(--text-2) / <alpha-value>)',
+          3:   'rgb(var(--text-3) / <alpha-value>)',
+          inv: 'rgb(var(--text-inv) / <alpha-value>)',
+        },
+        accent: {
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          h:       'rgb(var(--accent-h) / <alpha-value>)',
+          soft:    'rgb(var(--accent-soft) / <alpha-value>)',
+          txt:     'rgb(var(--accent-txt) / <alpha-value>)',
+          fg:      'rgb(var(--accent-fg) / <alpha-value>)',
+          ring:    'rgb(var(--accent-ring) / <alpha-value>)',
+        },
+        semantic: {
+          success:         'rgb(var(--success) / <alpha-value>)',
+          'success-soft':  'rgb(var(--success-soft) / <alpha-value>)',
+          'success-fg':    'rgb(var(--success-fg) / <alpha-value>)',
+          warning:         'rgb(var(--warning) / <alpha-value>)',
+          'warning-soft':  'rgb(var(--warning-soft) / <alpha-value>)',
+          'warning-fg':    'rgb(var(--warning-fg) / <alpha-value>)',
+          danger:          'rgb(var(--danger) / <alpha-value>)',
+          'danger-soft':   'rgb(var(--danger-soft) / <alpha-value>)',
+          'danger-fg':     'rgb(var(--danger-fg) / <alpha-value>)',
+          info:            'rgb(var(--info) / <alpha-value>)',
+          'info-soft':     'rgb(var(--info-soft) / <alpha-value>)',
         },
         ms: {
           // Primary — driven by CSS vars so parent-page theme is inherited

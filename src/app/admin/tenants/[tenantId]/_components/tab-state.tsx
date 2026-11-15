@@ -56,7 +56,7 @@ export function TabBar() {
               }`}
             >
               <span
-                className={`inline-flex h-4 min-w-[16px] items-center justify-center rounded px-1 text-[10px] font-bold ${
+                className={`inline-flex h-4 min-w-[16px] items-center justify-center rounded px-1 text-xs font-bold ${
                   selected ? 'bg-white/20 text-white' : 'border border-blue-200/70 bg-blue-50 text-[#0052ff]'
                 }`}
               >
@@ -75,7 +75,7 @@ export function TabBar() {
 export function SidebarSubnav() {
   const { activeTab, setTab } = useTabs()
   return (
-    <div className="ml-4 mt-1.5 space-y-1 border-l-2 border-slate-200/80 pl-3 text-[11px] font-medium text-slate-600">
+    <div className="ml-4 mt-1.5 space-y-1 border-l-2 border-slate-200/80 pl-3 text-xs font-medium text-slate-600">
       {DETAIL_TABS.map((tab) => {
         const selected = activeTab === tab.id
         return (

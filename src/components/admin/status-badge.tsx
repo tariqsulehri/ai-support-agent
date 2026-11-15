@@ -11,7 +11,7 @@ export function StatusBadge({ status }: { status: string }) {
       : 'border-amber-200/90 bg-gradient-to-b from-amber-50 to-amber-100/70 text-amber-800 shadow-sm'
 
   return (
-    <span className={`inline-flex items-center rounded-full border px-3 py-0.5 text-[11px] font-bold tracking-tight ${tone}`}>
+    <span className={`inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-bold tracking-tight ${tone}`}>
       {formatLabel(status)}
     </span>
   )

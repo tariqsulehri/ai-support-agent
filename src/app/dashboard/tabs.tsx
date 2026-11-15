@@ -43,10 +43,10 @@ export function OverviewTab({ analytics, userName }: { analytics: DashboardAnaly
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3.5">
       <HeroBannerCard userName={userName} analytics={analytics} />
 
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           icon="communications"
           label="Conversations"
@@ -94,7 +94,7 @@ export function OverviewTab({ analytics, userName }: { analytics: DashboardAnaly
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           tone="emerald"
           icon="check"
@@ -149,7 +149,7 @@ export function OverviewTab({ analytics, userName }: { analytics: DashboardAnaly
         intentCounts={analytics.intentCounts}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
+      <div className="grid gap-3 xl:grid-cols-[1.3fr_1fr]">
         <MonthlyCallVolumeChart
           items={analytics.monthlyCallVolume.map((item) => ({ label: item.label, value: item.count, color: '#0052ff' }))}
         />
@@ -163,7 +163,7 @@ export function OverviewTab({ analytics, userName }: { analytics: DashboardAnaly
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-3 xl:grid-cols-2">
         <Distribution title="Conversation Intent" subtitle="Why visitors contacted the agent" items={analytics.intentCounts} total={n} />
         <Distribution title="Sentiment" subtitle="Tone of conversations" items={analytics.sentimentCounts} total={n} />
         <Distribution title="Service Demand" subtitle="Services mentioned by leads" items={analytics.serviceCounts} total={n} />
@@ -179,8 +179,8 @@ export function OverviewTab({ analytics, userName }: { analytics: DashboardAnaly
 export function LeadsTab({ analytics, canEdit = true }: { analytics: DashboardAnalytics; canEdit?: boolean }) {
   const n = analytics.filteredCalls
   return (
-    <div className="space-y-6">
-      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-3.5">
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           tone="emerald"
           icon="user"
@@ -215,12 +215,18 @@ export function LeadsTab({ analytics, canEdit = true }: { analytics: DashboardAn
 
       <LeadDetailPanel call={analytics.selectedCall} canEdit={canEdit} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2">
         <PipelineFunnel items={analytics.statusCounts} total={n} />
         <Distribution title="Urgency" subtitle="Operational priority by conversation" items={analytics.urgencyCounts} total={n} />
       </div>
 
-      <RecordList title="Recent lead interactions" calls={analytics.recentCalls} pagination={analytics.pagination} canEdit={canEdit} />
+      <RecordList
+        title="Recent lead interactions"
+        calls={analytics.recentCalls}
+        pagination={analytics.pagination}
+        canEdit={canEdit}
+        clearFiltersHref="/dashboard?tab=leads"
+      />
     </div>
   )
 }
@@ -232,23 +238,36 @@ function RecordList({
   calls,
   pagination,
   canEdit,
+  clearFiltersHref,
 }: {
   title: string
   calls: DashboardCall[]
   pagination?: PaginationMeta
   canEdit: boolean
+  clearFiltersHref?: string
 }) {
+  const isFiltered = pagination && pagination.totalRecords > 0 && pagination.filteredRecords === 0
   return (
-    <section className="space-y-4" aria-label={title}>
+    <section className="space-y-3" aria-label={title}>
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <h3 className={sectionTitle}>{title}</h3>
         {pagination && pagination.filteredRecords > 0 && (
-          <span className="text-xs font-medium text-slate-500">
+          <span className="text-xs font-medium text-slate-500 tabular-nums">
             Page {pagination.page} of {pagination.totalPages}
           </span>
         )}
       </div>
-      <CommunicationList calls={calls} canEdit={canEdit} />
+      <CommunicationList
+        calls={calls}
+        canEdit={canEdit}
+        emptyTitle={isFiltered ? 'No rows match these filters' : 'No conversations recorded yet'}
+        emptyDescription={
+          isFiltered
+            ? 'Try widening the search query, date range, or resetting status filters.'
+            : 'Conversations will appear here once visitors start interacting with the voice agent.'
+        }
+        clearFiltersHref={isFiltered ? clearFiltersHref : undefined}
+      />
       {pagination && <PaginationControls pagination={pagination} />}
     </section>
   )
@@ -263,7 +282,15 @@ export function CommunicationsTab({
   pagination?: PaginationMeta
   canEdit?: boolean
 }) {
-  return <RecordList title="Call transcripts & intelligence" calls={calls} pagination={pagination} canEdit={canEdit} />
+  return (
+    <RecordList
+      title="Call transcripts & intelligence"
+      calls={calls}
+      pagination={pagination}
+      canEdit={canEdit}
+      clearFiltersHref="/dashboard?tab=communications"
+    />
+  )
 }
 
 /* ───────────────────────── AI ───────────────────────── */
@@ -294,7 +321,7 @@ export function AiTab({ analytics, canEdit = true }: { analytics: DashboardAnaly
           <h2 className={sectionTitle}>Recommendations</h2>
         </div>
         <InsightList items={analytics.aiRecommendations} tone="blue" />
-        <p className="mt-3 text-[11px] text-slate-400">Derived from aggregate counts for all conversations matching the filters.</p>
+        <p className="mt-3 text-xs text-slate-400">Derived from aggregate counts for all conversations matching the filters.</p>
       </Panel>
 
       <Panel className="p-6">
@@ -352,7 +379,7 @@ export function CapabilitiesTab() {
           <Panel key={card.title} className="p-6">
             <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <h2 className={sectionTitle}>{card.title}</h2>
-              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${softClasses[index % softClasses.length]}`}>
+              <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${softClasses[index % softClasses.length]}`}>
                 {card.items.length} items
               </span>
             </div>
@@ -375,7 +402,7 @@ export function CapabilitiesTab() {
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {technologyGroups.map((group) => (
             <div key={group.title} className="rounded-2xl border border-slate-200/90 bg-slate-50/50 p-4">
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-700">{group.title}</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700">{group.title}</h3>
               <div className="mt-3 flex flex-wrap gap-2">
                 {group.items.map((item) => (
                   <span key={item} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700">
@@ -398,7 +425,7 @@ function ConfigurationStatus({ label, detail, complete, optional }: { label: str
     <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-900">{label}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-900">{label}</p>
           <p className="mt-1.5 break-words text-xs leading-relaxed text-slate-600">{detail}</p>
         </div>
         <Badge tone={complete ? 'good' : optional ? 'neutral' : 'warn'}>{complete ? 'Ready' : optional ? 'Optional' : 'Required'}</Badge>
@@ -473,7 +500,7 @@ export function PlatformTenantsTab({ tenants }: { tenants: ManagedTenantSummary[
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-xs">
-            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500">
               <tr>
                 <th scope="col" className="px-5 py-3.5">Tenant</th>
                 <th scope="col" className="px-5 py-3.5">Allowed domains</th>
@@ -493,7 +520,7 @@ export function PlatformTenantsTab({ tenants }: { tenants: ManagedTenantSummary[
                   <tr key={tenant.tenantId} className="transition-colors hover:bg-slate-50/80">
                     <td className="px-5 py-4">
                       <p className="text-sm font-semibold text-slate-950">{tenant.companyName}</p>
-                      <p className="mt-0.5 font-mono text-[11px] text-slate-400">{tenant.tenantId}</p>
+                      <p className="mt-0.5 font-mono text-xs text-slate-400">{tenant.tenantId}</p>
                     </td>
                     <td className="px-5 py-4 text-slate-600">
                       <span className="line-clamp-2 break-words">{tenant.domains.length ? tenant.domains.join(', ') : 'No domains'}</span>

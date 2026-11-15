@@ -67,7 +67,7 @@ export const LeadPanel = memo(function LeadPanel({ lead, callSummary }: LeadPane
 
             {callSummary.keyPoints.length > 0 && (
               <div className="mt-3">
-                <p className="text-[11px] font-semibold text-ms-muted uppercase tracking-wider mb-2">
+                <p className="text-xs font-semibold text-ms-muted uppercase tracking-wider mb-2">
                   Key Points
                 </p>
                 <ul className="flex flex-col gap-1.5">

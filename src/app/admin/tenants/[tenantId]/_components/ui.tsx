@@ -10,7 +10,7 @@ const pillTones = {
 
 export function Pill({ tone = 'slate', children }: { tone?: keyof typeof pillTones; children: ReactNode }) {
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${pillTones[tone]}`}>
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold ${pillTones[tone]}`}>
       {children}
     </span>
   )
@@ -50,7 +50,7 @@ export function MutedNote({ children }: { children: ReactNode }) {
 }
 
 export function SectionHeading({ children }: { children: ReactNode }) {
-  return <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{children}</h3>
+  return <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{children}</h3>
 }
 
 export function formatDate(value: string | null, withTime = false): string {

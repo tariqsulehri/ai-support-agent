@@ -56,7 +56,7 @@ export function SupportAgentSplitLogin({
 
         {/* Hero Title & Subhead */}
         <div className="relative z-10 my-auto py-6 md:py-8">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/80">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/80">
             ENTERPRISE CONVERSATIONAL AI
           </p>
           <h1 className="mt-3 text-2xl sm:text-4xl lg:text-[40px] font-bold tracking-tight leading-[1.15]">
@@ -114,7 +114,7 @@ export function SupportAgentSplitLogin({
             <div className="space-y-1.5">
               <label
                 htmlFor="email"
-                className="block text-[11px] font-bold uppercase tracking-wider text-slate-400"
+                className="block text-xs font-bold uppercase tracking-wider text-slate-400"
               >
                 Email
               </label>
@@ -135,7 +135,7 @@ export function SupportAgentSplitLogin({
             <div className="space-y-1.5">
               <label
                 htmlFor="password"
-                className="block text-[11px] font-bold uppercase tracking-wider text-slate-400"
+                className="block text-xs font-bold uppercase tracking-wider text-slate-400"
               >
                 Password
               </label>

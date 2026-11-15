@@ -74,7 +74,7 @@ function Donut({ segments, total }: { segments: Array<{ color: string; count: nu
       </svg>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
         <span className="text-2xl font-bold tabular-nums text-slate-950">{total.toLocaleString()}</span>
-        <span className="text-[11px] font-medium text-slate-400">conversations</span>
+        <span className="text-xs font-medium text-slate-400">conversations</span>
       </div>
     </div>
   )
@@ -107,16 +107,16 @@ export function DashboardSplitAnalytics({
   const mixItems = mixSource.slice(0, 6)
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <section className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:p-4">
         <h3 className="text-base font-semibold tracking-tight text-slate-950">Pipeline stages</h3>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-0.5 text-xs text-slate-500">
           {hotLeads.toLocaleString()} hot lead{hotLeads === 1 ? '' : 's'} · {qualifiedPipeline.toLocaleString()} in qualified, proposal or won.
         </p>
 
-        <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row sm:justify-around">
+        <div className="mt-3.5 flex flex-col items-center gap-4 sm:flex-row sm:justify-around">
           <Donut segments={stages} total={stagedTotal} />
-          <ul className="w-full flex-1 space-y-2 sm:w-auto">
+          <ul className="w-full flex-1 space-y-1.5 sm:w-auto">
             {stages.map((stage) => (
               <li key={stage.status} className="flex items-center justify-between gap-4 text-xs">
                 <span className="flex min-w-0 items-center gap-2">
@@ -133,7 +133,7 @@ export function DashboardSplitAnalytics({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
+      <section className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-base font-semibold tracking-tight text-slate-950">Demand mix</h3>
           <div className="inline-flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="Demand mix dimension">
@@ -142,21 +142,21 @@ export function DashboardSplitAnalytics({
             <ToggleButton active={mix === 'quality'} onClick={() => setMix('quality')}>Quality</ToggleButton>
           </div>
         </div>
-        <p className="mt-1 text-xs text-slate-500">Share of {totalCalls.toLocaleString()} conversations, largest first.</p>
+        <p className="mt-0.5 text-xs text-slate-500">Share of {totalCalls.toLocaleString()} conversations, largest first.</p>
 
         {mixItems.length === 0 ? (
-          <p className="mt-8 text-center text-xs text-slate-400">No classified conversations for this period yet.</p>
+          <p className="mt-5 text-center text-xs text-slate-400">No classified conversations for this period yet.</p>
         ) : (
-          <ul className="mt-5 space-y-3.5">
+          <ul className="mt-3.5 space-y-2.5">
             {mixItems.map((item) => (
-              <li key={item.label} className="space-y-1.5">
+              <li key={item.label} className="space-y-1">
                 <div className="flex items-center justify-between gap-3 text-xs">
                   <span className="truncate font-medium text-slate-800">{formatLabel(item.label)}</span>
                   <span className="shrink-0 tabular-nums text-slate-500">
                     <span className="font-semibold text-slate-900">{item.count.toLocaleString()}</span> · {pct(item.count, totalCalls)}%
                   </span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                   <div
                     className="h-full rounded-full bg-[#0052ff] transition-[width] duration-500"
                     style={{ width: `${Math.min(100, pct(item.count, totalCalls))}%` }}

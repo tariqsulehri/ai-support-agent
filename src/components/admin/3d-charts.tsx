@@ -158,7 +158,7 @@ export function GlossyDonutChart({
   })
 
   return (
-    <section className={`min-w-0 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_14px_35px_rgba(15,23,42,0.08)] transition-shadow hover:shadow-[0_20px_45px_rgba(15,23,42,0.12)] ${className}`}>
+    <section className={`min-w-0 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:p-4 transition-shadow hover:shadow-[0_4px_12px_rgba(15,23,42,0.08)] ${className}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
@@ -190,10 +190,16 @@ export function GlossyDonutChart({
           )}
         </div>
       )}
+      {items.length > 0 && effectiveTotal === 0 && (
+        <p className="mt-2 text-xs font-medium text-slate-500">All values are 0.</p>
+      )}
+      <figcaption className="sr-only">
+        {title}: {items.map((it) => `${it.label} ${it.value}`).join(', ') || 'No data to show yet.'}
+      </figcaption>
 
       {/* Main Content: 3D Donut Chart or Accessible Data Table */}
       {isTableView ? (
-        <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
+        <div className="mt-3.5 overflow-hidden rounded-xl border border-slate-200">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
               <tr>
@@ -228,7 +234,7 @@ export function GlossyDonutChart({
           </table>
         </div>
       ) : (
-        <div className="mt-5 grid items-center gap-6 sm:grid-cols-[minmax(160px,1fr)_1.25fr]">
+        <div className="mt-3.5 grid items-center gap-4 sm:grid-cols-[minmax(160px,1fr)_1.25fr]">
           <div className="glossy-donut-scene" style={{ width: size, height: size }}>
             {/* SVG Gradients Definition */}
             <svg width="0" height="0" className="absolute">
@@ -380,25 +386,28 @@ export function MonthlyCallVolumeChart({
   title?: string
 }) {
   const [isTableView, setIsTableView] = useState(false)
-  const chartId = useId().replace(/[:]/g, '')
   const total = items.reduce((sum, item) => sum + item.value, 0)
   const average = items.length ? total / items.length : 0
   const maximum = Math.max(...items.map((item) => item.value), 0)
-  const chartHeight = 176
-  const chartTop = 16
-  const chartBottom = 148
-  const chartRange = chartBottom - chartTop
-  const columnWidth = 40
-  const chartWidth = Math.max(items.length * 82, 360)
-  const averageY = chartBottom - (maximum > 0 ? (average / maximum) * chartRange : 0)
+  const scaleMax = maximum > 0 ? maximum : 10
+  const yTicks = [
+    scaleMax,
+    Math.round((scaleMax * 2) / 3),
+    Math.round(scaleMax / 3),
+    0,
+  ]
+  const avgPercent = scaleMax > 0 ? Math.min(100, Math.max(0, (average / scaleMax) * 100)) : 0
 
   return (
-    <section className="min-w-0 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_14px_35px_rgba(15,23,42,0.08)]">
+    <section className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h3 className="text-base font-bold tracking-tight text-slate-950">{title}</h3>
-            <ChartInfoButton title={title} infoText="Completed conversations grouped by month over the last six months. The dashed line marks the monthly average." />
+            <ChartInfoButton
+              title={title}
+              infoText="Completed conversations grouped by month over the last six months. The dashed line marks the monthly average."
+            />
           </div>
           <p className="mt-0.5 text-xs text-slate-500">Last 6 months · dashed line is the monthly average</p>
         </div>
@@ -414,9 +423,15 @@ export function MonthlyCallVolumeChart({
           />
         </div>
       </div>
+      <figcaption className="sr-only">
+        {title}: {items.map((it) => `${it.label} ${it.value} calls`).join(', ') || 'No data to show yet.'}
+      </figcaption>
+      {items.length > 0 && total === 0 && (
+        <p className="mt-2 text-xs font-medium text-slate-500">All values are 0.</p>
+      )}
 
       {isTableView ? (
-        <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
+        <div className="mt-3.5 overflow-hidden rounded-xl border border-slate-200">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-slate-200 bg-slate-50 font-semibold text-slate-700">
               <tr>
@@ -438,62 +453,86 @@ export function MonthlyCallVolumeChart({
           </table>
         </div>
       ) : (
-        <div className="mt-4 overflow-x-auto" role="img" aria-label={`${title}: ${items.map((item) => `${item.label}, ${item.value} calls`).join('; ') || 'No data available'}`}>
-          <svg
-            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-            className="block h-[210px] min-w-full"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient id={`call-column-${chartId}`} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#2563eb" />
-                <stop offset="55%" stopColor="#0052ff" />
-                <stop offset="100%" stopColor="#0b347f" />
-              </linearGradient>
-            </defs>
-            {[0, 1, 2, 3].map((step) => {
-              const y = chartTop + (chartRange / 3) * step
-              const value = maximum > 0 ? Math.round(maximum * (1 - step / 3)) : 0
-              return (
-                <g key={step}>
-                  <line x1="40" x2={chartWidth - 8} y1={y} y2={y} stroke="#dbe3ec" strokeDasharray="2 4" />
-                  <text x="32" y={y + 3} textAnchor="end" fill="#64748b" fontSize="9">{value}</text>
-                </g>
-              )
-            })}
-            <line
-              x1="40"
-              x2={chartWidth - 8}
-              y1={averageY}
-              y2={averageY}
-              stroke="#ea580c"
-              strokeWidth="1.5"
-              strokeDasharray="5 4"
-            />
-            {items.map((item, index) => {
-              const slotWidth = (chartWidth - 50) / Math.max(items.length, 1)
-              const x = 40 + slotWidth * index + (slotWidth - columnWidth) / 2
-              const barHeight = maximum > 0 ? (item.value / maximum) * chartRange : 0
-              const y = chartBottom - barHeight
-              return (
-                <g key={item.label}>
-                  <rect x={x} y={chartTop} width={columnWidth} height={chartRange} rx="6" fill="#f1f5f9" />
-                  <rect x={x} y={y} width={columnWidth} height={barHeight} rx="6" fill={`url(#call-column-${chartId})`} />
-                  <title>{`${item.label}: ${item.value} calls`}</title>
-                  <text x={x + columnWidth / 2} y={chartBottom + 18} textAnchor="middle" fill="#475569" fontSize="10">
-                    {item.label}
-                  </text>
-                  {item.value > 0 && item.value === maximum && (
-                    <text x={x + columnWidth / 2} y={Math.max(y - 7, 10)} textAnchor="middle" fill="#0f172a" fontSize="10" fontWeight="600">
+        <div
+          className="mt-3.5 flex gap-3 h-[180px] w-full"
+          role="img"
+          aria-label={`${title}: ${items.map((item) => `${item.label}, ${item.value} calls`).join('; ') || 'No data available'}`}
+        >
+          {/* Y-Axis Ticks */}
+          <div className="relative w-8 shrink-0 h-[132px] select-none text-right">
+            <span className="absolute top-0 right-1 -translate-y-1/2 text-xs font-medium tabular-nums text-slate-400 leading-none">
+              {yTicks[0]}
+            </span>
+            <span className="absolute top-[33.33%] right-1 -translate-y-1/2 text-xs font-medium tabular-nums text-slate-400 leading-none">
+              {yTicks[1]}
+            </span>
+            <span className="absolute top-[66.67%] right-1 -translate-y-1/2 text-xs font-medium tabular-nums text-slate-400 leading-none">
+              {yTicks[2]}
+            </span>
+            <span className="absolute bottom-0 right-1 translate-y-1/2 text-xs font-medium tabular-nums text-slate-400 leading-none">
+              {yTicks[3]}
+            </span>
+          </div>
+
+          {/* Plot Area */}
+          <div className="relative flex-1 h-[132px]">
+            {/* Gridlines */}
+            <div className="absolute top-0 inset-x-0 border-b border-dashed border-slate-200 pointer-events-none" />
+            <div className="absolute top-[33.33%] inset-x-0 border-b border-dashed border-slate-200 pointer-events-none" />
+            <div className="absolute top-[66.67%] inset-x-0 border-b border-dashed border-slate-200 pointer-events-none" />
+            <div className="absolute bottom-0 inset-x-0 border-b border-slate-300 pointer-events-none" />
+
+            {/* Average Reference Line */}
+            {average > 0 && scaleMax > 0 && (
+              <div
+                className="absolute inset-x-0 border-b-2 border-dashed border-amber-500 z-10 pointer-events-none transition-all duration-300"
+                style={{ bottom: `${avgPercent}%` }}
+                title={`Monthly average: ${average.toFixed(1)}`}
+              />
+            )}
+
+            {/* Columns */}
+            <div className="absolute inset-0 flex items-end justify-around px-2 sm:px-6">
+              {items.map((item) => {
+                const heightPercent = scaleMax > 0 ? (item.value / scaleMax) * 100 : 0
+                const isMax = item.value > 0 && item.value === maximum
+                return (
+                  <div
+                    key={item.label}
+                    className="group relative flex flex-col items-center justify-end h-full w-12 sm:w-16 max-w-[64px]"
+                  >
+                    {/* Peak / Hover Value Above Bar */}
+                    <span
+                      className={`absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-bold tabular-nums text-slate-800 transition-opacity ${
+                        isMax ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                    >
                       {item.value}
-                    </text>
-                  )}
-                </g>
-              )
-            })}
-            <line x1="40" x2={chartWidth - 8} y1={chartBottom} y2={chartBottom} stroke="#cbd5e1" />
-          </svg>
+                    </span>
+
+                    {/* Bar Track & Fill */}
+                    <div
+                      className="relative w-8 sm:w-10 h-full rounded-md bg-slate-100 flex items-end overflow-hidden shadow-inner cursor-pointer"
+                      title={`${item.label}: ${item.value} calls`}
+                    >
+                      <div
+                        className="w-full rounded-md bg-gradient-to-t from-[#0b347f] via-[#0052ff] to-[#2563eb] shadow-[0_2px_8px_rgba(0,82,255,0.35)] transition-all duration-300 group-hover:brightness-110"
+                        style={{
+                          height: `${heightPercent}%`,
+                          minHeight: item.value > 0 ? '4px' : '0px',
+                        }}
+                      />
+                    </div>
+
+                    {/* Month Label Below Baseline */}
+                    <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-semibold text-slate-600 whitespace-nowrap group-hover:text-slate-900 transition-colors">
+                      {item.label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
     </section>
@@ -522,7 +561,7 @@ export function GlossyBarChart({
   const effectiveTotal = total ?? items.reduce((sum, item) => sum + item.value, 0)
 
   return (
-    <section className="min-w-0 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_14px_35px_rgba(15,23,42,0.08)] transition-shadow hover:shadow-[0_20px_45px_rgba(15,23,42,0.12)]">
+    <section className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:p-4 transition-shadow hover:shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
@@ -540,8 +579,14 @@ export function GlossyBarChart({
           />
         </div>
       </div>
+      <figcaption className="sr-only">
+        {title}: {items.map((it) => `${it.label} ${it.value}`).join(', ') || 'No data to show yet.'}
+      </figcaption>
+      {items.length > 0 && effectiveTotal === 0 && (
+        <p className="mt-2 text-xs font-medium text-slate-500">All values are 0.</p>
+      )}
       {isTableView ? (
-        <div className="mt-5 overflow-hidden rounded-xl border border-slate-200">
+        <div className="mt-3.5 overflow-hidden rounded-xl border border-slate-200">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-slate-200 bg-slate-50 font-semibold text-slate-700">
               <tr>
@@ -576,7 +621,7 @@ export function GlossyBarChart({
           </table>
         </div>
       ) : variant === 'funnel' ? (
-        <div className="mt-5 space-y-3">
+        <div className="mt-3.5 space-y-2">
           {items.length ? items.map((item) => {
             const share = toPercent(item.value, effectiveTotal)
             const width = Math.max(share, item.value > 0 ? 12 : 0)
@@ -598,10 +643,10 @@ export function GlossyBarChart({
                 </span>
               </div>
             )
-          }) : <p className="text-sm text-slate-500">No data yet.</p>}
+          }) : <p className="text-xs text-slate-500">No data to show yet.</p>}
         </div>
       ) : (
-        <div className="mt-5 space-y-4">
+        <div className="mt-3.5 space-y-2.5">
           {items.length ? items.map((item) => {
             const width = variant === 'distribution'
               ? Math.max(toPercent(item.value, effectiveTotal), item.value > 0 ? 4 : 0)
@@ -617,7 +662,7 @@ export function GlossyBarChart({
                 </div>
               </div>
             )
-          }) : <p className="text-sm text-slate-500">No data yet.</p>}
+          }) : <p className="text-xs text-slate-500">No data to show yet.</p>}
         </div>
       )}
     </section>

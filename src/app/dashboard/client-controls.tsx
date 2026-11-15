@@ -75,7 +75,7 @@ export const LeadStarRating = memo(function LeadStarRating({
         ))}
       </span>
       {showLabel && (
-        <span className="hidden text-[10px] font-semibold text-amber-900 sm:inline" aria-hidden="true">
+        <span className="hidden text-xs font-semibold text-amber-900 sm:inline" aria-hidden="true">
           {label}
         </span>
       )}
@@ -161,7 +161,7 @@ export function OptimisticStatusForm({
         )}
       </div>
       {error && (
-        <p role="alert" className="mt-1 text-[11px] font-medium text-rose-600">
+        <p role="alert" className="mt-1 text-xs font-medium text-rose-600">
           {error}
         </p>
       )}
@@ -240,7 +240,7 @@ export function LeadManagementForm({
         </label>
       </fieldset>
       {!readOnly && <SubmitButton className={cx(btnPrimary, 'w-full')}>Save lead plan</SubmitButton>}
-      <p aria-live="polite" className={cx('min-h-[1rem] text-[11px] font-medium', state?.ok ? 'text-emerald-700' : 'text-rose-600')}>
+      <p aria-live="polite" className={cx('min-h-[1rem] text-xs font-medium', state?.ok ? 'text-emerald-700' : 'text-rose-600')}>
         {state ? (state.ok ? state.message : state.error) : readOnly ? 'Read-only access.' : ''}
       </p>
     </form>
@@ -317,7 +317,7 @@ export function FilterBar({ exportHref }: { exportHref: string }) {
     <div
       role="search"
       aria-busy={isPending}
-      className="grid gap-3 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:grid-cols-2 sm:p-5 lg:grid-cols-[1.6fr_repeat(5,minmax(0,1fr))_auto] lg:items-end"
+      className="grid gap-2.5 rounded-xl border border-slate-200/90 bg-white px-3.5 py-3 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:grid-cols-2 sm:px-4 sm:py-3 lg:grid-cols-[1.6fr_repeat(5,minmax(0,1fr))_auto] lg:items-end"
     >
       <label className="block min-w-0 sm:col-span-2 lg:col-span-1">
         <span className={fieldLabel}>Search</span>

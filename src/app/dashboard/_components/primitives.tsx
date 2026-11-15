@@ -18,7 +18,7 @@ const BADGE_TONES: Record<Tone, { pill: string; dot: string }> = {
 export function Badge({ children, tone = 'blue' }: { children: ReactNode; tone?: Tone }) {
   const t = BADGE_TONES[tone] ?? BADGE_TONES.blue
   return (
-    <span className={cx('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-semibold', t.pill)}>
+    <span className={cx('inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold', t.pill)}>
       <span className={cx('h-1.5 w-1.5 shrink-0 rounded-full', t.dot)} aria-hidden="true" />
       {children}
     </span>
@@ -54,7 +54,7 @@ export function InfoTip({ label, text }: { label: string; text: string }) {
       </button>
       <span
         role="tooltip"
-        className="pointer-events-none absolute right-0 top-full z-30 mt-1 hidden w-52 rounded-lg bg-slate-900 p-2.5 text-[11px] font-medium leading-relaxed text-white shadow-xl group-focus-within/tip:block group-hover/tip:block"
+        className="pointer-events-none absolute right-0 top-full z-30 mt-1 hidden w-52 rounded-lg bg-slate-900 p-2.5 text-xs font-medium leading-relaxed text-white shadow-xl group-focus-within/tip:block group-hover/tip:block"
       >
         {text}
       </span>
@@ -102,25 +102,25 @@ export function StatCard({
   progress?: number
 }) {
   return (
-    <div className={cx(card, 'flex flex-col justify-between p-4 sm:p-5')}>
-      <div className="flex items-center justify-between gap-2">
+    <div className={cx(card, 'flex flex-col justify-between p-3.5 sm:p-4')}>
+      <div className="flex items-center justify-between gap-1.5">
         <div className="flex min-w-0 items-center gap-2">
-          <span className={cx('flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border', STAT_TONES[tone])}>
-            <Icon name={icon} className="h-3.5 w-3.5" />
+          <span className={cx('flex h-5 w-5 shrink-0 items-center justify-center rounded-md border', STAT_TONES[tone])}>
+            <Icon name={icon} className="h-3 w-3" />
           </span>
           <span className="truncate text-xs font-semibold text-slate-700">{label}</span>
         </div>
         {tooltip && <InfoTip label={label} text={tooltip} />}
       </div>
 
-      <div className="mt-3">
+      <div className="mt-2">
         <div className="flex flex-wrap items-baseline gap-1.5">
-          <span className="text-2xl font-bold tracking-tight text-slate-950 tabular-nums sm:text-3xl">{value}</span>
+          <span className="text-xl font-bold tracking-tight text-slate-950 tabular-nums sm:text-2xl">{value}</span>
           {context && <span className="text-xs font-medium text-slate-400">{context}</span>}
         </div>
         {typeof progress === 'number' && (
           <div
-            className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
+            className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
             role="progressbar"
             aria-label={label}
             aria-valuenow={Math.round(progress)}
@@ -135,7 +135,7 @@ export function StatCard({
         )}
       </div>
 
-      <p className="mt-2 truncate text-[11px] font-medium text-slate-500" title={detail}>
+      <p className="mt-1.5 truncate text-xs font-medium text-slate-500" title={detail}>
         {detail}
       </p>
     </div>

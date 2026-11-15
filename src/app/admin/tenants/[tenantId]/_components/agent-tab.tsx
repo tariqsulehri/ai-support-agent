@@ -22,29 +22,29 @@ export function AgentTab({ data, canManage }: { data: TenantDetailData; canManag
           )
         }
       >
-        <ActionForm id="agent-settings-form" className="space-y-5">
+        <ActionForm id="agent-settings-form" className="space-y-3.5">
           <input type="hidden" name="tenantId" value={data.tenant.tenantId} />
           {readOnly && (
-            <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
+            <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
               You have read-only access. A tenant owner or admin can change these settings.
             </p>
           )}
 
-          <fieldset disabled={readOnly} className="space-y-5">
+          <fieldset disabled={readOnly} className="space-y-3.5">
             <legend className="sr-only">Agent persona</legend>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Company / Brand Name" name="companyName" defaultValue={settings.companyName} required maxLength={120} />
               <Field label="Assistant Name" name="agentName" defaultValue={settings.agentName} required maxLength={80} />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Tone & Persona" name="tone" defaultValue={settings.tone} required maxLength={200} />
               <div className="min-w-0">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Language Mode</span>
-                <p className="mt-1.5 flex h-10 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Language Mode</span>
+                <p className="mt-1 flex h-9 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs text-slate-600">
                   {formatLabel(settings.languageMode)}
                 </p>
-                <span className="mt-1 block text-[11px] text-slate-500">Managed by the platform.</span>
+                <span className="mt-0.5 block text-xs text-slate-500">Managed by the platform.</span>
               </div>
             </div>
 

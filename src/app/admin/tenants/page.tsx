@@ -103,7 +103,7 @@ function EmptyState({ children }: { children: ReactNode }) {
 function StatCard({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
     <div className="rounded-xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_16px_-2px_rgba(15,23,42,0.06)]">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <p className="mt-2 text-3xl font-extrabold tabular-nums text-slate-950">{value}</p>
       <div className={`mt-2.5 h-1.5 w-14 rounded-full ${accent}`} />
     </div>
@@ -151,7 +151,7 @@ function TenantTable({ tenants }: { tenants: ManagedTenantSummary[] }) {
       <div className="-mx-4 overflow-x-auto sm:mx-0 sm:rounded-xl sm:border sm:border-slate-200/80">
         <table className="w-full min-w-[860px] text-left text-sm">
           <caption className="sr-only">Registered tenants</caption>
-          <thead className="bg-slate-50/90 text-[11px] uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th scope="col" className={thClass}>Tenant</th>
               <th scope="col" className={thClass}>Domains</th>
@@ -178,7 +178,7 @@ function TenantTable({ tenants }: { tenants: ManagedTenantSummary[] }) {
                   <td className={tdClass}>
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge status={tenant.subscriptionStatus} />
-                      <span className="rounded-full border border-indigo-200/90 bg-indigo-50 px-2.5 py-0.5 text-[11px] font-bold text-indigo-800">
+                      <span className="rounded-full border border-indigo-200/90 bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-800">
                         {formatLabel(tenant.subscriptionType)}
                       </span>
                     </div>
@@ -254,7 +254,7 @@ function CreateTenantPanel({ suggestedEmbedToken }: { suggestedEmbedToken: strin
             </div>
             <Field label="Embed Token" name="embedToken" required defaultValue={suggestedEmbedToken} autoComplete="off" />
             <fieldset className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-4">
-              <legend className="px-1 text-[11px] font-bold uppercase tracking-wider text-slate-700">Tenant Admin Login (optional)</legend>
+              <legend className="px-1 text-xs font-bold uppercase tracking-wider text-slate-700">Tenant Admin Login (optional)</legend>
               <div className="space-y-3">
                 <Field label="Admin Name" name="adminName" placeholder="Tenant Admin" maxLength={120} />
                 <Field label="Admin Email" name="adminEmail" type="email" placeholder="admin@example.com" autoComplete="off" />
@@ -357,7 +357,7 @@ function UsagePanel({
       <div className="-mx-4 overflow-x-auto sm:mx-0 sm:rounded-xl sm:border sm:border-slate-200/80">
         <table className="w-full min-w-[980px] text-left text-sm">
           <caption className="sr-only">Usage counters per tenant</caption>
-          <thead className="bg-slate-50/90 text-[11px] uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th scope="col" className={thClass}>Tenant</th>
               <th scope="col" className={thClass}>Total</th>
@@ -428,14 +428,14 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
   }))
 
   return (
-    <main className="min-h-dvh bg-[#f6f8fb] px-4 py-6 text-slate-950 sm:py-8">
-      <div className="mx-auto w-full max-w-7xl space-y-5">
-        <header className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm sm:p-6">
+    <main className="min-h-dvh bg-[#f6f8fb] px-3.5 py-4 text-slate-950 sm:px-6 sm:py-5">
+      <div className="mx-auto w-full max-w-7xl space-y-3.5">
+        <header className="rounded-xl border border-slate-200/90 bg-white px-4 py-3 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:px-5 sm:py-3.5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-wider text-[#0052ff]">Platform Admin</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">Tenant Management</h1>
-              <p className="mt-1 text-xs font-medium text-slate-500">
+              <h1 className="mt-0.5 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">Tenant Management</h1>
+              <p className="text-xs font-medium text-slate-500">
                 Control tenant access, runtime readiness, subscriptions, and deployment settings.
               </p>
             </div>
@@ -453,7 +453,7 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
           </div>
         </header>
 
-        <section className="grid gap-3.5 sm:grid-cols-3" aria-label="Tenant totals">
+        <section className="grid gap-2.5 sm:grid-cols-3" aria-label="Tenant totals">
           <StatCard label="Active tenants" value={activeTenants.length} accent="bg-emerald-500" />
           <StatCard label="Archived" value={archivedTenants.length} accent="bg-slate-400" />
           <StatCard
@@ -464,7 +464,7 @@ export default async function AdminTenantsPage({ searchParams }: TenantsPageProp
         </section>
 
         {(selectedTab === 'tenants' || selectedTab === 'usage') && (
-          <section className="grid gap-4 xl:grid-cols-2" aria-label="Platform metrics">
+          <section className="grid gap-3 xl:grid-cols-2" aria-label="Platform metrics">
             <GlossyDonutChart
               title="Tenant Status"
               infoTooltip="Registered tenant accounts grouped by active, disabled, and archived status."

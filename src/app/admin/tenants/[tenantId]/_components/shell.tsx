@@ -51,7 +51,7 @@ export function DetailHeader({ viewer, voiceUrl }: { viewer: ViewerInfo; voiceUr
           href={voiceUrl}
           target="_blank"
           rel="noreferrer"
-          className={`hidden items-center gap-1.5 rounded-xl border border-emerald-200/90 bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-800 transition hover:bg-emerald-100 sm:inline-flex ${focusRing}`}
+          className={`hidden items-center gap-1.5 rounded-xl border border-emerald-200/90 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100 sm:inline-flex ${focusRing}`}
         >
           <MicIcon className="h-3.5 w-3.5 text-emerald-600" />
           <span>Test Voice Agent</span>
@@ -63,7 +63,7 @@ export function DetailHeader({ viewer, voiceUrl }: { viewer: ViewerInfo; voiceUr
           <Avatar initials={viewer.initials} />
           <div className="hidden text-left sm:block">
             <p className="text-xs font-bold leading-tight text-slate-900">{viewer.name}</p>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">{viewer.roleTitle}</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{viewer.roleTitle}</p>
           </div>
         </div>
       </div>
@@ -126,7 +126,7 @@ export function DetailSidebar({
         <Avatar initials={viewer.initials} size="h-9 w-9" />
         <div className="min-w-0 text-left">
           <p className="truncate text-xs font-bold text-slate-900">{viewer.name}</p>
-          <p className="truncate font-mono text-[10px] text-slate-500">
+          <p className="truncate font-mono text-xs text-slate-500">
             {tenantId} · {viewer.roleTitle}
           </p>
         </div>

@@ -31,28 +31,36 @@ export async function GET(req: NextRequest) {
   }
   const includeSummary = sp.get('summary') === '1'
 
-  const analytics = await getDashboardAnalytics(filters, {
-    scope: dashboardScopeForSession(session),
-    sections: { list: true, aggregates: includeSummary, followUps: includeSummary, followUpQueue: false, selected: false },
-  })
+  try {
+    const analytics = await getDashboardAnalytics(filters, {
+      scope: dashboardScopeForSession(session),
+      sections: { list: true, aggregates: includeSummary, followUps: includeSummary, followUpQueue: false, selected: false },
+    })
 
-  return NextResponse.json(
-    {
-      records: analytics.recentCalls,
-      pagination: analytics.pagination,
-      ...(includeSummary && {
-        summary: {
-          totalCalls: analytics.totalCalls,
-          filteredCalls: analytics.filteredCalls,
-          callsWithLead: analytics.callsWithLead,
-          hotLeads: analytics.hotLeads,
-          qualifiedPipeline: analytics.qualifiedPipeline,
-          openFollowUps: analytics.openFollowUps,
-          conversionReadiness: analytics.conversionReadiness,
-        },
-      }),
-      generatedAt: analytics.generatedAt,
-    },
-    { headers: { 'Cache-Control': 'private, no-store' } }
-  )
+    return NextResponse.json(
+      {
+        records: analytics.recentCalls,
+        pagination: analytics.pagination,
+        ...(includeSummary && {
+          summary: {
+            totalCalls: analytics.totalCalls,
+            filteredCalls: analytics.filteredCalls,
+            callsWithLead: analytics.callsWithLead,
+            hotLeads: analytics.hotLeads,
+            qualifiedPipeline: analytics.qualifiedPipeline,
+            openFollowUps: analytics.openFollowUps,
+            conversionReadiness: analytics.conversionReadiness,
+          },
+        }),
+        generatedAt: analytics.generatedAt,
+      },
+      { headers: { 'Cache-Control': 'private, no-store' } }
+    )
+  } catch (err) {
+    console.error('[api:dashboard:calls] analytics query failed', err instanceof Error ? err.message : err)
+    return NextResponse.json(
+      { error: 'Internal server error', code: 'INTERNAL_ERROR' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
+    )
+  }
 }
