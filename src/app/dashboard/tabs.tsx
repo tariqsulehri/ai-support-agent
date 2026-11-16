@@ -11,10 +11,10 @@ import {
   Distribution,
   DonutChart,
   EmptyState,
-  HeroBannerCard,
   LeadDetailPanel,
   PaginationControls,
   Panel,
+  PanelHeader,
   PipelineFunnel,
   StatCard,
   percent,
@@ -28,7 +28,7 @@ function plural(n: number, word: string) {
 
 /* ───────────────────────── Overview ───────────────────────── */
 
-export function OverviewTab({ analytics, userName }: { analytics: DashboardAnalytics; userName?: string }) {
+export function OverviewTab({ analytics }: { analytics: DashboardAnalytics }) {
   const n = analytics.filteredCalls
   const positive = analytics.sentimentCounts.find((s) => s.label === 'positive')?.count ?? 0
   const topService = analytics.serviceCounts[0]
@@ -44,8 +44,6 @@ export function OverviewTab({ analytics, userName }: { analytics: DashboardAnaly
 
   return (
     <div className="space-y-3.5">
-      <HeroBannerCard userName={userName} analytics={analytics} />
-
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           icon="communications"
@@ -313,25 +311,18 @@ function InsightList({ items, tone }: { items: string[]; tone: 'blue' | 'rose' }
 export function AiTab({ analytics, canEdit = true }: { analytics: DashboardAnalytics; canEdit?: boolean }) {
   return (
     <div className="grid gap-6 xl:grid-cols-2">
-      <Panel className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-[#0052ff]">
-            <Icon name="ai" />
-          </span>
-          <h2 className={sectionTitle}>Recommendations</h2>
+      <Panel>
+        <PanelHeader title="Recommendations" icon="ai" description="Derived from aggregate counts for all conversations matching the filters." />
+        <div className="p-5 sm:p-6">
+          <InsightList items={analytics.aiRecommendations} tone="blue" />
         </div>
-        <InsightList items={analytics.aiRecommendations} tone="blue" />
-        <p className="mt-3 text-xs text-slate-400">Derived from aggregate counts for all conversations matching the filters.</p>
       </Panel>
 
-      <Panel className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600">
-            <Icon name="warning" />
-          </span>
-          <h2 className={sectionTitle}>Risk signals</h2>
+      <Panel>
+        <PanelHeader title="Risk signals" icon="warning" iconTone="rose" />
+        <div className="p-5 sm:p-6">
+          <InsightList items={analytics.riskSignals} tone="rose" />
         </div>
-        <InsightList items={analytics.riskSignals} tone="rose" />
       </Panel>
 
       <section className="xl:col-span-2">
@@ -359,10 +350,9 @@ export function CapabilitiesTab() {
     <div className="space-y-6">
       <div className="grid gap-4 lg:grid-cols-3">
         {capabilityCards.map((card) => (
-          <Panel key={card.title} className="p-6">
-            <h2 className={sectionTitle}>{card.title}</h2>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">{card.summary}</p>
-            <ul className="mt-4 space-y-2">
+          <Panel key={card.title}>
+            <PanelHeader title={card.title} description={card.summary} />
+            <ul className="space-y-2 p-5 sm:p-6">
               {card.points.map((point) => (
                 <li key={point} className="flex items-center gap-2 rounded-xl border border-slate-200/80 px-3.5 py-2.5 text-xs font-medium text-slate-800">
                   <Icon name="check" className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
@@ -376,14 +366,16 @@ export function CapabilitiesTab() {
 
       <div className="grid gap-4 xl:grid-cols-3">
         {featureCards.map((card, index) => (
-          <Panel key={card.title} className="p-6">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
-              <h2 className={sectionTitle}>{card.title}</h2>
-              <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${softClasses[index % softClasses.length]}`}>
-                {card.items.length} items
-              </span>
-            </div>
-            <ul className="mt-4 space-y-2">
+          <Panel key={card.title}>
+            <PanelHeader
+              title={card.title}
+              actions={
+                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${softClasses[index % softClasses.length]}`}>
+                  {card.items.length} items
+                </span>
+              }
+            />
+            <ul className="space-y-2 p-5 sm:p-6">
               {card.items.map((item) => (
                 <li key={item} className="rounded-xl border border-slate-200/80 px-3.5 py-2 text-xs leading-relaxed text-slate-700">
                   {item}
@@ -394,12 +386,9 @@ export function CapabilitiesTab() {
         ))}
       </div>
 
-      <Panel className="p-6">
-        <div className="border-b border-slate-100 pb-4">
-          <h2 className="text-lg font-semibold tracking-tight text-slate-950">Application stack</h2>
-          <p className="mt-1 text-xs text-slate-500">Runtime, AI, data and delivery tools behind the Support Agent.</p>
-        </div>
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <Panel>
+        <PanelHeader title="Application stack" description="Runtime, AI, data and delivery tools behind the Support Agent." />
+        <div className="grid gap-4 p-5 sm:p-6 md:grid-cols-2 xl:grid-cols-4">
           {technologyGroups.map((group) => (
             <div key={group.title} className="rounded-2xl border border-slate-200/90 bg-slate-50/50 p-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-700">{group.title}</h3>
@@ -444,21 +433,20 @@ export function PlatformTenantsTab({ tenants }: { tenants: ManagedTenantSummary[
 
   return (
     <div className="space-y-6">
-      <Panel className="p-6">
-        <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight text-slate-950">Tenant control center</h2>
-            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-500">
-              Manage tenant accounts, review subscription state and open a tenant&apos;s configuration.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Link href="/admin/tenants" className={btnSecondary}>Manage all tenants</Link>
-            <Link href="/admin/tenants?tab=create" className={btnPrimary}>+ Create tenant</Link>
-          </div>
-        </div>
+      <Panel>
+        <PanelHeader
+          title="Tenant control center"
+          icon="tenants"
+          description="Manage tenant accounts, review subscription state and open a tenant's configuration."
+          actions={
+            <>
+              <Link href="/admin/tenants?tab=tenants" className={btnSecondary}>Manage all tenants</Link>
+              <Link href="/admin/tenants?tab=create" className={btnPrimary}>+ Create tenant</Link>
+            </>
+          }
+        />
 
-        <div className="mt-6 grid gap-3.5 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid gap-3.5 p-5 sm:grid-cols-2 sm:p-6 md:grid-cols-4">
           <StatCard label="Total tenants" value={tenants.length} detail="registered accounts" icon="tenants" />
           <StatCard label="Active" value={active} detail="currently enabled" tone="emerald" icon="check" progress={percent(active, tenants.length)} />
           <StatCard label="Disabled" value={disabled} detail="temporarily disabled" tone="amber" icon="clock" />
@@ -491,13 +479,13 @@ export function PlatformTenantsTab({ tenants }: { tenants: ManagedTenantSummary[
       </div>
 
       <Panel>
-        <div className="flex items-center justify-between border-b border-slate-100 p-5 sm:p-6">
-          <div>
-            <h3 className={sectionTitle}>Tenant accounts</h3>
-            <p className="mt-0.5 text-xs text-slate-500">Open a tenant to configure domains, subscription, users and setup.</p>
-          </div>
-          <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{tenants.length} total</span>
-        </div>
+        <PanelHeader
+          title="Tenant accounts"
+          description="Open a tenant to configure domains, subscription, users and setup."
+          actions={
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">{tenants.length} total</span>
+          }
+        />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-xs">
             <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -571,18 +559,15 @@ export function TenantConfigurationTab({ tenantId, detail }: { tenantId?: string
   const email = detail.settings.emailNotifications
 
   return (
-    <Panel className="p-6">
-      <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight text-slate-950">{detail.tenant.companyName}</h2>
-          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-500">
-            Configure the agent persona, OpenAI credentials, lead database, SMTP alerts, domain verification and the website embed snippet.
-          </p>
-        </div>
-        <Link href={settingsHref} className={`${btnPrimary} shrink-0`}>Open configuration →</Link>
-      </div>
+    <Panel>
+      <PanelHeader
+        title={detail.tenant.companyName}
+        icon="configuration"
+        description="Configure the agent persona, OpenAI credentials, lead database, SMTP alerts, domain verification and the website embed snippet."
+        actions={<Link href={settingsHref} className={btnPrimary}>Open configuration →</Link>}
+      />
 
-      <div className="mt-6 grid gap-3.5 md:grid-cols-2">
+      <div className="grid gap-3.5 p-5 sm:p-6 md:grid-cols-2">
         <ConfigurationStatus
           label="OpenAI key"
           detail={detail.openAiSecret ? `Stored as ${detail.openAiSecret.maskedValue}.` : 'No OpenAI key configured.'}

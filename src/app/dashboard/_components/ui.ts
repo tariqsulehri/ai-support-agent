@@ -3,12 +3,15 @@
  * inputs and cards visually consistent and avoids 300-character class strings
  * being copy-pasted (and drifting) across components.
  */
+import { cardSurface } from '@/components/admin/surface'
+
 export const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' ')
 
 export const focusRing =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0052ff]/40 focus-visible:ring-offset-1'
 
-export const card = 'rounded-2xl border border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.05)]'
+// Card surface comes from the shared admin token so the whole app elevates cards the same way.
+export const card = cardSurface
 
 export const btnBase = cx(
   'inline-flex items-center justify-center gap-1.5 rounded-xl text-xs font-semibold transition-colors duration-100',

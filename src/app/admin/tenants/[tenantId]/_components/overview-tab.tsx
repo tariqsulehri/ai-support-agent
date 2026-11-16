@@ -7,6 +7,7 @@ import { CopyButton } from './copy-button'
 import { TabLink } from './tab-state'
 import { InfoList, InfoRow, formatDate } from './ui'
 import { readiness, type TabKey, type TenantDetailData } from './types'
+import { cardHeaderBand, cardSurface } from '@/components/admin/surface'
 
 type Requirement = { id: string; label: string; description: string; complete: boolean; tab: TabKey }
 
@@ -76,9 +77,10 @@ export function OverviewTab({ data, isPlatformAdmin }: { data: TenantDetailData;
     <>
       <section
         aria-labelledby="setup-checklist-heading"
-        className="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm"
+        className={`overflow-hidden ${cardSurface}`}
       >
-        <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-3 sm:px-5 sm:py-3.5">
+        <div className="h-1 w-full bg-gradient-to-r from-[#0052ff] via-[#1d4ed8] to-[#133cb4]" aria-hidden="true" />
+        <div className={`px-4 py-3 sm:px-5 sm:py-3.5 ${cardHeaderBand}`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 id="setup-checklist-heading" className="text-sm font-bold tracking-tight text-slate-900">

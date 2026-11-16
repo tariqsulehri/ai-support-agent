@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { formatLabel } from '@/lib/admin/forms'
+import { cardHeaderBand, cardSurface } from './surface'
 
 type Count = { label: string; count: number }
 
@@ -23,6 +24,9 @@ const STAGES = [
   { status: 'won', label: 'Won', color: '#10b981' },
   { status: 'lost', label: 'Lost', color: '#f43f5e' },
 ] as const
+
+// Header band bleeds to the card edges (negative margins match the card padding).
+const bandClass = `-mx-3.5 -mt-3.5 rounded-t-2xl px-3.5 py-3 sm:-mx-4 sm:-mt-4 sm:px-4 ${cardHeaderBand}`
 
 const pct = (part: number, total: number) => (total > 0 ? Math.round((part / total) * 100) : 0)
 
@@ -108,11 +112,13 @@ export function DashboardSplitAnalytics({
 
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-      <section className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:p-4">
-        <h3 className="text-base font-semibold tracking-tight text-slate-950">Pipeline stages</h3>
-        <p className="mt-0.5 text-xs text-slate-500">
-          {hotLeads.toLocaleString()} hot lead{hotLeads === 1 ? '' : 's'} · {qualifiedPipeline.toLocaleString()} in qualified, proposal or won.
-        </p>
+      <section className={`p-3.5 sm:p-4 ${cardSurface}`}>
+        <div className={bandClass}>
+          <h3 className="text-base font-semibold tracking-tight text-slate-950">Pipeline stages</h3>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {hotLeads.toLocaleString()} hot lead{hotLeads === 1 ? '' : 's'} · {qualifiedPipeline.toLocaleString()} in qualified, proposal or won.
+          </p>
+        </div>
 
         <div className="mt-3.5 flex flex-col items-center gap-4 sm:flex-row sm:justify-around">
           <Donut segments={stages} total={stagedTotal} />
@@ -133,16 +139,18 @@ export function DashboardSplitAnalytics({
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-base font-semibold tracking-tight text-slate-950">Demand mix</h3>
-          <div className="inline-flex rounded-lg bg-slate-100 p-0.5" role="group" aria-label="Demand mix dimension">
-            <ToggleButton active={mix === 'intents'} onClick={() => setMix('intents')}>Intents</ToggleButton>
-            <ToggleButton active={mix === 'services'} onClick={() => setMix('services')}>Services</ToggleButton>
-            <ToggleButton active={mix === 'quality'} onClick={() => setMix('quality')}>Quality</ToggleButton>
+      <section className={`p-3.5 sm:p-4 ${cardSurface}`}>
+        <div className={bandClass}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-base font-semibold tracking-tight text-slate-950">Demand mix</h3>
+            <div className="inline-flex rounded-lg bg-white/80 p-0.5 ring-1 ring-slate-200/80" role="group" aria-label="Demand mix dimension">
+              <ToggleButton active={mix === 'intents'} onClick={() => setMix('intents')}>Intents</ToggleButton>
+              <ToggleButton active={mix === 'services'} onClick={() => setMix('services')}>Services</ToggleButton>
+              <ToggleButton active={mix === 'quality'} onClick={() => setMix('quality')}>Quality</ToggleButton>
+            </div>
           </div>
+          <p className="mt-0.5 text-xs text-slate-500">Share of {totalCalls.toLocaleString()} conversations, largest first.</p>
         </div>
-        <p className="mt-0.5 text-xs text-slate-500">Share of {totalCalls.toLocaleString()} conversations, largest first.</p>
 
         {mixItems.length === 0 ? (
           <p className="mt-5 text-center text-xs text-slate-400">No classified conversations for this period yet.</p>

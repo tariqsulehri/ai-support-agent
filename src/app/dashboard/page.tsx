@@ -3,7 +3,7 @@ import { getDashboardAnalytics } from '@/lib/dashboard/analytics'
 import type { DashboardFilters, DashboardSections } from '@/lib/dashboard/types'
 import { canMutateDashboard, dashboardScopeForSession, getVerifiedSession } from '@/lib/auth/session'
 import { getManagedTenantDetail, listManagedTenants } from '@/lib/tenants/management'
-import { FilterBar } from './components'
+import { FilterBar, WelcomeSummary } from './components'
 import { baseTabs, platformTenantTab, tenantConfigurationTab, type DashboardTabId, type TabDefinition } from './constants'
 import {
   AiTab,
@@ -17,6 +17,7 @@ import {
 import { DashboardShell, buildNavItems } from './_components/shell'
 import { Icon } from './_components/icons'
 import { LocalTime } from './client-controls'
+import { CARD_SHADOW } from '@/components/admin/surface'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -95,6 +96,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   const setupHref = isPlatform ? '/admin/tenants' : session.tenantId ? `/admin/tenants/${session.tenantId}` : '/dashboard?tab=configuration'
   const nav = buildNavItems(tabs, (tab) => hrefWith('/dashboard', tab === 'overview' ? null : tab, filters))
   const showFilters = TABS_WITH_FILTERS.has(activeTab)
+  const firstName = session.name?.trim().split(/\s+/)[0] || 'there'
 
   return (
     <DashboardShell
@@ -107,33 +109,59 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       searchQuery={filters.q}
       setupHref={setupHref}
     >
-      <section className="flex flex-col gap-2.5 rounded-xl border border-slate-200/90 bg-white px-4 py-3 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-[#0052ff]">
-            <Icon name={activeTab} className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-base font-bold tracking-tight text-slate-950 sm:text-lg">{activeTabDef.label}</h1>
-              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-[#0052ff]">
-                {activeTabDef.badgeText}
+      {/* One header block per page: gradient title area (plus the overview summary)
+          with the filter toolbar attached underneath, so controls sit directly above
+          the KPIs and lists they change, without separate bars and gaps. */}
+      <section className={`rounded-2xl ${CARD_SHADOW}`} aria-labelledby="dashboard-title">
+        <div
+          className={`relative isolate overflow-hidden bg-gradient-to-br from-[#0052ff] via-[#1d4ed8] to-[#133cb4] px-4 py-4 text-white sm:px-6 sm:py-5 ${
+            showFilters ? 'rounded-t-2xl' : 'rounded-2xl'
+          }`}
+        >
+          <span aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 -z-10 h-64 w-64 rounded-full bg-white/10" />
+          <span aria-hidden="true" className="pointer-events-none absolute -bottom-24 right-48 -z-10 h-48 w-48 rounded-full bg-cyan-300/15" />
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/30 backdrop-blur-sm" aria-hidden="true">
+                <Icon name={activeTab} className="h-5 w-5" />
               </span>
+              <div className="min-w-0">
+                {activeTab === 'overview' && (
+                  <p className="text-xs font-semibold uppercase tracking-wider text-white/80">Welcome back, {firstName}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 id="dashboard-title" className="text-lg font-bold tracking-tight sm:text-xl">{activeTabDef.label}</h1>
+                  <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-semibold ring-1 ring-white/30">{activeTabDef.badgeText}</span>
+                </div>
+                <p className="text-xs text-white/85">{activeTabDef.description}</p>
+              </div>
             </div>
-            <p className="text-xs text-slate-500">{activeTabDef.description}</p>
+            {showFilters && analytics.configured && (
+              <p className="w-fit shrink-0 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 ring-1 ring-white/20">
+                <span className="font-semibold tabular-nums text-white">{analytics.filteredCalls.toLocaleString()}</span> of{' '}
+                <span className="tabular-nums">{analytics.totalCalls.toLocaleString()}</span> conversations · Updated{' '}
+                <LocalTime iso={analytics.generatedAt} />
+              </p>
+            )}
           </div>
+
+          {activeTab === 'overview' && analytics.configured && (
+            <div className="mt-4 border-t border-white/15 pt-4">
+              <WelcomeSummary analytics={analytics} />
+            </div>
+          )}
         </div>
-        {showFilters && analytics.configured && (
-          <p className="shrink-0 text-xs text-slate-400">
-            {analytics.filteredCalls.toLocaleString()} of {analytics.totalCalls.toLocaleString()} conversations · Updated{' '}
-            <LocalTime iso={analytics.generatedAt} />
-          </p>
+
+        {showFilters && (
+          <div className="rounded-b-2xl border border-t-0 border-slate-200/90 bg-white px-3 py-2.5 sm:px-4">
+            <FilterBar exportHref={hrefWith('/dashboard/export', null, filters)} />
+          </div>
         )}
       </section>
 
-      {showFilters && <FilterBar exportHref={hrefWith('/dashboard/export', null, filters)} />}
-
       <div className="space-y-3.5">
-        {activeTab === 'overview' && <OverviewTab analytics={analytics} userName={session.name} />}
+        {activeTab === 'overview' && <OverviewTab analytics={analytics} />}
         {activeTab === 'communications' && (
           <CommunicationsTab calls={analytics.recentCalls} pagination={analytics.pagination} canEdit={canEdit} />
         )}

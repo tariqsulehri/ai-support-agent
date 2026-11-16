@@ -296,9 +296,11 @@ export function FilterBar({ exportHref }: { exportHref: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- apply is recreated per render; query is the trigger
   }, [query, currentQ])
 
+  // Visible labels are dropped to keep the toolbar to one row: each option already
+  // names its dimension ("All statuses"), and the sr-only label keeps it accessible.
   const selectField = (name: string, label: string, options: ReadonlyArray<readonly [string, string]>, fallback: string) => (
     <label className="block min-w-0">
-      <span className={fieldLabel}>{label}</span>
+      <span className="sr-only">{label}</span>
       <select
         className={select}
         value={searchParams.get(name) ?? fallback}
@@ -317,10 +319,10 @@ export function FilterBar({ exportHref }: { exportHref: string }) {
     <div
       role="search"
       aria-busy={isPending}
-      className="grid gap-2.5 rounded-xl border border-slate-200/90 bg-white px-3.5 py-3 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:grid-cols-2 sm:px-4 sm:py-3 lg:grid-cols-[1.6fr_repeat(5,minmax(0,1fr))_auto] lg:items-end"
+      className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.6fr_repeat(5,minmax(0,1fr))_auto] lg:items-center"
     >
       <label className="block min-w-0 sm:col-span-2 lg:col-span-1">
-        <span className={fieldLabel}>Search</span>
+        <span className="sr-only">Search conversations</span>
         <span className="relative block">
           <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -344,7 +346,7 @@ export function FilterBar({ exportHref }: { exportHref: string }) {
       {selectField('quality', 'Quality', [['all', 'All quality'], ...['hot', 'warm', 'cold', 'unknown'].map((s) => [s, formatLabel(s)] as const)], 'all')}
       {selectField('urgency', 'Urgency', [['all', 'All urgency'], ...['high', 'medium', 'low', 'unknown'].map((s) => [s, formatLabel(s)] as const)], 'all')}
       {selectField('sort', 'Sort by', SORT_OPTIONS, 'recent')}
-      <a href={exportHref} className={cx(btnSecondary, 'h-10')} download>
+      <a href={exportHref} className={btnSecondary} download>
         <Icon name="download" className="h-4 w-4" />
         Export CSV
       </a>

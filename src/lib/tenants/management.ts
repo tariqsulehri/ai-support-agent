@@ -408,14 +408,18 @@ export async function listManagedTenants(): Promise<ManagedTenantSummary[]> {
 
   const tenantIds = tenants.map((t) => t.tenantId)
 
-  // 2. Batch fetch active domains for ALL tenants in a single indexed query (No N+1)
-  const allDomains = await c.domains
-    .find(
-      { tenantId: { $in: tenantIds }, status: 'active' },
-      { projection: { tenantId: 1, origin: 1 } }
-    )
-    .sort({ origin: 1 })
-    .toArray()
+  // 2 + 3. Batch fetch active domains and secrets metadata for ALL tenants (No N+1).
+  // Both depend only on tenantIds, so run them concurrently: one round trip, not two.
+  const [allDomains, secretsByTenant] = await Promise.all([
+    c.domains
+      .find(
+        { tenantId: { $in: tenantIds }, status: 'active' },
+        { projection: { tenantId: 1, origin: 1 } }
+      )
+      .sort({ origin: 1 })
+      .toArray(),
+    getBatchTenantSecretsMetadata(tenantIds, 'openai_api_key'),
+  ])
 
   const domainsByTenant = new Map<string, string[]>()
   for (const d of allDomains) {
@@ -423,9 +427,6 @@ export async function listManagedTenants(): Promise<ManagedTenantSummary[]> {
     list.push(d.origin)
     domainsByTenant.set(d.tenantId, list)
   }
-
-  // 3. Batch fetch secrets metadata for ALL tenants in a single indexed query (No N+1)
-  const secretsByTenant = await getBatchTenantSecretsMetadata(tenantIds, 'openai_api_key')
 
   // 4. In-memory O(1) hash join
   return tenants.map((tenant) => {

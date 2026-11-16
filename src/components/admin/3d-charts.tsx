@@ -1,8 +1,15 @@
 'use client'
 
 import { useId, useState, type CSSProperties } from 'react'
+import { CARD_SHADOW_HOVER, cardHeaderBand, cardSurface } from './surface'
 
 export type ChartDatum = { label: string; value: number; color: string }
+
+// Shared chart card surface; flex column so content can center inside equal-height grid rows.
+const chartCardClass = `flex min-w-0 flex-col p-4 transition-shadow sm:p-5 ${cardSurface} ${CARD_SHADOW_HOVER}`
+
+// Header row bleeds to the card edges (negative margins = card padding) to form a tinted band.
+const chartHeaderClass = `-mx-4 -mt-4 mb-1 flex rounded-t-2xl items-start justify-between gap-3 px-4 py-3 sm:-mx-5 sm:-mt-5 sm:px-5 sm:py-3.5 ${cardHeaderBand}`
 
 function toPercent(value: number, total: number): number {
   return total > 0 ? Math.max(0, (value / total) * 100) : 0
@@ -158,8 +165,8 @@ export function GlossyDonutChart({
   })
 
   return (
-    <section className={`min-w-0 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:p-4 transition-shadow hover:shadow-[0_4px_12px_rgba(15,23,42,0.08)] ${className}`}>
-      <div className="flex items-start justify-between gap-3">
+    <section className={`${chartCardClass} ${className}`}>
+      <div className={chartHeaderClass}>
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h3 className="text-base font-bold tracking-tight text-slate-950">{title}</h3>
@@ -234,7 +241,7 @@ export function GlossyDonutChart({
           </table>
         </div>
       ) : (
-        <div className="mt-3.5 grid items-center gap-4 sm:grid-cols-[minmax(160px,1fr)_1.25fr]">
+        <div className="mt-3.5 grid flex-1 content-center items-center gap-4 sm:grid-cols-[minmax(160px,1fr)_1.25fr]">
           <div className="glossy-donut-scene" style={{ width: size, height: size }}>
             {/* SVG Gradients Definition */}
             <svg width="0" height="0" className="absolute">
@@ -399,8 +406,8 @@ export function MonthlyCallVolumeChart({
   const avgPercent = scaleMax > 0 ? Math.min(100, Math.max(0, (average / scaleMax) * 100)) : 0
 
   return (
-    <section className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:p-4">
-      <div className="flex items-start justify-between gap-3">
+    <section className={chartCardClass}>
+      <div className={chartHeaderClass}>
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h3 className="text-base font-bold tracking-tight text-slate-950">{title}</h3>
@@ -547,6 +554,7 @@ export function GlossyBarChart({
   total,
   infoTooltip,
   variant = 'standard',
+  className = '',
 }: {
   title: string
   subtitle?: string
@@ -555,14 +563,15 @@ export function GlossyBarChart({
   total?: number
   infoTooltip?: string
   variant?: 'standard' | 'distribution' | 'funnel'
+  className?: string
 }) {
   const [isTableView, setIsTableView] = useState(false)
   const maximum = Math.max(...items.map((item) => item.value), 0)
   const effectiveTotal = total ?? items.reduce((sum, item) => sum + item.value, 0)
 
   return (
-    <section className="min-w-0 rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] sm:p-4 transition-shadow hover:shadow-[0_4px_12px_rgba(15,23,42,0.08)]">
-      <div className="flex items-start justify-between gap-4">
+    <section className={`${chartCardClass} ${className}`}>
+      <div className={chartHeaderClass}>
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h3 className="text-base font-bold tracking-tight text-slate-950">{title}</h3>
@@ -646,7 +655,7 @@ export function GlossyBarChart({
           }) : <p className="text-xs text-slate-500">No data to show yet.</p>}
         </div>
       ) : (
-        <div className="mt-3.5 space-y-2.5">
+        <div className="mt-3.5 flex flex-1 flex-col justify-center space-y-2.5">
           {items.length ? items.map((item) => {
             const width = variant === 'distribution'
               ? Math.max(toPercent(item.value, effectiveTotal), item.value > 0 ? 4 : 0)

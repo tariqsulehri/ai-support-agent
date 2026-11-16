@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react'
+import { cardHeaderBand, cardSurface } from './surface'
 
 export function AdminPanel({
   title,
@@ -19,9 +20,11 @@ export function AdminPanel({
   return (
     <section
       aria-labelledby={headingId}
-      className={`overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-[0_4px_20px_-4px_rgba(15,23,42,0.06),0_1px_3px_rgba(0,0,0,0.03)] ${className}`}
+      className={`overflow-hidden ${cardSurface} ${className}`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 bg-gradient-to-r from-blue-50/30 via-white to-white px-4 py-3 sm:px-5 sm:py-3.5">
+      {/* Same header treatment as SectionCard: brand stripe + tinted header band. */}
+      <div className="h-1 w-full bg-gradient-to-r from-[#0052ff] via-[#1d4ed8] to-[#133cb4]" aria-hidden="true" />
+      <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-3.5 ${cardHeaderBand}`}>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
             <h2 id={headingId} className="text-sm font-bold tracking-tight text-slate-950 sm:text-base">

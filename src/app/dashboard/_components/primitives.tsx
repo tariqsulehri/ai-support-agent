@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
+import { GradientStatTile, type GradientTone } from '@/components/admin/gradient-tile'
+import { cardHeaderBand } from '@/components/admin/surface'
 import { Icon, type IconName } from './icons'
-import { card, cx } from './ui'
+import { card, cx, sectionTitle } from './ui'
 
 export type Tone = 'neutral' | 'good' | 'warn' | 'bad' | 'blue' | 'purple' | 'cyan' | 'indigo'
 
@@ -27,6 +29,45 @@ export function Badge({ children, tone = 'blue' }: { children: ReactNode; tone?:
 
 export function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <section className={cx(card, 'overflow-hidden', className)}>{children}</section>
+}
+
+const HEADER_ICON_TONES = {
+  blue: 'border-blue-200 bg-white text-[#0052ff]',
+  rose: 'border-rose-200 bg-white text-rose-600',
+  emerald: 'border-emerald-200 bg-white text-emerald-700',
+  violet: 'border-violet-200 bg-white text-violet-700',
+} as const
+
+/** Tinted header band for a Panel: optional icon, title, description and actions. */
+export function PanelHeader({
+  title,
+  description,
+  icon,
+  iconTone = 'blue',
+  actions,
+}: {
+  title: string
+  description?: ReactNode
+  icon?: IconName
+  iconTone?: keyof typeof HEADER_ICON_TONES
+  actions?: ReactNode
+}) {
+  return (
+    <div className={cx('flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6', cardHeaderBand)}>
+      <div className="flex min-w-0 items-center gap-3">
+        {icon && (
+          <span className={cx('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border shadow-sm', HEADER_ICON_TONES[iconTone])} aria-hidden="true">
+            <Icon name={icon} className="h-4 w-4" />
+          </span>
+        )}
+        <div className="min-w-0">
+          <h2 className={sectionTitle}>{title}</h2>
+          {description && <p className="mt-0.5 max-w-3xl text-xs leading-relaxed text-slate-500">{description}</p>}
+        </div>
+      </div>
+      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2.5">{actions}</div>}
+    </div>
+  )
 }
 
 export function EmptyState({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
@@ -63,24 +104,18 @@ export function InfoTip({ label, text }: { label: string; text: string }) {
 }
 
 type StatTone = 'blue' | 'emerald' | 'amber' | 'rose' | 'purple'
-const STAT_TONES: Record<StatTone, string> = {
-  blue: 'border-blue-200 bg-blue-50 text-[#0052ff]',
-  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  amber: 'border-amber-200 bg-amber-50 text-amber-700',
-  rose: 'border-rose-200 bg-rose-50 text-rose-700',
-  purple: 'border-purple-200 bg-purple-50 text-purple-700',
-}
-const STAT_BAR: Record<StatTone, string> = {
-  blue: 'bg-[#0052ff]',
-  emerald: 'bg-emerald-500',
-  amber: 'bg-amber-500',
-  rose: 'bg-rose-500',
-  purple: 'bg-purple-500',
+const STAT_GRADIENTS: Record<StatTone, GradientTone> = {
+  blue: 'blue',
+  emerald: 'emerald',
+  amber: 'amber',
+  rose: 'rose',
+  purple: 'violet',
 }
 
 /**
- * KPI tile. `progress` (0–100) renders a real proportion bar; omit it when the
- * metric is not a ratio rather than drawing a decorative bar.
+ * KPI tile, rendered with the shared admin gradient tile so the dashboard and
+ * admin screens share one look. `progress` (0–100) draws a real share ring;
+ * omit it when the metric is not a ratio.
  */
 export function StatCard({
   label,
@@ -102,43 +137,16 @@ export function StatCard({
   progress?: number
 }) {
   return (
-    <div className={cx(card, 'flex flex-col justify-between p-3.5 sm:p-4')}>
-      <div className="flex items-center justify-between gap-1.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className={cx('flex h-5 w-5 shrink-0 items-center justify-center rounded-md border', STAT_TONES[tone])}>
-            <Icon name={icon} className="h-3 w-3" />
-          </span>
-          <span className="truncate text-xs font-semibold text-slate-700">{label}</span>
-        </div>
-        {tooltip && <InfoTip label={label} text={tooltip} />}
-      </div>
-
-      <div className="mt-2">
-        <div className="flex flex-wrap items-baseline gap-1.5">
-          <span className="text-xl font-bold tracking-tight text-slate-950 tabular-nums sm:text-2xl">{value}</span>
-          {context && <span className="text-xs font-medium text-slate-400">{context}</span>}
-        </div>
-        {typeof progress === 'number' && (
-          <div
-            className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
-            role="progressbar"
-            aria-label={label}
-            aria-valuenow={Math.round(progress)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className={cx('h-full rounded-full transition-[width] duration-500', STAT_BAR[tone])}
-              style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-            />
-          </div>
-        )}
-      </div>
-
-      <p className="mt-1.5 truncate text-xs font-medium text-slate-500" title={detail}>
-        {detail}
-      </p>
-    </div>
+    <GradientStatTile
+      label={label}
+      value={value}
+      context={context}
+      detail={detail}
+      tone={STAT_GRADIENTS[tone]}
+      icon={icon}
+      tooltip={tooltip}
+      progress={progress}
+    />
   )
 }
 

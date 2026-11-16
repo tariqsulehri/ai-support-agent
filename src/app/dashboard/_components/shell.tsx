@@ -189,7 +189,7 @@ export function DashboardShell({
           </div>
         </aside>
 
-        <main id="dashboard-main" className="min-w-0 flex-1 space-y-3.5 p-3.5 sm:p-4 lg:p-5">
+        <main id="dashboard-main" className="min-w-0 flex-1 flex flex-col gap-3.5 px-3.5 pb-5 pt-3 sm:px-4 lg:px-5">
           {/* Mobile / tablet section nav (sidebar is hidden below lg). */}
           <nav aria-label="Dashboard sections" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden">
             {nav.map((item) => (

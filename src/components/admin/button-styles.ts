@@ -17,6 +17,8 @@ const sizes = {
   sm: 'h-8 px-3 text-xs',
   md: 'h-9 px-4 text-xs',
   lg: 'h-11 px-5 text-sm',
+  /** Square icon-only button; pair with sr-only text for the accessible name. */
+  icon: 'h-8 w-8 p-0 text-xs',
 } as const
 
 export type ButtonVariant = keyof typeof variants

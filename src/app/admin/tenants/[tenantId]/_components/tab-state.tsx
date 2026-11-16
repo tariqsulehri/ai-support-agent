@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { DETAIL_TABS, type TabKey } from './types'
 import { DetailTabIcon } from './icons'
+import { CARD_SHADOW } from '@/components/admin/surface'
 
 type TabContextValue = { activeTab: TabKey; setTab: (tab: TabKey) => void }
 
@@ -36,8 +37,8 @@ const focusRing = 'outline-none focus-visible:ring-4 focus-visible:ring-[#0052ff
 export function TabBar() {
   const { activeTab, setTab } = useTabs()
   return (
-    <div className="-mx-1 overflow-x-auto px-1 py-1">
-      <div role="tablist" aria-label="Tenant settings sections" className="flex w-max gap-2 sm:w-auto sm:flex-wrap">
+    <div className={`overflow-x-auto rounded-2xl border border-slate-200/90 bg-white/90 p-1.5 backdrop-blur ${CARD_SHADOW}`}>
+      <div role="tablist" aria-label="Tenant settings sections" className="flex w-max gap-1.5 sm:w-auto sm:flex-wrap">
         {DETAIL_TABS.map((tab) => {
           const selected = activeTab === tab.id
           return (
@@ -49,10 +50,10 @@ export function TabBar() {
               aria-selected={selected}
               aria-controls={`tenant-panel-${tab.id}`}
               onClick={() => setTab(tab.id)}
-              className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${focusRing} ${
+              className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition ${focusRing} ${
                 selected
-                  ? 'bg-[#0052ff] text-white shadow-[0_3px_10px_rgba(0,82,255,0.30)]'
-                  : 'border border-slate-200/80 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50'
+                  ? 'bg-gradient-to-r from-[#0052ff] to-[#133cb4] text-white shadow-[0_6px_16px_-4px_rgba(0,82,255,0.45)]'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
               <span

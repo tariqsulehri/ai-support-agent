@@ -6,9 +6,10 @@ import { chartColors, statusOptions, type CountItem } from './constants'
 import { LeadManagementForm, LeadStarRating, LocalTime, OptimisticStatusForm } from './client-controls'
 import { Badge, EmptyState, Panel, percent, toneForQuality, toneForSentiment, toneForUrgency } from './_components/primitives'
 import { btnPrimary, cx } from './_components/ui'
+import { CARD_SHADOW_HOVER, cardHeaderBand, cardSurface } from '@/components/admin/surface'
 
 // Barrel exports so tabs and other modules import from one place.
-export { Badge, EmptyState, Panel, StatCard, percent, toneForQuality } from './_components/primitives'
+export { Badge, EmptyState, Panel, PanelHeader, StatCard, percent, toneForQuality } from './_components/primitives'
 export { FilterBar, LeadStarRating, OptimisticStatusForm, PaginationControls, LocalTime } from './client-controls'
 
 /* ───────────────────────── Helpers ───────────────────────── */
@@ -48,65 +49,56 @@ function leadDisplayName(call: DashboardCall): string {
 
 /* ───────────────────────── Hero ───────────────────────── */
 
-export function HeroBannerCard({ userName, analytics }: { userName?: string; analytics: DashboardAnalytics }) {
-  const firstName = userName?.trim().split(/\s+/)[0] || 'there'
+/**
+ * Overview summary shown inside the gradient page header: lead-capture card on the
+ * left, pipeline and readiness figures on the right. No wrapper of its own.
+ */
+export function WelcomeSummary({ analytics }: { analytics: DashboardAnalytics }) {
   const readiness = Math.min(Math.max(analytics.conversionReadiness, 0), 100)
   const captureRate = percent(analytics.callsWithLead, analytics.filteredCalls)
 
   return (
-    <section className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#0052ff] to-[#0b3ec4] p-4 text-white shadow-[0_4px_20px_rgba(0,82,255,0.18)] sm:p-5">
-      <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
-      <div className="relative flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-        <div className="max-w-2xl flex-1 space-y-2.5">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight sm:text-xl">Welcome back, {firstName}</h2>
-            <p className="text-xs font-medium text-blue-100">
-              {analytics.filteredCalls.toLocaleString()} conversations in the selected period
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-white p-3 text-slate-900 shadow-xs">
-            <p className="text-xs font-medium leading-snug">
-              <span className="font-semibold">
-                {analytics.callsWithLead.toLocaleString()} of {analytics.filteredCalls.toLocaleString()}
-              </span>{' '}
-              conversations captured contact details ({captureRate}% capture rate).
-            </p>
-            <div
-              className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
-              role="progressbar"
-              aria-label="Lead capture rate"
-              aria-valuenow={captureRate}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <div className="h-full rounded-full bg-[#0052ff] transition-[width] duration-500" style={{ width: `${captureRate}%` }} />
-            </div>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-500">
-              <span>{analytics.hotLeads.toLocaleString()} hot leads</span>
-              <span>
-                {analytics.overdueFollowUps > 0
-                  ? `${analytics.overdueFollowUps} overdue follow-up${analytics.overdueFollowUps === 1 ? '' : 's'}`
-                  : 'No overdue follow-ups'}
-              </span>
-            </div>
-          </div>
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="max-w-2xl flex-1 rounded-xl bg-white p-3 text-slate-900 shadow-sm">
+        <p className="text-xs font-medium leading-snug">
+          <span className="font-semibold">
+            {analytics.callsWithLead.toLocaleString()} of {analytics.filteredCalls.toLocaleString()}
+          </span>{' '}
+          conversations captured contact details ({captureRate}% capture rate).
+        </p>
+        <div
+          className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
+          role="progressbar"
+          aria-label="Lead capture rate"
+          aria-valuenow={captureRate}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div className="h-full rounded-full bg-[#0052ff] transition-[width] duration-500" style={{ width: `${captureRate}%` }} />
         </div>
-
-        <dl className="flex shrink-0 items-center gap-6 sm:gap-8 lg:border-l lg:border-white/20 lg:pl-6">
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-blue-100">Pipeline</dt>
-            <dd className="mt-0.5 text-2xl font-bold tabular-nums sm:text-3xl">{analytics.qualifiedPipeline.toLocaleString()}</dd>
-            <dd className="text-xs text-blue-100/90">qualified, proposal or won</dd>
-          </div>
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wider text-blue-100">Readiness</dt>
-            <dd className="mt-0.5 text-2xl font-bold tabular-nums sm:text-3xl">{readiness}%</dd>
-            <dd className="text-xs text-blue-100/90">weighted conversion score</dd>
-          </div>
-        </dl>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-500">
+          <span>{analytics.hotLeads.toLocaleString()} hot leads</span>
+          <span>
+            {analytics.overdueFollowUps > 0
+              ? `${analytics.overdueFollowUps} overdue follow-up${analytics.overdueFollowUps === 1 ? '' : 's'}`
+              : 'No overdue follow-ups'}
+          </span>
+        </div>
       </div>
-    </section>
+
+      <dl className="flex shrink-0 items-center gap-6 sm:gap-8 lg:border-l lg:border-white/20 lg:pl-6">
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-white/80">Pipeline</dt>
+          <dd className="mt-0.5 text-2xl font-bold tabular-nums sm:text-3xl">{analytics.qualifiedPipeline.toLocaleString()}</dd>
+          <dd className="text-xs text-white/80">qualified, proposal or won</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-white/80">Readiness</dt>
+          <dd className="mt-0.5 text-2xl font-bold tabular-nums sm:text-3xl">{readiness}%</dd>
+          <dd className="text-xs text-white/80">weighted conversion score</dd>
+        </div>
+      </dl>
+    </div>
   )
 }
 
@@ -186,7 +178,7 @@ export function LeadIdentity({ call }: { call: DashboardCall }) {
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="truncate text-base font-semibold tracking-tight text-slate-950">{leadDisplayName(call)}</h3>
+        <h3 className="truncate text-base font-bold tracking-tight text-[#133cb4]">{leadDisplayName(call)}</h3>
         <LeadStarRating score={call.maturityScore} label={call.maturityLabel} />
       </div>
       <p className="mt-0.5 truncate text-xs text-slate-500">{details.length ? details.join(' · ') : 'No contact details captured'}</p>
@@ -249,16 +241,19 @@ function MetaRow({ label, children }: { label: string; children: React.ReactNode
 export function CommunicationCard({ call, canEdit = true }: { call: DashboardCall; canEdit?: boolean }) {
   const finalized = isConversationFinalized(call)
   return (
-    <article className="rounded-xl border border-slate-200/90 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.05)] transition-colors hover:border-blue-200 sm:p-4">
-      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-start lg:justify-between">
+    <article className={`transition-[border-color,box-shadow] hover:border-blue-200 ${cardSurface} ${CARD_SHADOW_HOVER}`}>
+      {/* Header band: lead name + classification badges, per the app-wide card rule. */}
+      <header className={`flex flex-col gap-2.5 rounded-t-2xl px-3.5 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between ${cardHeaderBand}`}>
+        <LeadIdentity call={call} />
+        <div className="flex flex-wrap gap-1.5 lg:justify-end">
+          <Badge tone={toneForQuality(call.leadQuality)}>{formatLabel(call.leadQuality)}</Badge>
+          <Badge tone={toneForUrgency(call.urgency)}>{formatLabel(call.urgency)} urgency</Badge>
+          <Badge tone={emailStatusTone(call)}>{emailStatusLabel(call)}</Badge>
+          <Badge tone={finalized ? 'good' : 'warn'}>{finalized ? 'Finalized' : 'In progress'}</Badge>
+        </div>
+      </header>
+      <div className="flex flex-col gap-3.5 p-3.5 sm:p-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1 space-y-2.5">
-          <LeadIdentity call={call} />
-          <div className="flex flex-wrap gap-1.5">
-            <Badge tone={toneForQuality(call.leadQuality)}>{formatLabel(call.leadQuality)}</Badge>
-            <Badge tone={toneForUrgency(call.urgency)}>{formatLabel(call.urgency)} urgency</Badge>
-            <Badge tone={emailStatusTone(call)}>{emailStatusLabel(call)}</Badge>
-            <Badge tone={finalized ? 'good' : 'warn'}>{finalized ? 'Finalized' : 'In progress'}</Badge>
-          </div>
 
           <p className="rounded-lg border-l-4 border-l-[#0052ff] bg-slate-50 p-2.5 text-xs leading-relaxed text-slate-700">{call.summary}</p>
 
@@ -276,7 +271,7 @@ export function CommunicationCard({ call, canEdit = true }: { call: DashboardCal
           <TranscriptPreview call={call} />
         </div>
 
-        <aside className="flex w-full shrink-0 flex-col gap-2.5 rounded-xl border border-slate-200/90 bg-slate-50/60 p-3 lg:w-60">
+        <aside className="flex w-full shrink-0 flex-col gap-2.5 rounded-xl border border-slate-200/90 bg-slate-50/60 p-3.5 lg:w-72 2xl:w-80">
           <dl className="space-y-1.5">
             <MetaRow label="Created">
               <LocalTime iso={call.createdAt} className="font-medium text-slate-700" />

@@ -16,12 +16,15 @@ export default function DashboardLoading() {
             ))}
           </div>
         </div>
-        <div className="min-w-0 flex-1 space-y-5 p-4 sm:p-6 lg:p-8">
-          <div className="h-[86px] animate-pulse rounded-2xl border border-slate-200/80 bg-white" />
-          <div className="h-[84px] animate-pulse rounded-2xl border border-slate-200/80 bg-white" />
-          <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="min-w-0 flex-1 space-y-3.5 px-3.5 pb-5 pt-3 sm:px-4 lg:px-5">
+          {/* Unified header: gradient title area + attached filter toolbar. */}
+          <div>
+            <div className="h-[86px] animate-pulse rounded-t-2xl bg-gradient-to-br from-[#0052ff] via-[#1d4ed8] to-[#133cb4] opacity-80" />
+            <div className="h-[58px] animate-pulse rounded-b-2xl border border-t-0 border-slate-200/80 bg-white" />
+          </div>
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-32 animate-pulse rounded-2xl border border-slate-200/80 bg-white" />
+              <div key={i} className="h-32 animate-pulse rounded-xl bg-slate-200/80" />
             ))}
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
