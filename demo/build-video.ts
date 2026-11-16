@@ -193,13 +193,35 @@ function main(): void {
   }
 
   // Captions: recorded scenes use their timeline start; cards follow the screen part.
-  const timeline = readJson<Array<{ id: SceneId; start: number }>>(path.join(OUT, 'timeline.json'), [])
+  const timeline = readJson<Array<{ id: SceneId; start: number; end: number }>>(path.join(OUT, 'timeline.json'), [])
   let t = offset + duration(screenPart)
   const segments = [
     ...timeline.map((s) => ({ id: s.id, start: s.start + offset })),
     ...cards.map((c) => { const seg = { id: c.id, start: t }; t += duration(c.file); return seg }),
   ]
   const srt = writeCaptions(segments)
+  // Lower-third captions (part + scene caption) on every recorded scene: readable when muted.
+  if (process.env.DEMO_LOWER_THIRDS !== 'false' && timeline.length) {
+    const font = esc(findFont())
+    const filters = timeline.flatMap((seg, i) => {
+      const scene = SCENES.find((x) => x.id === seg.id)
+      if (!scene) return []
+      const a = seg.start + offset + 0.6
+      const b = Math.min(seg.end + offset - 0.4, a + 6)
+      const fade = `alpha='min(1,min((t-${a.toFixed(2)})/0.35,(${b.toFixed(2)}-t)/0.35))'`
+      const on = `enable='between(t,${a.toFixed(2)},${b.toFixed(2)})'`
+      const partFile = path.join(WORK, `lt-${i}-part.txt`)
+      const capFile = path.join(WORK, `lt-${i}-cap.txt`)
+      fs.writeFileSync(partFile, scene.part.toUpperCase())
+      fs.writeFileSync(capFile, scene.caption)
+      return [
+        `drawtext=fontfile='${font}':textfile='${esc(partFile)}':fontsize=24:fontcolor=0x7FE3D4:box=1:boxcolor=0x0B1F3A@0.92:boxborderw=14:x=64:y=h-196:${on}:${fade}`,
+        `drawtext=fontfile='${font}':textfile='${esc(capFile)}':fontsize=44:fontcolor=white:box=1:boxcolor=0x0B1F3A@0.92:boxborderw=20:x=64:y=h-136:${on}:${fade}`,
+      ]
+    })
+    ff(['-i', final, '-vf', filters.join(','), ...V, '-c:a', 'copy', '-movflags', '+faststart', path.join(OUT, 'final-demo-captioned.mp4')])
+    console.info(`[demo:build] ${path.relative(process.cwd(), path.join(OUT, 'final-demo-captioned.mp4'))} (with on-screen captions)`)
+  }
   if (process.env.DEMO_BURN_CAPTIONS === 'true') {
     ff(['-i', final, '-vf', `subtitles='${esc(srt)}':force_style='FontName=Inter,FontSize=20,PrimaryColour=&H00FFFFFF,BackColour=&H99000000,BorderStyle=4,Outline=0,MarginV=40'`,
       ...V, '-c:a', 'copy', path.join(OUT, 'final-demo-captioned.mp4')])

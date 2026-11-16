@@ -13,6 +13,7 @@
  * Env: DEMO_BASE_URL (default http://localhost:3000), DEMO_SCENES=a,b (record a subset),
  *      DEMO_MOCK_AI=false (use the real AI), DEMO_HEADLESS=false (watch it), DEMO_SCALE=1.25.
  */
+import '../src/scripts/load-env'
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -173,7 +174,27 @@ async function assertNoSecretsOnScreen(page: Page, label: string): Promise<void>
   if (hits.length) throw new Error(`[demo:record] Possible secret visible during "${label}" (${hits.map(String).join(', ')}). Aborting take.`)
 }
 /** Blur code blocks (embed snippets, tokens) on admin pages, as a second line of defence. */
-const BLUR_CODE = 'pre, code { filter: blur(5px) !important; }'
+const BLUR_CODE = 'pre, code, input[name="embedToken"] { filter: blur(5px) !important; }'
+
+/** Wait for in-flight dashboard saves (spinners / "Saving…") to finish before moving on. */
+async function waitForSaves(page: Page, label: string, timeout = 30_000): Promise<boolean> {
+  const t0 = Date.now()
+  let done = true
+  await page
+    .waitForFunction(
+      "!document.querySelector('[aria-busy=\"true\"]') && ![...document.querySelectorAll('button')].some((b) => /Saving/.test(b.textContent || ''))",
+      undefined,
+      { timeout, polling: 250 }
+    )
+    .catch(() => {
+      done = false
+      console.warn(`[demo:record]   "${label}" save still pending after ${timeout / 1000}s`)
+    })
+  const secs = (Date.now() - t0) / 1000
+  if (secs > 2) console.info(`[demo:record]   "${label}" save took ${secs.toFixed(1)}s`)
+  await beat(700)
+  return done
+}
 
 // ── Scenes ────────────────────────────────────────────────────────────────────
 type Ctx = { page: Page; widget: FrameLocator }
@@ -327,19 +348,28 @@ const sceneActions: Record<SceneId, (ctx: Ctx) => Promise<void>> = {
     await clickAndSettle(page, page.getByRole('link', { name: 'Lead pipeline' }).first())
     await go(page, `/dashboard?tab=leads&range=all&selectedId=${HERO_RECORD_ID}`)
     await assertNoSecretsOnScreen(page, 'tenant-pipeline')
-    const status = page.locator(`#status-${HERO_RECORD_ID}`)
+    const status = page.locator(`#status-${HERO_RECORD_ID}`).first()
     await scrollIntoView(status, 'center')
     await hover(page, page.getByText('Mike Johnson').first(), 800)
     await hover(page, status, 500)
     await status.selectOption('qualified') // native <select> popups are not captured in video
-    await beat(1000)
+    if (!(await waitForSaves(page, 'status', 2_000))) {
+      // The status is saved server-side; refresh so the page shows it instead of a spinner.
+      await go(page, `/dashboard?tab=leads&range=all&selectedId=${HERO_RECORD_ID}`)
+      await scrollIntoView(page.locator(`#status-${HERO_RECORD_ID}`).first(), 'center')
+    }
     const owner = page.locator('input[name="owner"]').first()
     if (await owner.isVisible().catch(() => false)) {
       await typeInto(page, owner, 'Jake (Dispatch)', 40)
       const notes = page.locator('textarea[name="notes"]').first()
       if (await notes.isVisible().catch(() => false)) await typeInto(page, notes, 'Tech Carlos assigned, 2-4 PM. Offer Comfort Club.', 24)
       await click(page, page.getByRole('button', { name: 'Save lead plan' }).first())
-      await beat(1000)
+      if (!(await waitForSaves(page, 'lead plan', 2_500))) {
+        // Saved server-side; refresh so the page shows the result instead of a spinner.
+        await go(page, `/dashboard?tab=leads&range=all&selectedId=${HERO_RECORD_ID}`)
+        await scrollIntoView(page.locator('input[name="owner"]').first(), 'center')
+        await beat(1200)
+      }
     }
   },
   async 'tenant-insights'({ page }) {

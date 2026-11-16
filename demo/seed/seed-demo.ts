@@ -120,7 +120,7 @@ function conversation(tenant: DemoTenant, index: number, createdAt: Date, now: D
   ]
   const open = status !== 'won' && status !== 'lost'
   const owner = status === 'new' ? null : pick(OWNERS)
-  const followUpAt = open && owner ? new Date(now.getTime() + (rand() < 0.3 ? -1 : 1) * (6 + rand() * 60) * 3_600_000) : null
+  const followUpAt = open && owner ? new Date(now.getTime() + (rand() < 0.12 ? -1 : 1) * (6 + rand() * 60) * 3_600_000) : null
   const statusHistory = [{ status: 'new', changedAt: createdAt }]
   if (status !== 'new') statusHistory.push({ status, changedAt: new Date(createdAt.getTime() + 3_600_000 * (2 + rand() * 30)) })
   const maturity = calculateMaturityScore({ status, leadQuality: quality, urgency: tpl.urgency, sentiment, lead, messageCount: transcript.length, hasLead: captured })

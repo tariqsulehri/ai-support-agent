@@ -89,7 +89,7 @@ npm run demo:record
 npm run demo:build
 ```
 
-Result: `demo/output/final-demo.mp4` (1920x1080) and `captions.srt`.
+Result (1920x1080): `demo/output/final-demo.mp4`, `final-demo-captioned.mp4` (on-screen part + caption on every scene, best for muted social autoplay; `DEMO_LOWER_THIRDS=false` skips it) and `captions.srt` (when narration exists).
 
 - `DEMO_SCENES=admin-login,admin-overview npm run demo:record` re-records just some scenes.
 - `DEMO_HEADLESS=false` shows the browser while it records.
@@ -152,6 +152,7 @@ follow-ups, and the hero lead (Mike Johnson, Plano TX, AC repair) from the 30-se
 - **Header after a call:** it says "Offline" when a call ends.
 - **Chat reset:** the chat resets ~1.5 s after the goodbye, so the summary disappears.
 - **Request Categories chart:** it uses software-agency labels.
+- **Status spinner never stops:** in the lead pipeline, changing a lead's status (and sometimes "Save lead plan") saves instantly, but the page's refresh after the save never finishes, so the spinner keeps going (`OptimisticStatusForm` in `src/app/dashboard/client-controls.tsx`). The recorder reloads the page after 2 s.
 - **Hardcoded credentials:** `public/embed.js` and `src/data/tenants.json` contain hardcoded demo credentials.
 
 ## Lead-gen copy

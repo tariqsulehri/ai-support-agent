@@ -4,20 +4,19 @@ import { BRAND, SCENES } from '../../scenes'
 
 type Segment = { id: string; start: number; end: number }
 
-function LowerThird({ text, index }: { text: string; index: number }) {
+function LowerThird({ text, part, frames }: { text: string; part: string; frames: number }) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
-  const p = spring({ frame, fps, config: { damping: 200 } })
+  const enter = spring({ frame, fps, config: { damping: 200 } })
+  const exit = spring({ frame: frame - (frames - 12), fps, config: { damping: 200 } })
+  const p = enter - exit
   return (
-    <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'flex-start', padding: '0 0 70px 70px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '18px 30px', borderRadius: 18,
-        background: 'rgba(11,42,69,.88)', color: 'white', fontFamily: "Inter, 'Segoe UI', Arial, sans-serif",
-        fontSize: 40, fontWeight: 700, boxShadow: '0 12px 40px rgba(0,0,0,.3)',
-        opacity: p, transform: `translateX(${(1 - p) * -60}px)` }}>
-        <span style={{ width: 44, height: 44, borderRadius: 12, background: BRAND.accent, display: 'grid', placeItems: 'center', fontSize: 24 }}>
-          {index}
-        </span>
-        {text}
+    <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'flex-start', padding: '0 0 64px 64px' }}>
+      <div style={{ padding: '16px 28px 18px', borderRadius: 18, background: 'rgba(11,31,58,.92)', color: 'white',
+        fontFamily: "Inter, 'Segoe UI', Arial, sans-serif", boxShadow: '0 12px 40px rgba(0,0,0,.3)',
+        borderLeft: `8px solid ${BRAND.accent}`, opacity: p, transform: `translateX(${(1 - p) * -60}px)` }}>
+        <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: '#7FE3D4' }}>{part}</div>
+        <div style={{ fontSize: 38, fontWeight: 700, marginTop: 4 }}>{text}</div>
       </div>
     </AbsoluteFill>
   )
@@ -45,14 +44,14 @@ export function Captioned({ src, timelineFile, offsetSeconds = 0 }: { src: strin
   return (
     <AbsoluteFill style={{ background: 'black' }}>
       <OffthreadVideo src={staticFile(src)} />
-      {(timeline ?? []).map((seg, i) => {
+      {(timeline ?? []).map((seg) => {
         const scene = SCENES.find((s) => s.id === seg.id)
         if (!scene) return null
         const from = Math.round((seg.start + offsetSeconds + 0.6) * fps)
-        const length = Math.max(1, Math.round(Math.min(5, seg.end - seg.start - 1) * fps))
+        const length = Math.max(fps, Math.round(Math.min(6, seg.end - seg.start - 1) * fps))
         return (
           <Sequence key={seg.id} from={from} durationInFrames={length}>
-            <LowerThird text={scene.caption} index={i + 1} />
+            <LowerThird text={scene.caption} part={scene.part} frames={length} />
           </Sequence>
         )
       })}
