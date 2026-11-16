@@ -1,36 +1,48 @@
 /**
- * Seeds a LOCAL MongoDB with a fictional demo business so every screen in the demo
- * video looks real: tenant + agent settings + knowledge base, a tenant-owner login,
- * a verified domain, and ~110 realistic conversations over six months (growing trend),
- * including the "hero" lead captured live in the video.
+ * Seeds a LOCAL MongoDB with a fictional US multi-tenant platform for the demo video:
+ *   - platform admin login (DEMO_ADMIN_EMAIL / DEMO_ADMIN_PASSWORD)
+ *   - 9 US service-business tenants (TX, GA, AZ, IL, FL, CO, CA) with plans, statuses,
+ *     domains, masked API keys and usage counters, so the admin console shows real
+ *     multi-tenant management (active, trial, disabled/past-due, archived)
+ *   - hero tenant "Summit Pro Home Services" (Dallas-Fort Worth) with its owner login
+ *     (DEMO_TENANT_EMAIL / DEMO_TENANT_PASSWORD), knowledge base and ~185 conversations
+ *   - ~580 realistic US conversations in total, growing month over month
  *
  *   npm run demo:seed
  *
- * Safe to re-run: it deletes and recreates only the demo tenant's data.
- * Refuses to touch a non-local database unless DEMO_SEED_ALLOW_REMOTE=true.
- * All names, emails (example.com/.test) and phone numbers (555-01xx) are fake.
+ * Re-run before every take (the recording edits a lead and creates a tenant). It
+ * deletes and recreates only the demo tenants/users listed in demo/fixtures, and refuses
+ * a non-local database unless DEMO_SEED_ALLOW_REMOTE=true.
  */
 import '../../src/scripts/load-env'
 import { ObjectId, type Document } from 'mongodb'
 import { env } from '@/lib/config/env'
 import { getMongoDb } from '@/lib/db/mongodb'
 import { AUTH_COLLECTIONS } from '@/lib/auth/types'
+import { upsertAuthUser } from '@/lib/auth/users'
 import { TENANT_COLLECTIONS } from '@/lib/tenants/db-types'
 import { calculateMaturityScore } from '@/lib/ai/maturity-score'
 import { upsertTenantSecretInDb } from '@/lib/tenants/secrets'
 import {
+  archiveManagedTenant,
   createManagedTenant,
   createManagedTenantUser,
+  disableManagedTenant,
   updateManagedTenantSettings,
 } from '@/lib/tenants/management'
 import {
-  DEMO_OWNER,
-  DEMO_TENANT,
+  HERO,
   HERO_LEAD,
   HERO_RECORD_ID,
   HERO_SUMMARY,
   HERO_TURNS,
-} from '../fixtures/demo-tenant'
+  LIVE_TENANT,
+  PLATFORM_ADMIN,
+  TENANT_OWNER,
+  TENANTS,
+  type DemoTenant,
+} from '../fixtures/demo-data'
+import { COMPANIES, FIRST_NAMES, LAST_NAMES, STREET_NAMES, STREET_TYPES, SUBURBS, TEMPLATES, type Template } from '../fixtures/templates'
 
 // ── Safety ────────────────────────────────────────────────────────────────────
 function assertLocalDatabase(): void {
@@ -39,253 +51,131 @@ function assertLocalDatabase(): void {
   if (process.env.DEMO_SEED_ALLOW_REMOTE === 'true') return
   const host = uri.replace(/^mongodb(\+srv)?:\/\//, '').replace(/^[^@]*@/, '').split(/[/?,:]/)[0]
   if (!['localhost', '127.0.0.1', '::1', 'mongo', 'mongodb', 'host.docker.internal'].includes(host)) {
-    throw new Error(
-      `Refusing to seed demo data into "${host}". Use a local database, or set DEMO_SEED_ALLOW_REMOTE=true if you are sure.`
-    )
+    throw new Error(`Refusing to seed demo data into "${host}". Use a local database, or set DEMO_SEED_ALLOW_REMOTE=true if you are sure.`)
   }
 }
 
-// ── Deterministic randomness (same data every run) ────────────────────────────
+// ── Deterministic randomness ──────────────────────────────────────────────────
 let seed = 20261116
 function rand(): number {
   seed = (seed + 0x6d2b79f5) | 0
-  let t = seed
-  t = Math.imul(t ^ (t >>> 15), t | 1)
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  let x = seed
+  x = Math.imul(x ^ (x >>> 15), x | 1)
+  x ^= x + Math.imul(x ^ (x >>> 7), x | 61)
+  return ((x ^ (x >>> 14)) >>> 0) / 4294967296
 }
 const pick = <T,>(items: readonly T[]): T => items[Math.floor(rand() * items.length)]
 function weighted<T extends string>(table: Record<T, number>): T {
   const entries = Object.entries(table) as Array<[T, number]>
-  let roll = rand() * entries.reduce((sum, [, w]) => sum + w, 0)
-  for (const [value, weight] of entries) {
-    roll -= weight
-    if (roll <= 0) return value
-  }
+  let roll = rand() * entries.reduce((s, [, w]) => s + w, 0)
+  for (const [v, w] of entries) if ((roll -= w) <= 0) return v
   return entries[0][0]
 }
-
-// ── Fictional people ──────────────────────────────────────────────────────────
-const FIRST = ['Maya', 'Jordan', 'Priya', 'Luis', 'Grace', 'Owen', 'Fatima', 'Ethan', 'Chloe', 'Marcus', 'Elena', 'Noah',
-  'Aisha', 'Ben', 'Sofia', 'Caleb', 'Hannah', 'Diego', 'Rachel', 'Tom', 'Nina', 'Victor', 'Leah', 'Andre', 'Claire', 'Raj',
-  'Ivy', 'Samuel', 'Monica', 'Kevin']
-const LAST = ['Patel', 'Brooks', 'Nguyen', 'Garcia', 'Kim', 'Sullivan', 'Rahman', 'Cole', 'Martinez', 'Reed', 'Okafor',
-  'Bennett', 'Lopez', 'Fischer', 'Hayes', 'Romero', 'Walsh', 'Chen', 'Morgan', 'Price']
-const STREETS = ['Oak St', 'Maple Ave', 'Harbor Rd', 'Pine Ct', 'Willow Way', 'Elm Dr', 'Lakeview Blvd', 'Birch Ln', 'Ridge Rd']
-const OWNERS = ['Maria (Office)', 'Jake (Dispatch)', 'Sam Harbor']
-
-// ── Conversation templates (home services) ────────────────────────────────────
-type Template = {
-  service: string
-  category: string
-  intent: 'buying_interest' | 'support' | 'information' | 'meeting_request' | 'complaint'
-  quality: Record<'hot' | 'warm' | 'cold', number>
-  urgency: 'high' | 'medium' | 'low'
-  ask: string
-  answer: string
-  summary: (name: string, street: string) => string
-  keyPoints: string[]
-  nextSteps: string[]
-  weight: number
+function weightedTemplate(pool: Template[]): Template {
+  let roll = rand() * pool.reduce((s, x) => s + x.weight, 0)
+  for (const x of pool) if ((roll -= x.weight) <= 0) return x
+  return pool[0]
 }
-
-const TEMPLATES: Template[] = [
-  {
-    service: 'Emergency plumbing', category: 'support_request', intent: 'buying_interest', urgency: 'high', weight: 5,
-    quality: { hot: 8, warm: 2, cold: 0 },
-    ask: 'A pipe under my kitchen sink burst and water is everywhere. Can you send someone tonight?',
-    answer: 'I am sorry! Shut the valve under the sink if you can. Our on-call plumber can be there within the hour. Can I get your name, phone and address?',
-    summary: (n, s) => `${n} reported a burst pipe under the kitchen sink at ${s} and needed same-night service. Shut-off guidance was given and the on-call plumber was requested.`,
-    keyPoints: ['Burst pipe, active leak', 'Same-night emergency visit requested', 'Shut-off steps given'],
-    nextSteps: ['Dispatch on-call plumber', 'Call customer with ETA'],
-  },
-  {
-    service: 'Water heater repair & replacement', category: 'pricing_inquiry', intent: 'buying_interest', urgency: 'medium', weight: 5,
-    quality: { hot: 5, warm: 4, cold: 1 },
-    ask: 'My water heater is 14 years old and the water is only lukewarm. Should I repair it or replace it?',
-    answer: 'At 14 years, replacement is often the better value, but the technician will check it and give you an upfront quote for both. Shall I book a free estimate?',
-    summary: (n, s) => `${n} has a 14-year-old water heater producing lukewarm water at ${s} and wants advice on repair versus replacement. A free replacement estimate was offered.`,
-    keyPoints: ['Aging unit (14 years)', 'Interested in replacement options', 'Asked about financing'],
-    nextSteps: ['Book free estimate', 'Send financing information'],
-  },
-  {
-    service: 'Furnace tune-up', category: 'general_inquiry', intent: 'meeting_request', urgency: 'low', weight: 4,
-    quality: { hot: 2, warm: 6, cold: 2 },
-    ask: 'Can I schedule a furnace tune-up before winter? Do you have anything next week?',
-    answer: 'Yes! We have mornings and afternoons open next week. Which day works best, and what is the service address?',
-    summary: (n, s) => `${n} wants a pre-winter furnace tune-up at ${s} next week and asked about available times.`,
-    keyPoints: ['Seasonal maintenance', 'Flexible on timing next week'],
-    nextSteps: ['Confirm appointment day', 'Offer maintenance plan'],
-  },
-  {
-    service: 'AC repair', category: 'support_request', intent: 'buying_interest', urgency: 'high', weight: 3,
-    quality: { hot: 6, warm: 3, cold: 1 },
-    ask: 'My AC is running but blowing warm air. It is really hot in here. How soon can someone come?',
-    answer: 'That is no fun in this heat. Check that the thermostat is on cool and the filter is not clogged. Our earliest slot is tomorrow 11 AM to 1 PM. Want it?',
-    summary: (n, s) => `${n}'s AC at ${s} is blowing warm air. Basic checks were suggested and the next-day midday window was offered.`,
-    keyPoints: ['AC blowing warm air', 'Wants earliest appointment', 'Elderly parent at home'],
-    nextSteps: ['Confirm tomorrow 11 AM-1 PM', 'Text technician ETA'],
-  },
-  {
-    service: 'Drain cleaning', category: 'support_request', intent: 'support', urgency: 'medium', weight: 3,
-    quality: { hot: 3, warm: 5, cold: 2 },
-    ask: 'Our basement floor drain keeps backing up after it rains. Is that something you fix?',
-    answer: 'Yes, we clear and camera-inspect drains so we can find the cause. Can I take your details and book an inspection?',
-    summary: (n, s) => `${n} has a basement floor drain at ${s} that backs up after rain and wants it inspected and cleared.`,
-    keyPoints: ['Recurring backup after rain', 'Camera inspection suggested'],
-    nextSteps: ['Book drain inspection', 'Quote camera inspection'],
-  },
-  {
-    service: 'New HVAC system quote', category: 'pricing_inquiry', intent: 'buying_interest', urgency: 'low', weight: 3,
-    quality: { hot: 4, warm: 5, cold: 1 },
-    ask: 'We are thinking about replacing our whole heating and cooling system. Do you do free quotes?',
-    answer: 'We do! A comfort advisor visits, measures your home and gives you options with upfront pricing. Financing is available too. When is a good time?',
-    summary: (n, s) => `${n} is considering a full HVAC replacement at ${s} and requested a free in-home quote, with interest in financing.`,
-    keyPoints: ['Full system replacement', 'Free in-home quote requested', 'Interested in financing'],
-    nextSteps: ['Schedule comfort advisor visit', 'Send financing options'],
-  },
-  {
-    service: 'Emergency plumbing', category: 'general_inquiry', intent: 'information', urgency: 'low', weight: 3,
-    quality: { hot: 0, warm: 3, cold: 7 },
-    ask: 'Do you work on weekends? Just asking for future reference.',
-    answer: 'Yes, emergency plumbing and no-heat calls are covered 24/7, including weekends. Regular appointments are Monday to Friday.',
-    summary: (n) => `${n} asked about weekend availability for future reference. Emergency 24/7 coverage was explained.`,
-    keyPoints: ['General question about hours', 'No immediate job'],
-    nextSteps: ['Add to newsletter list'],
-  },
-  {
-    service: 'Water heater repair & replacement', category: 'support_request', intent: 'complaint', urgency: 'medium', weight: 1,
-    quality: { hot: 1, warm: 5, cold: 4 },
-    ask: 'Your tech replaced my water heater last month and now there is a small drip at the valve.',
-    answer: 'I am sorry about that. Your workmanship is guaranteed for a year, so we will send someone back at no charge. What day works?',
-    summary: (n, s) => `${n} reported a small drip at the valve of a water heater installed last month at ${s}. A no-charge warranty revisit was offered.`,
-    keyPoints: ['Warranty revisit', 'Minor drip at valve', 'Customer was polite but concerned'],
-    nextSteps: ['Book warranty visit', 'Manager follow-up call'],
-  },
-]
+const fill = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? '')
 
 type Status = 'new' | 'reviewing' | 'qualified' | 'proposal' | 'won' | 'lost'
+const OWNERS = ['Maria (Office)', 'Jake (Dispatch)', 'Carlos (Sales)', 'Dana (Service Manager)']
 
-const TEMPLATE_POOL = TEMPLATES.flatMap((tpl) => Array<Template>(tpl.weight).fill(tpl))
-
-function conversationDoc(index: number, createdAt: Date, now: Date): Document {
-  const t = pick(TEMPLATE_POOL)
-  const first = pick(FIRST)
-  const lastName = pick(LAST)
-  const name = `${first} ${lastName}`
-  const street = `${10 + Math.floor(rand() * 890)} ${pick(STREETS)}`
-  const captured = t.intent === 'information' ? rand() < 0.35 : rand() < 0.9
-  const quality = captured ? weighted(t.quality) : 'unknown'
+function conversation(tenant: DemoTenant, index: number, createdAt: Date, now: Date): Document {
+  const pool = TEMPLATES.filter((x) => tenant.trades.includes(x.trade) && (tenant.services.includes(x.service) || x.service === 'General question' || x.service === 'Careers'))
+  const tpl = weightedTemplate(pool)
+  const first = pick(FIRST_NAMES)
+  const last = pick(LAST_NAMES)
+  const name = `${first} ${last}`
+  const city = pick(SUBURBS[tenant.city] ?? [tenant.city])
+  const zip = `${tenant.zipPrefix}${String(Math.floor(rand() * 90) + 10)}`
+  const street = `${100 + Math.floor(rand() * 9800)} ${pick(STREET_NAMES)} ${pick(STREET_TYPES)}, ${city}, ${tenant.state} ${zip}`
+  const company = tpl.commercial ? pick(COMPANIES) : null
+  const captured = tpl.intent === 'information' ? rand() < 0.4 : rand() < 0.92
+  const quality = captured ? weighted(tpl.quality) : 'unknown'
   const ageDays = (now.getTime() - createdAt.getTime()) / 86_400_000
-
-  // Older conversations have moved further through the pipeline.
   const status: Status =
     !captured ? (rand() < 0.7 ? 'reviewing' : 'lost')
     : ageDays < 2 ? weighted({ new: 6, reviewing: 3, qualified: 1, proposal: 0, won: 0, lost: 0 })
     : ageDays < 14 ? weighted({ new: 1, reviewing: 3, qualified: 4, proposal: 2, won: 2, lost: 1 })
     : weighted({ new: 0, reviewing: 1, qualified: 2, proposal: 2, won: 6, lost: 2 })
-
-  const sentiment = t.intent === 'complaint' ? 'neutral' : weighted({ positive: 7, neutral: 3, negative: 0.4 })
+  const sentiment = tpl.intent === 'complaint' ? 'neutral' : weighted({ positive: 7, neutral: 3, negative: 0.4 })
+  const phone = `(${pick(tenant.areaCodes)}) 555-01${String(Math.floor(rand() * 100)).padStart(2, '0')}`
+  const email = `${first}.${last}`.toLowerCase().replace(/[^a-z.]/g, '') + '@example.com'
   const lead = captured
-    ? {
-        name,
-        email: `${first}.${lastName}`.toLowerCase() + '@example.com',
-        phone: `(555) 01${Math.floor(rand() * 10)}-${String(1000 + Math.floor(rand() * 8999))}`,
-        company: null,
-        country: rand() < 0.93 ? 'United States' : 'Canada',
-        purpose: t.service,
-      }
-    : { name: null, email: null, phone: null, company: null, country: null, purpose: t.service }
-
+    ? { name, email, phone, company, country: 'United States', purpose: `${tpl.service} in ${city}, ${tenant.state}` }
+    : { name: null, email: null, phone: null, company: null, country: 'United States', purpose: tpl.service }
+  const vars = { name: captured ? name : 'A visitor', city, state: tenant.state, street, company: company ?? '' }
+  const greeting = `Hi, I'm ${tenant.agentName} with ${tenant.companyName}. How can I help you today?`
   const transcript = [
-    { role: 'assistant', content: DEMO_TENANT.greeting },
-    { role: 'user', content: t.ask },
-    { role: 'assistant', content: t.answer },
+    { role: 'assistant', content: greeting },
+    { role: 'user', content: tpl.ask },
+    { role: 'assistant', content: tpl.answer },
     ...(captured
       ? [
-          { role: 'user', content: `${name}, ${lead.phone}, ${lead.email}. ${street}.` },
-          { role: 'assistant', content: `Thanks, ${first}! You're all set. Our team will confirm by text shortly.` },
+          { role: 'user', content: `${name}${company ? `, ${company}` : ''}, ${phone}, ${email}. ${street}.` },
+          { role: 'assistant', content: `Thanks, ${first}! You're all set. We'll text you a confirmation shortly.` },
         ]
       : [{ role: 'user', content: 'Great, thanks!' }]),
   ]
-
   const open = status !== 'won' && status !== 'lost'
   const owner = status === 'new' ? null : pick(OWNERS)
-  // A handful of overdue follow-ups gives the AI insights tab something useful to flag.
-  const followUpAt = open && owner
-    ? new Date(now.getTime() + (rand() < 0.3 ? -1 : 1) * (6 + rand() * 60) * 3_600_000)
-    : null
-
+  const followUpAt = open && owner ? new Date(now.getTime() + (rand() < 0.3 ? -1 : 1) * (6 + rand() * 60) * 3_600_000) : null
   const statusHistory = [{ status: 'new', changedAt: createdAt }]
   if (status !== 'new') statusHistory.push({ status, changedAt: new Date(createdAt.getTime() + 3_600_000 * (2 + rand() * 30)) })
-
-  const maturity = calculateMaturityScore({
-    status, leadQuality: quality, urgency: t.urgency, sentiment, lead, messageCount: transcript.length, hasLead: captured,
-  })
+  const maturity = calculateMaturityScore({ status, leadQuality: quality, urgency: tpl.urgency, sentiment, lead, messageCount: transcript.length, hasLead: captured })
+  const summary = fill(tpl.summary, vars)
 
   return {
-    conversationId: `demo-${index}`,
-    tenant: { id: DEMO_TENANT.tenantId, companyName: DEMO_TENANT.companyName, agentName: DEMO_TENANT.agentName },
+    conversationId: `demo-${tenant.tenantId}-${index}`,
+    tenant: { id: tenant.tenantId, companyName: tenant.companyName, agentName: tenant.agentName },
     user: lead,
     lead,
     hasLead: captured,
     requirement: {
-      summary: t.summary(name, street),
-      detectedNeed: t.service,
-      servicesInterested: [t.service],
-      urgency: t.urgency,
-      budgetMentioned: t.category === 'pricing_inquiry',
-      timelineMentioned: t.urgency !== 'low',
+      summary,
+      detectedNeed: tpl.service,
+      servicesInterested: tenant.services.includes(tpl.service) ? [tpl.service] : [],
+      urgency: tpl.urgency,
+      budgetMentioned: tpl.category === 'pricing_inquiry',
+      timelineMentioned: tpl.urgency !== 'low',
     },
-    classification: { category: t.category, subcategory: null, intent: t.intent, leadQuality: quality, sentiment },
+    classification: { category: tpl.category, subcategory: null, intent: tpl.intent, leadQuality: quality, sentiment },
     maturityScore: maturity.score,
     maturityLabel: maturity.label,
-    summary: { text: t.summary(captured ? name : 'A visitor', street), keyPoints: t.keyPoints },
-    callSummary: { summary: t.summary(captured ? name : 'A visitor', street), keyPoints: t.keyPoints, nextSteps: t.nextSteps },
+    summary: { text: summary, keyPoints: tpl.keyPoints },
+    callSummary: { summary, keyPoints: tpl.keyPoints, nextSteps: tpl.nextSteps },
     transcript,
     messageCount: transcript.length,
     status,
     statusHistory,
     owner,
     followUpAt,
-    notes: owner && rand() < 0.4 ? 'Prefers text messages. Gate code in notes on the work order.' : null,
-    source: { mode: 'conversation', language: rand() < 0.12 ? 'spanish' : 'english' },
-    email: { sent: true, recipients: ['dispatch@harborline-demo.test'] },
+    notes: owner && rand() < 0.35 ? pick(['Prefers text messages.', 'Gate code on the work order.', 'Has a dog; call on arrival.', 'Asked for financing details.']) : null,
+    source: { mode: 'conversation', language: rand() < 0.14 ? 'spanish' : 'english' },
+    email: { sent: true, recipients: [`dispatch@${tenant.tenantId}.test`] },
     finalizedAt: new Date(createdAt.getTime() + 4 * 60_000),
     createdAt,
     updatedAt: statusHistory.at(-1)!.changedAt,
   }
 }
 
-function heroDoc(now: Date): Document {
-  const createdAt = new Date(now.getTime() - 3 * 60_000)
+function heroConversation(now: Date): Document {
+  const createdAt = new Date(now.getTime() - 4 * 60_000)
   const transcript = [
-    { role: 'assistant', content: DEMO_TENANT.greeting },
-    ...HERO_TURNS.flatMap((turn) => [
-      { role: 'user', content: turn.user },
-      { role: 'assistant', content: turn.reply },
-    ]),
+    { role: 'assistant', content: HERO.greeting },
+    ...HERO_TURNS.flatMap((turn) => [{ role: 'user', content: turn.user }, { role: 'assistant', content: turn.reply }]),
   ]
-  const maturity = calculateMaturityScore({
-    status: 'new', leadQuality: 'hot', urgency: 'high', sentiment: 'positive', lead: HERO_LEAD,
-    messageCount: transcript.length, hasLead: true,
-  })
+  const maturity = calculateMaturityScore({ status: 'new', leadQuality: 'hot', urgency: 'high', sentiment: 'positive', lead: HERO_LEAD, messageCount: transcript.length, hasLead: true })
   return {
     _id: new ObjectId(HERO_RECORD_ID),
     conversationId: 'demo-hero',
-    tenant: { id: DEMO_TENANT.tenantId, companyName: DEMO_TENANT.companyName, agentName: DEMO_TENANT.agentName },
+    tenant: { id: HERO.tenantId, companyName: HERO.companyName, agentName: HERO.agentName },
     user: HERO_LEAD,
     lead: HERO_LEAD,
     hasLead: true,
-    requirement: {
-      summary: HERO_SUMMARY.summary,
-      detectedNeed: 'Water heater leak',
-      servicesInterested: ['Water heater repair & replacement', 'Furnace tune-up'],
-      urgency: 'high',
-      budgetMentioned: false,
-      timelineMentioned: true,
-    },
-    classification: { category: 'support_request', subcategory: 'water_heater', intent: 'buying_interest', leadQuality: 'hot', sentiment: 'positive' },
+    requirement: { summary: HERO_SUMMARY.summary, detectedNeed: 'AC not cooling', servicesInterested: ['AC repair'], urgency: 'high', budgetMentioned: false, timelineMentioned: true },
+    classification: { category: 'support_request', subcategory: 'ac_repair', intent: 'buying_interest', leadQuality: 'hot', sentiment: 'positive' },
     maturityScore: maturity.score,
     maturityLabel: maturity.label,
     summary: { text: HERO_SUMMARY.summary, keyPoints: HERO_SUMMARY.keyPoints },
@@ -298,102 +188,131 @@ function heroDoc(now: Date): Document {
     followUpAt: null,
     notes: null,
     source: { mode: 'conversation', language: 'english' },
-    email: { sent: true, recipients: ['dispatch@harborline-demo.test'] },
+    email: { sent: true, recipients: [`dispatch@${HERO.tenantId}.test`] },
     finalizedAt: now,
     createdAt,
     updatedAt: now,
   }
 }
 
-/** Growth story: more conversations every month (oldest month first). */
-const PER_MONTH = [9, 12, 15, 19, 24, 30]
-
 async function main(): Promise<void> {
   assertLocalDatabase()
   const db = await getMongoDb()
   if (!db) throw new Error('Could not connect to MongoDB.')
-  const tenantId = DEMO_TENANT.tenantId
   const now = new Date()
+  const tenantIds = [...TENANTS.map((x) => x.tenantId), LIVE_TENANT.tenantId]
 
-  // 1. Clean previous demo data (only this tenant).
+  // 1. Remove previous demo data (only demo tenants and demo logins).
   await Promise.all([
-    ...Object.values(TENANT_COLLECTIONS).map((name) => db.collection(name).deleteMany({ tenantId })),
-    db.collection(AUTH_COLLECTIONS.users).deleteMany({ tenantId }),
-    db.collection(AUTH_COLLECTIONS.users).deleteMany({ email: DEMO_OWNER.email }),
-    db.collection(env.MONGODB_CALLS_COLLECTION).deleteMany({ 'tenant.id': tenantId }),
+    ...Object.values(TENANT_COLLECTIONS).map((c) => db.collection(c).deleteMany({ tenantId: { $in: tenantIds } })),
+    db.collection('tenant_usage_counters').deleteMany({ tenantId: { $in: tenantIds } }),
+    db.collection(AUTH_COLLECTIONS.users).deleteMany({ $or: [{ tenantId: { $in: tenantIds } }, { email: { $in: [PLATFORM_ADMIN.email, TENANT_OWNER.email].map((e) => e.toLowerCase()) } }] }),
+    db.collection(env.MONGODB_CALLS_COLLECTION).deleteMany({ 'tenant.id': { $in: tenantIds } }),
   ])
 
-  // 2. Tenant, settings, knowledge base, owner login (through the app's own functions).
-  await createManagedTenant({
-    tenantId,
-    companyName: DEMO_TENANT.companyName,
-    agentName: DEMO_TENANT.agentName,
-    greeting: DEMO_TENANT.greeting,
-    tone: DEMO_TENANT.tone,
-    services: [...DEMO_TENANT.services],
-    domains: [DEMO_TENANT.domain, 'http://localhost:3000'],
-    embedToken: process.env.DEMO_EMBED_TOKEN || 'harborline-demo-token',
-    subscriptionStatus: 'active',
-    subscriptionType: 'growth',
-    billingCycle: 'monthly',
-  })
-  await updateManagedTenantSettings({
-    tenantId,
-    companyName: DEMO_TENANT.companyName,
-    agentName: DEMO_TENANT.agentName,
-    greeting: DEMO_TENANT.greeting,
-    tone: DEMO_TENANT.tone,
-    services: [...DEMO_TENANT.services],
-    customInstructions: DEMO_TENANT.customInstructions,
-    knowledgeBase: DEMO_TENANT.knowledgeBase.map((e) => ({ ...e })),
-  })
-  await db.collection(TENANT_COLLECTIONS.settings).updateOne(
-    { tenantId },
-    { $set: { languageMode: 'auto', supportedLanguages: [...DEMO_TENANT.languages], voiceProfile: { gender: 'female', style: 'warm and calm' } } }
-  )
-  // Mark domains verified so no verification tokens appear on screen.
-  await db.collection(TENANT_COLLECTIONS.domains).updateMany(
-    { tenantId, status: 'active' },
-    { $set: { verificationStatus: 'verified', verifiedAt: now }, $unset: { verificationToken: '' } }
-  )
-  await createManagedTenantUser({
-    tenantId,
-    email: DEMO_OWNER.email,
-    password: DEMO_OWNER.password,
-    name: DEMO_OWNER.name,
-    role: 'tenant_owner',
-  })
+  // 2. Platform admin.
+  await upsertAuthUser({ email: PLATFORM_ADMIN.email, password: PLATFORM_ADMIN.password, name: PLATFORM_ADMIN.name, role: 'platform_admin' })
 
-  // 3. Optional: store an OpenAI key for live (non-mocked) recordings. Only the masked
-  //    form (e.g. "sk-p...abcd") is ever shown in the UI.
-  if (process.env.DEMO_OPENAI_API_KEY && env.PLATFORM_ENCRYPTION_KEY) {
-    await upsertTenantSecretInDb(db, { tenantId, kind: 'openai_api_key', value: process.env.DEMO_OPENAI_API_KEY })
+  // 3. Tenants (through the app's own management functions).
+  for (const tenant of TENANTS) {
+    const isHero = tenant.tenantId === HERO.tenantId
+    await createManagedTenant({
+      tenantId: tenant.tenantId,
+      companyName: tenant.companyName,
+      agentName: tenant.agentName,
+      greeting: isHero ? HERO.greeting : `Hi, I'm ${tenant.agentName} with ${tenant.companyName}. How can I help you today?`,
+      tone: isHero ? HERO.tone : 'friendly, professional and helpful',
+      services: tenant.services,
+      domains: isHero ? [tenant.domain, 'http://localhost:3000'] : [tenant.domain],
+      embedToken: `${tenant.tenantId}-demo-token`,
+      subscriptionStatus: tenant.subscription.status,
+      subscriptionType: tenant.subscription.type,
+      billingCycle: tenant.subscription.billingCycle,
+    })
+    if (isHero) {
+      await updateManagedTenantSettings({
+        tenantId: tenant.tenantId,
+        companyName: tenant.companyName,
+        agentName: tenant.agentName,
+        greeting: HERO.greeting,
+        tone: HERO.tone,
+        services: tenant.services,
+        customInstructions: HERO.customInstructions,
+        knowledgeBase: HERO.knowledgeBase.map((e) => ({ ...e })),
+      })
+      await db.collection(TENANT_COLLECTIONS.settings).updateOne(
+        { tenantId: tenant.tenantId },
+        { $set: { languageMode: 'auto', supportedLanguages: [...HERO.languages], voiceProfile: { gender: 'female', style: 'warm and upbeat' } } }
+      )
+      await createManagedTenantUser({ tenantId: tenant.tenantId, email: TENANT_OWNER.email, password: TENANT_OWNER.password, name: TENANT_OWNER.name, role: 'tenant_owner' })
+      await createManagedTenantUser({ tenantId: tenant.tenantId, email: `dispatch@${tenant.tenantId}.test`, password: `${tenant.tenantId}-staff`, name: 'Jake (Dispatch)', role: 'tenant_admin' })
+      await createManagedTenantUser({ tenantId: tenant.tenantId, email: `office@${tenant.tenantId}.test`, password: `${tenant.tenantId}-staff`, name: 'Maria (Office)', role: 'tenant_viewer' })
+    }
+    // Verified domains: no verification tokens on screen.
+    await db.collection(TENANT_COLLECTIONS.domains).updateMany(
+      { tenantId: tenant.tenantId, status: 'active' },
+      { $set: { verificationStatus: 'verified', verifiedAt: now }, $unset: { verificationToken: '' } }
+    )
+    // Placeholder keys so "OpenAI ready" looks configured. Only the masked form is ever shown.
+    // The demo conversation is mocked, so these never reach OpenAI.
+    if (tenant.hasOpenAiKey && env.PLATFORM_ENCRYPTION_KEY) {
+      const real = isHero ? process.env.DEMO_OPENAI_API_KEY : undefined
+      await upsertTenantSecretInDb(db, { tenantId: tenant.tenantId, kind: 'openai_api_key', value: real || `sk-demo-placeholder-${tenant.tenantId}` })
+    }
+    if (tenant.status === 'disabled') await disableManagedTenant(tenant.tenantId)
+    if (tenant.status === 'archived') await archiveManagedTenant(tenant.tenantId)
   }
 
-  // 4. Conversations: six months, growing, plus tonight's hero lead.
+  // 4. Conversations per tenant over six months (growing), plus the hero lead.
   const docs: Document[] = []
-  let index = 0
-  PER_MONTH.forEach((count, i) => {
-    const monthsAgo = PER_MONTH.length - 1 - i
-    const monthStart = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1)
-    const monthEnd = monthsAgo === 0 ? new Date(now.getTime() - 3_600_000) : new Date(now.getFullYear(), now.getMonth() - monthsAgo + 1, 0, 23)
-    for (let k = 0; k < count; k++) {
-      const at = new Date(monthStart.getTime() + rand() * (monthEnd.getTime() - monthStart.getTime()))
-      // About a third of inquiries arrive after hours: the point of the product.
-      if (rand() < 0.35) at.setHours(19 + Math.floor(rand() * 4), Math.floor(rand() * 60))
-      docs.push(conversationDoc(index++, at, now))
+  const usage: Document[] = []
+  for (const tenant of TENANTS) {
+    let index = 0
+    tenant.volume.forEach((count, i) => {
+      const monthsAgo = tenant.volume.length - 1 - i
+      const start = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1)
+      const end = monthsAgo === 0 ? new Date(now.getTime() - 3_600_000) : new Date(now.getFullYear(), now.getMonth() - monthsAgo + 1, 0, 23)
+      for (let k = 0; k < count; k++) {
+        const at = new Date(start.getTime() + rand() * (end.getTime() - start.getTime()))
+        if (rand() < 0.35) at.setHours(18 + Math.floor(rand() * 5), Math.floor(rand() * 60)) // after-hours share
+        docs.push(conversation(tenant, index++, at, now))
+      }
+    })
+    const total = tenant.volume.reduce((a, b) => a + b, 0)
+    if (total > 0) {
+      const counters = {
+        embed_session_created: total * 9,
+        embed_session_denied: Math.round(total * 0.2),
+        config_request: total * 11,
+        chat_request: total * 6,
+        transcription_request: Math.round(total * 1.8),
+        tts_request: total * 7,
+        conversation_completed: total,
+      }
+      usage.push({
+        tenantId: tenant.tenantId,
+        counters,
+        total: Object.values(counters).reduce((a, b) => a + b, 0),
+        firstEventAt: new Date(now.getTime() - 180 * 86_400_000),
+        lastEventAt: now,
+        createdAt: new Date(now.getTime() - 180 * 86_400_000),
+        updatedAt: now,
+      })
     }
-  })
-  docs.push(heroDoc(now))
+  }
+  docs.push(heroConversation(now))
   await db.collection(env.MONGODB_CALLS_COLLECTION).insertMany(docs)
+  if (usage.length) await db.collection('tenant_usage_counters').insertMany(usage)
 
   console.info('[demo:seed] done', {
-    tenantId,
+    tenants: TENANTS.length,
     conversations: docs.length,
-    login: `${DEMO_OWNER.email} (password from DEMO_PASSWORD or the default in demo/fixtures/demo-tenant.ts)`,
-    heroRecordId: HERO_RECORD_ID,
+    platformAdmin: PLATFORM_ADMIN.email,
+    tenantOwner: `${TENANT_OWNER.email} (${HERO.companyName})`,
   })
-  console.info('[demo:seed] Restart `npm run dev` if it was already running, so cached tenant data refreshes.')
+  if (process.env.USAGE_EVENTS_ENABLED !== 'true') console.info('[demo:seed] Tip: set USAGE_EVENTS_ENABLED=true in .env.local to show the Usage charts.')
+  if (!env.PLATFORM_ENCRYPTION_KEY) console.info('[demo:seed] Tip: set PLATFORM_ENCRYPTION_KEY so tenants show "OpenAI key configured".')
+  console.info('[demo:seed] Restart `npm run dev` if it was running, so cached tenant data refreshes.')
 }
 
 main()

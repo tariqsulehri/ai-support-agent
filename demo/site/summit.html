@@ -1,0 +1,236 @@
+<!doctype html>
+<!--
+  Fictional US home-services website used as the backdrop for the demo video.
+  "Summit Pro Home Services" is a made-up company; reviews and figures are illustrative.
+  The recorder serves this at {BASE_URL}/__demo/site (same origin as the app, so the
+  embedded assistant is allowed to frame) without changing the app.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Summit Pro Home Services | Heating, Cooling, Plumbing &amp; Electrical | Dallas-Fort Worth</title>
+  <style>
+    :root {
+      --primary: #e8590c; --primary-dk: #c2410c; --navy: #0b1f3a; --navy-2: #12305a; --sky: #38bdf8;
+      --ink: #0f172a; --sub: #475569; --line: #e2e8f0; --bg: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--ink);
+      font-family: Inter, 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; }
+    a { color: inherit; text-decoration: none; }
+
+    .promo { background: linear-gradient(90deg, var(--primary), #f59f00); color: #fff; font-weight: 700; font-size: 14px; text-align: center; padding: 9px 16px; letter-spacing: .01em; }
+    .promo b { background: rgba(255,255,255,.22); padding: 2px 8px; border-radius: 999px; margin-left: 6px; }
+
+    header { position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,.96); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+    .nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 48px; }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-mark { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--primary), #f59f00); box-shadow: 0 8px 20px rgba(232,89,12,.35); }
+    .logo-text { line-height: 1.05; }
+    .logo-text strong { display: block; font-size: 21px; letter-spacing: -.02em; color: var(--navy); }
+    .logo-text span { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: var(--primary); text-transform: uppercase; }
+    .menu { display: flex; gap: 30px; font-weight: 600; font-size: 15px; color: var(--sub); }
+    .menu a:hover { color: var(--navy); }
+    .nav-cta { display: flex; align-items: center; gap: 16px; }
+    .phone { text-align: right; line-height: 1.15; }
+    .phone small { display: block; font-size: 11px; color: #16a34a; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .phone strong { font-size: 18px; color: var(--navy); }
+    .btn { display: inline-flex; align-items: center; gap: 10px; border-radius: 12px; font-weight: 700; padding: 13px 22px; font-size: 15px; }
+    .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 10px 24px rgba(232,89,12,.3); }
+    .btn-light { background: #fff; color: var(--navy); }
+    .btn-ghost { border: 2px solid rgba(255,255,255,.35); color: #fff; }
+
+    .hero { position: relative; overflow: hidden; color: #fff;
+      background: radial-gradient(900px 500px at 85% 10%, rgba(56,189,248,.25), transparent 60%),
+                  radial-gradient(700px 500px at 10% 100%, rgba(232,89,12,.25), transparent 60%),
+                  linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 60%, #1d4ed8 120%); }
+    .hero::after { content: ''; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.08) 1px, transparent 1px); background-size: 22px 22px; pointer-events: none; }
+    .hero-inner { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px; align-items: center; padding: 64px 48px 84px; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); font-weight: 600; font-size: 13px; }
+    .pill .live { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.25); }
+    h1 { font-size: 60px; line-height: 1.04; letter-spacing: -.035em; margin: 20px 0 18px; }
+    h1 em { font-style: normal; background: linear-gradient(90deg, #fdba74, #fde68a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lead { font-size: 19px; line-height: 1.55; color: #cbd5e1; max-width: 600px; margin: 0 0 28px; }
+    .hero-btns { display: flex; gap: 14px; margin-bottom: 30px; }
+    .trust { display: flex; gap: 26px; align-items: center; color: #cbd5e1; font-size: 14px; font-weight: 600; }
+    .stars { color: #fbbf24; letter-spacing: 2px; font-size: 16px; }
+    .trust strong { color: #fff; }
+
+    .visual { position: relative; height: 430px; }
+    .house { position: absolute; inset: 20px 30px 0 30px; border-radius: 28px; overflow: hidden;
+      background: linear-gradient(180deg, #7dd3fc 0%, #bae6fd 55%, #a7f3d0 56%, #6ee7b7 100%); box-shadow: 0 30px 60px rgba(0,0,0,.35); }
+    .float { position: absolute; background: #fff; color: var(--ink); border-radius: 18px; box-shadow: 0 18px 40px rgba(2,6,23,.3); padding: 14px 16px; }
+    .float small { color: var(--sub); font-size: 12px; font-weight: 600; }
+    .float strong { display: block; font-size: 15px; }
+    .tech { left: -6px; bottom: 34px; display: flex; gap: 12px; align-items: center; }
+    .avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), #f59f00); color: #fff; display: grid; place-items: center; font-weight: 800; }
+    .review { right: 0; top: 0; width: 230px; }
+    .review p { margin: 6px 0 0; font-size: 13px; line-height: 1.45; color: var(--sub); }
+    .temp { right: 18px; bottom: 70px; text-align: center; }
+    .temp strong { font-size: 28px; color: #0284c7; }
+
+    .services { padding: 56px 48px 24px; }
+    .section-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 26px; }
+    .eyebrow { color: var(--primary); font-weight: 800; letter-spacing: .14em; text-transform: uppercase; font-size: 12px; }
+    h2 { font-size: 36px; letter-spacing: -.03em; margin: 8px 0 0; color: var(--navy); }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+    .card { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 26px; box-shadow: 0 4px 14px rgba(15,23,42,.05); overflow: hidden; }
+    .card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 5px; background: var(--accent); }
+    .icon { width: 58px; height: 58px; border-radius: 16px; display: grid; place-items: center; background: var(--accent-soft); margin-bottom: 16px; }
+    .card h3 { margin: 0 0 6px; font-size: 21px; color: var(--navy); }
+    .card p { margin: 0 0 14px; color: var(--sub); line-height: 1.55; font-size: 15px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tags span { font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 5px 10px; border-radius: 999px; }
+    .hvac { --accent: #0284c7; --accent-soft: #e0f2fe; }
+    .plumb { --accent: #0d9488; --accent-soft: #ccfbf1; }
+    .elec { --accent: #d97706; --accent-soft: #fef3c7; }
+
+    .strip { margin: 34px 48px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; background: var(--navy); color: #fff; border-radius: 22px; padding: 26px 30px; }
+    .strip div strong { display: block; font-size: 30px; letter-spacing: -.02em; }
+    .strip div span { color: #94a3b8; font-size: 14px; font-weight: 600; }
+    .areas { padding: 26px 48px 40px; color: var(--sub); font-size: 14px; }
+    .areas b { color: var(--navy); }
+    .demo-note { text-align: center; color: #94a3b8; font-size: 12px; padding-bottom: 28px; }
+
+    /* Assistant launcher + panel (mirrors public/embed.js; no hardcoded credentials). */
+    #launcher { position: fixed; right: 28px; bottom: 28px; z-index: 50; display: flex; align-items: center; gap: 12px; height: 62px;
+      padding: 0 22px 0 12px; border: 0; border-radius: 999px; cursor: pointer; color: #fff; font: 700 17px/1 inherit; font-family: inherit;
+      background: linear-gradient(135deg, var(--primary), #f59f00); box-shadow: 0 14px 34px rgba(232,89,12,.45); }
+    #launcher .bubble { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.22); display: grid; place-items: center; }
+    #launcher .ring { position: absolute; inset: -6px; border-radius: 999px; border: 3px solid rgba(232,89,12,.55); animation: ring 1.8s ease-out infinite; }
+    #launcher .tip { position: absolute; right: 0; bottom: 76px; white-space: nowrap; background: #fff; color: var(--navy); font-size: 14px;
+      font-weight: 700; padding: 10px 14px; border-radius: 14px; box-shadow: 0 12px 30px rgba(2,6,23,.2); }
+    @keyframes ring { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.22); } }
+    #voice-agent-container { position: fixed; right: 20px; bottom: 16px; z-index: 60; width: 470px; height: calc(100vh - 32px); display: none; background: transparent; }
+    #voice-agent-container iframe { border: 0; width: 100%; height: 100%; background: transparent; color-scheme: light; }
+  </style>
+</head>
+<body>
+  <div class="promo">Summer AC Tune-Up Special: $49 for new customers <b>Ends Friday</b></div>
+
+  <header><div class="nav">
+    <a class="logo" href="#">
+      <span class="logo-mark"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20 12 4l9 16"/><path d="M8 20l4-7 4 7"/></svg></span>
+      <span class="logo-text"><strong>Summit Pro</strong><span>Home Services</span></span>
+    </a>
+    <nav class="menu"><a href="#">Heating &amp; Cooling</a><a href="#">Plumbing</a><a href="#">Electrical</a><a href="#">Comfort Club</a><a href="#">Reviews</a></nav>
+    <div class="nav-cta">
+      <div class="phone"><small>&#9679; Open 24/7</small><strong>(214) 555-0100</strong></div>
+      <a class="btn btn-primary" href="#">Book Online</a>
+    </div>
+  </div></header>
+
+  <section class="hero"><div class="hero-inner">
+    <div>
+      <span class="pill"><span class="live"></span> Technicians available today in Dallas-Fort Worth</span>
+      <h1>Comfort, water &amp; power,<br /><em>fixed today.</em></h1>
+      <p class="lead">Heating, cooling, plumbing and electrical pros you can trust. Upfront pricing, same-day service and a 100% satisfaction guarantee across DFW.</p>
+      <div class="hero-btns">
+        <a class="btn btn-primary" href="#">Schedule Service</a>
+        <a class="btn btn-ghost" href="#">View Specials</a>
+      </div>
+      <div class="trust">
+        <span><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> <strong>4.9</strong> from 2,300+ reviews</span>
+        <span>&#10003; Licensed &amp; insured in Texas</span>
+        <span>&#10003; Family owned since 2004</span>
+      </div>
+    </div>
+
+    <div class="visual" aria-hidden="true">
+      <div class="house">
+        <svg viewBox="0 0 600 400" width="100%" height="100%" preserveAspectRatio="xMidYMax slice">
+          <circle cx="500" cy="70" r="38" fill="#fde68a"/>
+          <rect x="0" y="300" width="600" height="100" fill="#4ade80"/>
+          <rect x="120" y="170" width="300" height="150" rx="6" fill="#fff7ed"/>
+          <path d="M100 180 270 70l170 110z" fill="#c2410c"/>
+          <rect x="245" y="230" width="52" height="90" rx="4" fill="#0b1f3a"/>
+          <rect x="150" y="205" width="64" height="54" rx="4" fill="#bae6fd" stroke="#fff" stroke-width="5"/>
+          <rect x="330" y="205" width="64" height="54" rx="4" fill="#bae6fd" stroke="#fff" stroke-width="5"/>
+          <rect x="440" y="262" width="78" height="58" rx="8" fill="#cbd5e1"/>
+          <circle cx="479" cy="291" r="20" fill="#94a3b8"/><path d="M479 275v32M463 291h32" stroke="#e2e8f0" stroke-width="4"/>
+          <path d="M60 300c10-40 30-60 30-60s20 20 30 60" fill="#16a34a"/>
+          <path d="M540 300c8-30 22-46 22-46s16 16 22 46" fill="#16a34a"/>
+          <g transform="translate(330 95)"><circle r="26" fill="#0284c7"/><path d="M0-13v26M-11-6l22 12M11-6l-22 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>
+          <g transform="translate(190 112)"><circle r="22" fill="#d97706"/><path d="M3-12-6 2h7l-3 11 9-14H0z" fill="#fff"/></g>
+          <g transform="translate(410 150)"><circle r="20" fill="#0d9488"/><path d="M0-10c6 8 8 11 8 15a8 8 0 0 1-16 0c0-4 2-7 8-15z" fill="#fff"/></g>
+        </svg>
+      </div>
+      <div class="float review"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span><p>"AC died at 9 PM, tech was here first thing in the morning. Lifesavers!" <br /><strong style="display:inline;font-size:13px;color:#0f172a">Jennifer R., Frisco</strong></p></div>
+      <div class="float tech"><span class="avatar">CM</span><div><small>Technician en route</small><strong>Carlos M. &middot; 12 min away</strong></div></div>
+      <div class="float temp"><small>Indoor temp</small><strong>72&deg;F</strong></div>
+    </div>
+  </div></section>
+
+  <section class="services">
+    <div class="section-head">
+      <div><div class="eyebrow">What we do</div><h2>One call for your whole home</h2></div>
+      <a class="btn btn-primary" href="#">See all services</a>
+    </div>
+    <div class="grid">
+      <div class="card hvac">
+        <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M4 7l16 10M20 7 4 17"/></svg></div>
+        <h3>Heating &amp; Cooling</h3><p>AC repair, furnace service and high-efficiency system installs with financing.</p>
+        <div class="tags"><span>AC Repair</span><span>Furnaces</span><span>New Systems</span></div>
+      </div>
+      <div class="card plumb">
+        <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linejoin="round"><path d="M12 3c5 6 7 9 7 12a7 7 0 0 1-14 0c0-3 2-6 7-12z"/></svg></div>
+        <h3>Plumbing</h3><p>Leaks, drains, water heaters and sewer lines, with 24/7 emergency response.</p>
+        <div class="tags"><span>Water Heaters</span><span>Drains</span><span>Leak Repair</span></div>
+      </div>
+      <div class="card elec">
+        <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div>
+        <h3>Electrical</h3><p>Panel upgrades, EV chargers, lighting and safety inspections by master electricians.</p>
+        <div class="tags"><span>EV Chargers</span><span>Panels</span><span>Generators</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="strip">
+    <div><strong>60 min</strong><span>Average emergency arrival</span></div>
+    <div><strong>25,000+</strong><span>DFW homes served</span></div>
+    <div><strong>$0</strong><span>Overtime fees for members</span></div>
+    <div><strong>100%</strong><span>Satisfaction guarantee</span></div>
+  </div>
+  <p class="areas"><b>Proudly serving:</b> Dallas &middot; Fort Worth &middot; Plano &middot; Frisco &middot; McKinney &middot; Arlington &middot; Irving &middot; Richardson &middot; Allen &middot; Garland</p>
+  <p class="demo-note">Fictional company created for a product demonstration. Reviews and figures are illustrative.</p>
+
+  <button id="launcher" type="button" aria-label="Chat with us">
+    <span class="tip">Need help now? Chat with Riley &#128075;</span>
+    <span class="ring" aria-hidden="true"></span>
+    <span class="bubble" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+    Chat with us
+  </button>
+  <div id="voice-agent-container" aria-live="polite"></div>
+
+  <script>
+    // Same lazy-iframe pattern as public/embed.js. The recorder swaps the src
+    // placeholder for the real /voice URL before serving this page.
+    (function () {
+      var src = '__WIDGET_SRC__'
+      var launcher = document.getElementById('launcher')
+      var container = document.getElementById('voice-agent-container')
+      var iframe = null
+      launcher.addEventListener('click', function () {
+        if (!iframe) {
+          iframe = document.createElement('iframe')
+          iframe.src = src
+          iframe.allow = 'microphone *; autoplay *'
+          iframe.setAttribute('allowtransparency', 'true')
+          iframe.title = 'Summit Pro assistant'
+          container.appendChild(iframe)
+        }
+        container.style.display = 'block'
+        launcher.style.display = 'none'
+      })
+      window.addEventListener('message', function (e) {
+        if (e.data && e.data.type === 'voice-agent:close') {
+          container.style.display = 'none'
+          launcher.style.display = 'flex'
+        }
+      })
+    })()
+  </script>
+</body>
+</html>

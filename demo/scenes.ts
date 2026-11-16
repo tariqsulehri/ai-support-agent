@@ -1,198 +1,170 @@
 /**
- * Single source of truth for the demo video.
+ * Single source of truth for the demo video (≈3.5 minutes):
+ *   Part 1  Website conversation, 30 s (visitor → assistant → lead captured → summary)
+ *   Part 2  Platform admin: multi-tenant console, tenant detail, plans, onboarding, cross-tenant dashboard
+ *   Part 3  Tenant (business owner) dashboard: KPIs, transcripts, lead pipeline, insights, setup
+ *   Part 4  Call to action
  *
- * - demo/voiceover.ts reads `voiceover` to generate one audio file per scene.
- * - demo/record.ts reads `minSeconds` (or the generated audio length, whichever is
- *   longer) to decide how long to hold each scene on screen.
- * - demo/remotion reads `caption` for the on-screen lower-third captions.
- *
- * Edit the words here, then re-run voiceover -> record -> build.
- *
- * Everything shown is fictional: "Harborline Heating & Plumbing" is a made-up demo
- * company, and all names, emails (example.com) and phone numbers (555-01xx) are fake.
+ * voiceover.ts reads `voiceover`, record.ts holds each scene for max(minSeconds, narration),
+ * build-video.ts and Remotion read `caption` / `part`. Everything shown is fictional US data.
  */
 
 export type SceneId =
-  | 'hook'
-  | 'solution'
-  | 'answers'
-  | 'lead-capture'
-  | 'voice-language'
-  | 'summary'
-  | 'dashboard'
-  | 'pipeline'
-  | 'insights'
-  | 'customize'
-  | 'results'
+  | 'chat-open' | 'chat-ask' | 'chat-booked'
+  | 'admin-login' | 'admin-overview' | 'admin-tenants' | 'admin-tenant-detail' | 'admin-subscriptions' | 'admin-create' | 'admin-dashboard'
+  | 'tenant-login' | 'tenant-overview' | 'tenant-transcripts' | 'tenant-pipeline' | 'tenant-insights' | 'tenant-setup'
   | 'cta'
 
 export interface Scene {
   id: SceneId
+  part: 'Website conversation' | 'Platform admin' | 'Tenant dashboard' | 'Call to action'
   title: string
-  /** Minimum time on screen. The recorder extends this to fit the narration audio. */
   minSeconds: number
-  /** Short on-screen caption (lower third). Keep it under ~60 characters. */
   caption: string
-  /** What the viewer sees. Documentation only. */
   onScreen: string
-  /** Exact action the recorder performs. Documentation only. */
   action: string
-  /** Narration: simple, benefit-first, no jargon. */
   voiceover: string
-  /** Rendered by Remotion/ffmpeg as a full-screen card instead of a screen recording. */
   card?: boolean
 }
 
 export const BRAND = {
   product: 'AI Front Desk',
-  demoCompany: 'Harborline Heating & Plumbing',
-  agentName: 'Riley',
+  demoCompany: 'Summit Pro Home Services',
   cta: 'Book a free 15-minute demo',
-  ctaSub: 'We set it up on your website, trained on your services.',
-  ctaUrl: 'yourdomain.com/demo', // TODO: replace with your booking link (Calendly, HubSpot, etc.)
+  ctaSub: 'For your business, or white-labeled for your clients.',
+  ctaUrl: 'yourdomain.com/demo', // TODO: your booking link (Calendly, HubSpot, etc.)
   primary: '#194ad9',
   accent: '#4CBAAB',
 } as const
 
 export const SCENES: Scene[] = [
+  // ── Part 1: 30-second website conversation ──────────────────────────────────
   {
-    id: 'hook',
-    title: 'The missed call',
-    minSeconds: 14,
-    caption: '9:47 PM. The office is closed.',
-    onScreen: 'Harborline website at night; "Office hours 8am-5pm" banner; phone icon shows "Missed call".',
-    action: 'Open demo site, slow scroll over the hero and the closed-hours banner.',
-    voiceover:
-      "It's nine forty-seven at night. A customer's water heater just burst. " +
-      "They visit your website, call, and get voicemail. So they call the next company on the list. " +
-      'That job is gone, and it happens more often than you think.',
+    id: 'chat-open', part: 'Website conversation', title: 'Visitor arrives', minSeconds: 6,
+    caption: 'A homeowner visits the website',
+    onScreen: 'Summit Pro Home Services website (HVAC, plumbing, electrical); "Chat with us" launcher.',
+    action: 'Open site, hover the hero, click "Chat with us"; greeting appears.',
+    voiceover: "A homeowner in Plano, Texas lands on Summit Pro's website. Riley, their AI assistant, greets them instantly.",
   },
   {
-    id: 'solution',
-    title: 'Meet your AI front desk',
-    minSeconds: 12,
-    caption: 'Answers every visitor, 24/7',
-    onScreen: 'Cursor clicks "Chat with us"; the assistant opens and greets the visitor by company name.',
-    action: 'Click the "Chat with us" launcher; wait for the greeting.',
-    voiceover:
-      'Now imagine someone answered, every time. ' +
-      'This is your AI front desk. It sits on your website and greets every visitor in seconds, day or night, ' +
-      'like a friendly member of your team.',
+    id: 'chat-ask', part: 'Website conversation', title: 'Real answers', minSeconds: 11,
+    caption: 'Instant answers, 24/7',
+    onScreen: 'Visitor types "AC stopped cooling, 98 degrees"; Riley replies with a safety check and a 2-4 PM slot.',
+    action: 'Type the question, send, reply streams in.',
+    voiceover: 'They describe the problem in their own words, and Riley answers with a quick fix to try and an open time slot today.',
   },
   {
-    id: 'answers',
-    title: 'Real answers about your business',
-    minSeconds: 18,
-    caption: 'Knows your services, hours and policies',
-    onScreen: 'Visitor types their problem; the assistant replies with emergency options and a booking window.',
-    action: 'Type the leak message, send, let the reply stream in.',
-    voiceover:
-      'Customers describe their problem in their own words. ' +
-      'The assistant answers using your services, your hours and your policies, ' +
-      'and it moves the conversation toward a booking instead of a dead end.',
+    id: 'chat-booked', part: 'Website conversation', title: 'Lead captured, job booked', minSeconds: 13,
+    caption: 'Lead captured and summarized automatically',
+    onScreen: 'Visitor sends contact details; Contact Details card fills; conversation summary appears.',
+    action: 'Type details, send; scroll to Contact Details and Conversation Summary.',
+    voiceover: 'Name, phone, email and address are captured automatically, the job is booked, and the team gets a summary. All in under thirty seconds.',
+  },
+
+  // ── Part 2: Platform admin (multi-tenant) ───────────────────────────────────
+  {
+    id: 'admin-login', part: 'Platform admin', title: 'One console for every client', minSeconds: 8,
+    caption: 'Platform admin console',
+    onScreen: 'Admin sign-in page.', action: 'Type admin email and password, sign in.',
+    voiceover: "Now let's look behind the scenes. As the platform owner, you sign in to one admin console.",
   },
   {
-    id: 'lead-capture',
-    title: 'Every lead captured',
-    minSeconds: 16,
-    caption: 'Name, phone, email and the job, captured automatically',
-    onScreen: 'Visitor shares contact details; the Contact Details card fills in live.',
-    action: 'Type name/phone/email/address, send; pause on the Contact Details card.',
-    voiceover:
-      'While it helps, it collects what your team needs: name, phone, email and exactly what the job is. ' +
-      'No forms, and nobody slips away without leaving their details.',
+    id: 'admin-overview', part: 'Platform admin', title: 'Platform overview', minSeconds: 12,
+    caption: 'Every business on the platform at a glance',
+    onScreen: 'Active / Disabled / Archived / OpenAI-ready tiles; tenant status donut; platform usage bars.',
+    action: 'Hover the stat tiles and charts.',
+    voiceover: 'From here you manage every business on the platform: who is active, who is paused, and how much each one is using the assistant.',
   },
   {
-    id: 'voice-language',
-    title: 'Talk or type, in their language',
-    minSeconds: 15,
-    caption: 'Voice or text, in 15+ languages',
-    onScreen: 'Visitor holds the mic and asks in Spanish; the assistant replies in Spanish.',
-    action: 'Hold the mic button for about 2.5s, release; the Spanish question and reply appear.',
+    id: 'admin-tenants', part: 'Platform admin', title: 'Tenant directory', minSeconds: 15,
+    caption: 'Each client is a separate, isolated tenant',
+    onScreen: 'Tenants table: Dallas HVAC, Austin plumbing, Atlanta electrical, Phoenix HVAC, Chicago dental...; search and status filter.',
+    action: 'Open Tenants tab, type "plumb" in search, clear, click Disabled filter, then All.',
     voiceover:
-      'Visitors can type or just talk. ' +
-      'And if they switch to Spanish, or many other languages, the assistant switches with them.',
+      'Each client company is its own tenant: a home services company in Dallas, a plumber in Austin, an electrician in Atlanta, a dental office in Chicago. ' +
+      'Search, filter, and see each plan and setup status at a glance.',
   },
   {
-    id: 'summary',
-    title: 'Instant summary for your team',
-    minSeconds: 13,
-    caption: 'A clear summary lands in your inbox',
-    onScreen: 'Conversation wraps up; a call summary with key points appears.',
-    action: 'Type the thank-you message; wait for the summary card and scroll to it.',
+    id: 'admin-tenant-detail', part: 'Platform admin', title: 'Inside a tenant', minSeconds: 18,
+    caption: 'Readiness, embed code, assistant, team',
+    onScreen: 'Summit Pro tenant: Overview & Readiness, Website Embed (masked key), Agent, Integrations, Team tabs.',
+    action: 'Open Summit Pro; click through Embed, Agent and Team tabs.',
     voiceover:
-      'When the chat ends, your team gets a short summary: who it was, what they need, and how urgent it is. ' +
-      'Your morning starts with booked jobs, not voicemails.',
+      "Open any tenant to see its readiness, the website code to install, the assistant's personality and knowledge, and its team logins. " +
+      "Each tenant's conversations and keys are kept completely separate.",
   },
   {
-    id: 'dashboard',
-    title: 'One dashboard for every conversation',
-    minSeconds: 16,
-    caption: 'See every inquiry, lead and hot opportunity',
-    onScreen: 'Owner signs in; Overview shows conversations, lead capture rate, hot leads and charts.',
-    action: 'Sign in as the demo owner; hover the KPI cards; slow scroll to the charts.',
-    voiceover:
-      'Everything flows into one simple dashboard. ' +
-      'See how many people reached out, how many became leads, and which ones are ready to book right now.',
+    id: 'admin-subscriptions', part: 'Platform admin', title: 'Plans & billing', minSeconds: 9,
+    caption: 'Trials, plans and billing cycles',
+    onScreen: 'Subscriptions table: trial, starter, growth, enterprise; monthly/yearly.',
+    action: 'Open Subscriptions tab, scroll.',
+    voiceover: 'Plans are managed here too: free trials, starter, growth and enterprise, billed monthly or yearly.',
   },
   {
-    id: 'pipeline',
-    title: 'Follow up, assign, close',
-    minSeconds: 17,
+    id: 'admin-create', part: 'Platform admin', title: 'Onboard a client in a minute', minSeconds: 16,
+    caption: 'Onboard a new client in about a minute',
+    onScreen: 'Create Tenant form filled for "Gulf Coast Electric"; tenant created.',
+    action: 'Open Create Tenant, fill ID, company, assistant name, services, domain; click Create.',
+    voiceover: 'Onboarding a new client takes about a minute. Enter the company, its services and website, and their assistant is ready to install.',
+  },
+  {
+    id: 'admin-dashboard', part: 'Platform admin', title: 'All clients, one dashboard', minSeconds: 13,
+    caption: 'Conversations and leads across all clients',
+    onScreen: 'Platform dashboard: KPIs across all tenants; Tenants control center.',
+    action: 'Click Dashboard; hover KPIs; open the Tenants tab.',
+    voiceover: 'And the platform dashboard rolls up conversations and leads across all of your clients in one view.',
+  },
+
+  // ── Part 3: Tenant dashboard ────────────────────────────────────────────────
+  {
+    id: 'tenant-login', part: 'Tenant dashboard', title: "The business owner's view", minSeconds: 8,
+    caption: "Your client's private dashboard",
+    onScreen: 'Tenant sign-in page.', action: 'Sign out; sign in with the tenant owner login.',
+    voiceover: "Now switch to your client's side. The business owner signs in to their own private dashboard.",
+  },
+  {
+    id: 'tenant-overview', part: 'Tenant dashboard', title: 'Performance at a glance', minSeconds: 14,
+    caption: 'Conversations, leads and growth',
+    onScreen: 'Overview: conversations, lead capture, hot leads, readiness; 6-month growth; service demand.',
+    action: 'Hover KPI cards; scroll to charts.',
+    voiceover: 'They see exactly how their website is performing: conversations, lead capture rate, hot leads and month over month growth.',
+  },
+  {
+    id: 'tenant-transcripts', part: 'Tenant dashboard', title: 'Every conversation saved', minSeconds: 15,
+    caption: 'Search every conversation in seconds',
+    onScreen: 'Call transcripts list; search "water heater"; summaries and transcript previews.',
+    action: 'Open Call transcripts, search "water heater", scroll results.',
+    voiceover: 'Every conversation is saved with a summary, key points and the full transcript, and it is searchable in seconds.',
+  },
+  {
+    id: 'tenant-pipeline', part: 'Tenant dashboard', title: 'Work the lead', minSeconds: 16,
     caption: 'Assign, schedule follow-ups, track every job',
-    onScreen: "Lead pipeline opens on tonight's water-heater lead; status moves from New to Qualified.",
-    action: 'Open the lead pipeline on the hero lead; change status to Qualified.',
-    voiceover:
-      "Open tonight's lead and everything is there, including the full conversation. " +
-      'Assign it to your dispatcher, set a follow-up time, and move it through your pipeline. Nothing slips through the cracks.',
+    onScreen: "Lead pipeline on Mike Johnson's AC lead; status New → Qualified; owner and notes saved.",
+    action: 'Open Lead pipeline on the hero lead; set status, owner, notes; save.',
+    voiceover: "Today's AC lead from Plano is right at the top. Assign it to dispatch, add a note, and move it through the pipeline.",
   },
   {
-    id: 'insights',
-    title: 'It tells you what needs attention',
-    minSeconds: 13,
-    caption: 'Smart reminders: who to call back first',
-    onScreen: 'AI insights tab: recommendations, risk signals and the priority follow-up queue.',
-    action: 'Open the AI insights tab; slow scroll through recommendations and the follow-up queue.',
-    voiceover:
-      'It even points out what needs attention, like overdue callbacks and your hottest leads, ' +
-      'so the right customer gets a call first.',
+    id: 'tenant-insights', part: 'Tenant dashboard', title: 'What needs attention', minSeconds: 11,
+    caption: 'Smart reminders and one-click CSV export',
+    onScreen: 'AI insights: recommendations, risk signals, priority follow-up queue; Export CSV.',
+    action: 'Open AI insights; scroll; hover Export CSV.',
+    voiceover: 'Smart insights flag overdue callbacks and hot leads, so the right customer gets a call first. And everything exports to your CRM in one click.',
   },
   {
-    id: 'customize',
-    title: 'Sounds like your business',
-    minSeconds: 13,
-    caption: 'Your services, your tone, your brand colors',
-    onScreen: 'Agent setup: name, greeting, tone, services and knowledge base entries.',
-    action: 'Open the agent settings page; slow scroll over services and knowledge base.',
-    voiceover:
-      'You stay in control. Set the greeting, the tone, your services and your answers to common questions. ' +
-      'It matches your brand and goes live on your site with one small snippet.',
+    id: 'tenant-setup', part: 'Tenant dashboard', title: 'Their assistant, their way', minSeconds: 10,
+    caption: 'Greeting, tone, services, answers',
+    onScreen: 'Agent setup: greeting, tone, services, knowledge base.',
+    action: 'Open agent settings; scroll.',
+    voiceover: 'And they stay in control of their assistant: the greeting, the tone, their services and answers to common questions, with no code.',
   },
+
+  // ── Part 4: CTA ─────────────────────────────────────────────────────────────
   {
-    id: 'results',
-    title: 'What you get',
-    minSeconds: 12,
-    caption: 'Never miss a website lead again',
-    onScreen: 'Full-screen card: three benefit lines.',
-    action: 'Title card (rendered, not recorded).',
-    voiceover:
-      'Every visitor answered, around the clock. Every lead captured with real contact details. ' +
-      'And a team that spends its time on jobs, not chasing missed calls.',
-    card: true,
-  },
-  {
-    id: 'cta',
-    title: 'Call to action',
-    minSeconds: 10,
+    id: 'cta', part: 'Call to action', title: 'Book a demo', minSeconds: 9, card: true,
     caption: 'Book a free 15-minute demo',
-    onScreen: 'Full-screen CTA card with the booking link.',
-    action: 'Title card (rendered, not recorded).',
-    voiceover:
-      "Want to see it answering your customers? Book a free fifteen-minute demo. " +
-      "We'll set it up with your services, so you can try it on your own website.",
-    card: true,
+    onScreen: 'CTA card with booking link.', action: 'Rendered card.',
+    voiceover: 'Want this answering your customers, or offered to your own clients? Book a free fifteen-minute demo today.',
   },
 ]
 
-/** Scenes captured by the Playwright recorder (cards are rendered separately). */
 export const RECORDED_SCENES = SCENES.filter((s) => !s.card)
