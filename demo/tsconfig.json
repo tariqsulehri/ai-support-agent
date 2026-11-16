@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "baseUrl": "..",
+    "paths": { "@/*": ["./src/*"] },
+    "plugins": []
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["./remotion", "./output"]
+}

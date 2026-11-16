@@ -15,7 +15,12 @@
     "tenants:secret:set-openai": "tsx src/scripts/set-tenant-openai-secret.ts",
     "tenants:migrate-conversations": "tsx src/scripts/migrate-tenant-conversations.ts",
     "auth:user:create": "tsx src/scripts/create-auth-user.ts",
-    "impeccable": ".agent/skills/impeccable/scripts/impeccable"
+    "impeccable": ".agent/skills/impeccable/scripts/impeccable",
+    "demo:seed": "tsx --tsconfig demo/tsconfig.json demo/seed/seed-demo.ts",
+    "demo:voiceover": "tsx --tsconfig demo/tsconfig.json demo/voiceover.ts",
+    "demo:record": "tsx --tsconfig demo/tsconfig.json demo/record.ts",
+    "demo:build": "tsx --tsconfig demo/tsconfig.json demo/build-video.ts",
+    "demo:typecheck": "tsc -p demo/tsconfig.json"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.0.0",
@@ -38,6 +43,7 @@
     "autoprefixer": "^10.4.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.1.0",
+    "playwright": "1.63.0",
     "postcss": "^8.4.0",
     "tailwindcss": "^3.4.0",
     "tsx": "^4.21.0",

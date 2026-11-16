@@ -8,3 +8,8 @@ deployment/.env.*
 !deployment/.env.*.example
 audit/results/
 
+
+# Demo video build outputs
+demo/output/
+demo/remotion/node_modules/
+demo/remotion/out/

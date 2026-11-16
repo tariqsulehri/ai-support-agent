@@ -1,0 +1,24 @@
+{
+  "name": "demo-video-cards",
+  "private": true,
+  "description": "Remotion title cards, captions and CTA for the product demo video.",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render:intro": "remotion render src/index.ts intro out/intro.mp4",
+    "render:results": "remotion render src/index.ts results out/results.mp4",
+    "render:cta": "remotion render src/index.ts cta out/cta.mp4",
+    "render:all": "npm run render:intro && npm run render:results && npm run render:cta",
+    "render:captioned": "remotion render src/index.ts captioned out/captioned.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.539",
+    "@remotion/media-utils": "4.0.539",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.539"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "typescript": "5.6.3"
+  }
+}
