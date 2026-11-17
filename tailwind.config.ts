@@ -10,7 +10,8 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: [
-          'var(--font-poppins)',
+          // --va-font is only set by the embed theme (the site's font); else Poppins.
+          'var(--va-font, var(--font-poppins))',
           'Poppins',
           'Segoe UI',
           '-apple-system',
