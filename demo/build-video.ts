@@ -1,24 +1,21 @@
 /**
- * Assembles the final video with ffmpeg:
- *   1. lays each scene's narration over the screen recording at the time that scene
- *      started (from timeline.json),
- *   2. appends the "results" and "cta" cards (Remotion renders if present in
- *      demo/remotion/out/<id>.mp4, otherwise simple ffmpeg title cards),
- *   3. optionally prepends demo/remotion/out/intro.mp4 and mixes background music,
- *   4. writes captions.srt (LinkedIn/YouTube autoplay muted, so captions matter).
+ * Assembles the final video with ffmpeg, in the order of SCENES (demo/scenes.ts):
+ *   - card scenes (intro, problem, solution, cta) come from Remotion renders in
+ *     demo/remotion/out/<id>.mp4, or simple ffmpeg title cards if those are missing,
+ *   - the recorded scenes come from output/screen-1080p.mp4 (one continuous take),
+ *   - each scene's narration (output/audio/<id>.mp3) is placed at that scene's start,
+ *   - loudness is normalised (-16 LUFS), optional music is mixed underneath,
+ *   - on-screen lower-third captions are drawn on every recorded scene.
  *
  *   npm run demo:build
  *
- * Inputs : demo/output/screen-1080p.mp4, timeline.json, audio/*.mp3, audio/durations.json
- * Output : demo/output/final-demo.mp4 (+ captions.srt, and final-demo-captioned.mp4 when
- *          DEMO_BURN_CAPTIONS=true)
- *
- * Options (env): DEMO_MUSIC=path/to/music.mp3, DEMO_MUSIC_VOLUME=0.10, DEMO_FONT=/path/to/Bold.ttf
+ * Output: output/final-demo.mp4 (with captions) and output/captions.srt.
+ * Env: DEMO_MUSIC=track.mp3|none (default: assets/music-bed.mp3), DEMO_MUSIC_VOLUME=0.3, DEMO_LOWER_THIRDS=false, DEMO_FONT=/path/Bold.ttf
  */
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
-import { BRAND, SCENES, type SceneId } from './scenes'
+import { BENEFITS, BRAND, PROBLEMS, SCENES, type Scene, type SceneId } from './scenes'
 
 const ROOT = __dirname
 const OUT = path.join(ROOT, 'output')
@@ -27,6 +24,8 @@ const WORK = path.join(OUT, 'build')
 const REMOTION_OUT = path.join(ROOT, 'remotion', 'out')
 const V = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', '30']
 const A = ['-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2']
+/** Narration starts this long after its scene begins. */
+const LEAD_IN = 0.4
 
 function ff(args: string[]): void {
   execFileSync('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', ...args], { stdio: 'inherit' })
@@ -42,19 +41,17 @@ function readJson<T>(file: string, fallback: T): T {
   }
 }
 function findFont(): string {
-  const candidates = [
+  const font = [
     process.env.DEMO_FONT,
     '/usr/share/fonts/opentype/inter/Inter-Bold.otf',
     '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
     '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
-    '/Library/Fonts/Arial Bold.ttf',
     'C:/Windows/Fonts/arialbd.ttf',
-  ].filter(Boolean) as string[]
-  const font = candidates.find((f) => fs.existsSync(f))
+  ].find((f) => f && fs.existsSync(f))
   if (!font) throw new Error('No bold font found. Set DEMO_FONT=/path/to/a/Bold.ttf')
   return font
 }
-/** drawtext needs ':' and '\' escaped in file paths. */
+/** ffmpeg filter paths need ':' and '\' escaped. */
 const esc = (p: string) => p.replace(/\\/g, '/').replace(/:/g, '\\:')
 
 const narration = readJson<Record<string, number>>(path.join(AUDIO, 'durations.json'), {})
@@ -62,77 +59,73 @@ const audioFor = (id: SceneId) => {
   const f = path.join(AUDIO, `${id}.mp3`)
   return fs.existsSync(f) ? f : null
 }
+/** Length of a card scene: its minimum, or long enough for the narration. Remotion uses the same rule. */
+export const cardSeconds = (scene: Scene) => Math.max(scene.minSeconds, (narration[scene.id] ?? 0) + 1.2)
 
-/** Screen recording + narration placed at each scene's start time. */
-function narrateScreen(): string {
+type Timeline = Array<{ id: SceneId; start: number; end: number }>
+
+/** The recorded take with each scene's narration placed at its start time. */
+function narrateScreen(timeline: Timeline): string {
   const screen = path.join(OUT, 'screen-1080p.mp4')
   if (!fs.existsSync(screen)) throw new Error('Missing output/screen-1080p.mp4. Run `npm run demo:record` first.')
-  const timeline = readJson<Array<{ id: SceneId; start: number }>>(path.join(OUT, 'timeline.json'), [])
-  const out = path.join(WORK, '10-screen.mp4')
-  const clips = timeline.map((t) => ({ ...t, file: audioFor(t.id) })).filter((t) => t.file)
+  const out = path.join(WORK, 'screen.mp4')
   const total = duration(screen)
-
+  const clips = timeline.map((t) => ({ ...t, file: audioFor(t.id) })).filter((t) => t.file)
   if (!clips.length) {
-    console.warn('[demo:build] no narration found: screen part will be silent (run `npm run demo:voiceover`).')
     ff(['-i', screen, '-f', 'lavfi', '-t', String(total), '-i', 'anullsrc=r=48000:cl=stereo', '-map', '0:v', '-map', '1:a', ...V, ...A, '-shortest', out])
     return out
   }
-  const inputs = clips.flatMap((c) => ['-i', c.file!])
-  const delays = clips.map((c, i) => `[${i + 1}:a]aresample=48000,adelay=${Math.round((c.start + 0.4) * 1000)}:all=1[a${i}]`)
+  const delays = clips.map((c, i) => `[${i + 1}:a]aresample=48000,adelay=${Math.round((c.start + LEAD_IN) * 1000)}:all=1[a${i}]`)
   const mix = `${clips.map((_, i) => `[a${i}]`).join('')}amix=inputs=${clips.length}:normalize=0:duration=longest,apad[vo]`
-  ff(['-i', screen, ...inputs, '-filter_complex', [...delays, mix].join(';'), '-map', '0:v', '-map', '[vo]', '-t', String(total), ...V, ...A, out])
+  ff(['-i', screen, ...clips.flatMap((c) => ['-i', c.file!]), '-filter_complex', [...delays, mix].join(';'),
+    '-map', '0:v', '-map', '[vo]', '-t', String(total), ...V, ...A, out])
   return out
 }
 
-/** A full-screen card: Remotion render if available, otherwise an ffmpeg title card. */
-function card(id: SceneId, index: number): string {
-  const scene = SCENES.find((s) => s.id === id)!
-  const out = path.join(WORK, `${20 + index}-${id}.mp4`)
-  const voice = audioFor(id)
-  const len = Math.max(scene.minSeconds, (narration[id] ?? 0) + 1.2)
-  const remotion = path.join(REMOTION_OUT, `${id}.mp4`)
+/** Fallback title-card text when no Remotion render exists. */
+function fallbackLines(id: SceneId): Array<{ text: string; size: number; color: string }> {
+  switch (id) {
+    case 'intro': return [{ text: BRAND.company, size: 110, color: 'white' }, { text: BRAND.product, size: 52, color: '0xC7D7FE' }]
+    case 'problem': return [{ text: 'Without an AI support agent', size: 72, color: 'white' }, ...PROBLEMS.map((p) => ({ text: `x  ${p}`, size: 42, color: '0xFECACA' }))]
+    case 'solution': return [{ text: `After deploying ${BRAND.company}`, size: 72, color: 'white' }, ...BENEFITS.map((b) => ({ text: `+  ${b}`, size: 42, color: '0xBBF7D0' }))]
+    default: return [{ text: BRAND.cta, size: 80, color: 'white' }, { text: BRAND.ctaUrl, size: 44, color: '0x7FE3D4' }, { text: BRAND.email, size: 44, color: '0xC7D7FE' }]
+  }
+}
+
+/** A full-screen card scene with its narration. */
+function card(scene: Scene): string {
+  const out = path.join(WORK, `card-${scene.id}.mp4`)
+  const len = cardSeconds(scene)
+  const voice = audioFor(scene.id)
   const audioIn = voice ? ['-i', voice] : ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo']
-  const audioFilter = voice ? '[1:a]aresample=48000,adelay=300:all=1,apad[a]' : '[1:a]anull[a]'
+  const audioFilter = voice ? `[1:a]aresample=48000,adelay=${Math.round(LEAD_IN * 1000)}:all=1,apad[a]` : '[1:a]anull[a]'
+  const remotion = path.join(REMOTION_OUT, `${scene.id}.mp4`)
 
   if (fs.existsSync(remotion)) {
-    ff(['-stream_loop', '-1', '-i', remotion, ...audioIn, '-filter_complex', `[0:v]scale=1920:1080,fps=30[v];${audioFilter}`,
+    // Hold the last frame if the render is shorter than the narration needs.
+    const pad = Math.max(0, len - duration(remotion))
+    ff(['-i', remotion, ...audioIn, '-filter_complex', `[0:v]scale=1920:1080,fps=30,tpad=stop_mode=clone:stop_duration=${pad.toFixed(2)}[v];${audioFilter}`,
       '-map', '[v]', '-map', '[a]', '-t', len.toFixed(2), ...V, ...A, out])
     return out
   }
 
   const font = esc(findFont())
-  const lines =
-    id === 'cta'
-      ? [{ text: BRAND.cta, size: 84, y: 400, color: 'white' }, { text: BRAND.ctaSub, size: 36, y: 530, color: '0xC7D7FE' },
-         { text: BRAND.ctaUrl, size: 54, y: 660, color: '0x7FE3D4' }]
-      : [{ text: 'Never miss a website lead again', size: 76, y: 300, color: 'white' },
-         { text: '24/7 answers for every visitor', size: 46, y: 470, color: '0xC7D7FE' },
-         { text: 'Every lead captured with contact details', size: 46, y: 560, color: '0xC7D7FE' },
-         { text: 'Instant summaries for your team', size: 46, y: 650, color: '0xC7D7FE' }]
+  const lines = fallbackLines(scene.id)
+  const lineGap = 90
+  const top = 540 - ((lines.length - 1) * lineGap) / 2 - 40
   const draws = lines.map((l, i) => {
-    const txt = path.join(WORK, `${id}-${i}.txt`)
+    const txt = path.join(WORK, `${scene.id}-${i}.txt`)
     fs.writeFileSync(txt, l.text)
-    const fadeIn = (0.3 + i * 0.35).toFixed(2)
-    return `drawtext=fontfile='${font}':textfile='${esc(txt)}':fontsize=${l.size}:fontcolor=${l.color}:x=(w-text_w)/2:y=${l.y}:alpha='min(1,max(0,(t-${fadeIn})/0.5))'`
+    const fadeIn = (0.3 + i * 0.4).toFixed(2)
+    return `drawtext=fontfile='${font}':textfile='${esc(txt)}':fontsize=${l.size}:fontcolor=${l.color}:x=(w-text_w)/2:y=${Math.round(top + i * lineGap + (i ? 30 : 0))}:alpha='min(1,max(0,(t-${fadeIn})/0.5))'`
   })
-  const bg = `color=c=0x0b2a45:s=1920x1080:r=30:d=${len.toFixed(2)}`
-  ff(['-f', 'lavfi', '-i', bg, ...audioIn, '-filter_complex',
-    `[0:v]drawbox=x=0:y=0:w=iw:h=ih:color=0x194ad9@0.35:t=fill,drawbox=x=0:y=ih-14:w=iw:h=14:color=0x4CBAAB:t=fill,${draws.join(',')},fade=t=in:st=0:d=0.4[v];${audioFilter}`,
+  ff(['-f', 'lavfi', '-i', `color=c=0x1800AD:s=1920x1080:r=30:d=${len.toFixed(2)}`, ...audioIn, '-filter_complex',
+    `[0:v]drawbox=x=0:y=ih-14:w=iw:h=14:color=0x4CBAAB:t=fill,${draws.join(',')},fade=t=in:st=0:d=0.4[v];${audioFilter}`,
     '-map', '[v]', '-map', '[a]', '-t', len.toFixed(2), ...V, ...A, out])
   return out
 }
 
-/** Optional Remotion intro (demo/remotion/out/intro.mp4), normalised to the same format. */
-function intro(): string | null {
-  const src = path.join(REMOTION_OUT, 'intro.mp4')
-  if (!fs.existsSync(src)) return null
-  const out = path.join(WORK, '00-intro.mp4')
-  ff(['-i', src, '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-filter_complex', '[0:v]scale=1920:1080,fps=30[v]',
-    '-map', '[v]', '-map', '1:a', '-shortest', ...V, ...A, out])
-  return out
-}
-
-/** SRT captions from the narration text, chunked and timed proportionally per scene. */
+/** SRT captions from the narration, chunked and timed proportionally within each scene. */
 function writeCaptions(segments: Array<{ id: SceneId; start: number }>): string {
   const fmt = (s: number) => {
     const ms = Math.max(0, Math.round(s * 1000))
@@ -151,7 +144,7 @@ function writeCaptions(segments: Array<{ id: SceneId; start: number }>): string 
       else merged.push(c)
     }
     const totalChars = merged.reduce((n, c) => n + c.length, 0)
-    let t = seg.start + 0.4
+    let t = seg.start + LEAD_IN
     for (const c of merged) {
       const d = (c.length / totalChars) * spoken
       entries.push(`${entries.length + 1}\n${fmt(t)} --> ${fmt(t + d - 0.05)}\n${c}\n`)
@@ -163,70 +156,83 @@ function writeCaptions(segments: Array<{ id: SceneId; start: number }>): string 
   return file
 }
 
+/** Lower-third captions (part label + caption) on the recorded scenes. */
+function lowerThirdFilters(timeline: Timeline, offset: number): string[] {
+  const font = esc(findFont())
+  return timeline.flatMap((seg, i) => {
+    const scene = SCENES.find((x) => x.id === seg.id)
+    if (!scene) return []
+    const a = seg.start + offset + 0.6
+    const b = Math.min(seg.end + offset - 0.4, a + 6)
+    const fade = `alpha='min(1,min((t-${a.toFixed(2)})/0.35,(${b.toFixed(2)}-t)/0.35))'`
+    const on = `enable='between(t,${a.toFixed(2)},${b.toFixed(2)})'`
+    const partFile = path.join(WORK, `lt-${i}-part.txt`)
+    const capFile = path.join(WORK, `lt-${i}-cap.txt`)
+    fs.writeFileSync(partFile, scene.part.toUpperCase())
+    fs.writeFileSync(capFile, scene.caption)
+    // One solid panel behind both lines (sized from the text) so page content never shows through.
+    const panelW = Math.round(Math.max(scene.caption.length * 25, scene.part.length * 17) + 90)
+    return [
+      `drawbox=x=40:y=ih-222:w=${panelW}:h=176:color=0x0B1F3A@0.98:t=fill:${on}`,
+      `drawbox=x=40:y=ih-222:w=8:h=176:color=0x4CBAAB:t=fill:${on}`,
+      `drawtext=fontfile='${font}':textfile='${esc(partFile)}':fontsize=24:fontcolor=0x7FE3D4:x=72:y=h-196:${on}:${fade}`,
+      `drawtext=fontfile='${font}':textfile='${esc(capFile)}':fontsize=44:fontcolor=white:x=72:y=h-140:${on}:${fade}`,
+    ]
+  })
+}
+
 function main(): void {
   fs.rmSync(WORK, { recursive: true, force: true })
   fs.mkdirSync(WORK, { recursive: true })
+  const timeline = readJson<Timeline>(path.join(OUT, 'timeline.json'), [])
 
+  // Assemble in SCENES order; all recorded scenes form one continuous screen segment.
   const parts: string[] = []
-  const introPart = intro()
-  if (introPart) parts.push(introPart)
-  const offset = introPart ? duration(introPart) : 0
-  const screenPart = narrateScreen()
-  parts.push(screenPart)
-  const cards = SCENES.filter((s) => s.card).map((s, i) => ({ id: s.id, file: card(s.id, i) }))
-  parts.push(...cards.map((c) => c.file))
+  const segments: Array<{ id: SceneId; start: number }> = []
+  let clock = 0
+  let screenOffset = 0
+  let screenAdded = false
+  for (const scene of SCENES) {
+    if (scene.card) {
+      const file = card(scene)
+      parts.push(file)
+      segments.push({ id: scene.id, start: clock })
+      clock += duration(file)
+    } else if (!screenAdded) {
+      screenAdded = true
+      const file = narrateScreen(timeline)
+      parts.push(file)
+      screenOffset = clock
+      segments.push(...timeline.map((t) => ({ id: t.id, start: t.start + clock })))
+      clock += duration(file)
+    }
+  }
 
   const list = path.join(WORK, 'parts.txt')
   fs.writeFileSync(list, parts.map((p) => `file '${p.replace(/'/g, "'\\''")}'`).join('\n'))
-  const joined = path.join(WORK, '90-joined.mp4')
+  const joined = path.join(WORK, 'joined.mp4')
   ff(['-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', joined])
 
+  // Background music: DEMO_MUSIC=path, default the generated bed (demo/make-music-bed.sh), DEMO_MUSIC=none to skip.
+  // The bed is ducked under the narration with a sidechain compressor.
+  const musicEnv = process.env.DEMO_MUSIC
+  const music = musicEnv === 'none' ? null : musicEnv || path.join(ROOT, 'assets', 'music-bed.mp3')
+  const hasMusic = Boolean(music && fs.existsSync(music))
+  const vol = process.env.DEMO_MUSIC_VOLUME || '0.3'
+  // Normalise the narration first, then add the bed at a fixed level (loudnorm on the mix
+  // would pump the music up in pauses), ducked under the voice and limited.
+  const audioGraph = hasMusic
+    ? `[0:a]loudnorm=I=-16:TP=-2,asplit=2[vo][key];[1:a]volume=${vol},afade=t=in:d=2,aformat=channel_layouts=stereo[bed];` +
+      `[bed][key]sidechaincompress=threshold=0.02:ratio=8:attack=40:release=700[duck];` +
+      `[vo][duck]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.89[a]`
+    : '[0:a]loudnorm=I=-16:TP=-1.5[a]'
+  const thirds = process.env.DEMO_LOWER_THIRDS !== 'false' && timeline.length ? lowerThirdFilters(timeline, screenOffset) : []
+  const videoGraph = thirds.length ? `[0:v]${thirds.join(',')}[v]` : '[0:v]null[v]'
   const final = path.join(OUT, 'final-demo.mp4')
-  const music = process.env.DEMO_MUSIC
-  if (music && fs.existsSync(music)) {
-    const vol = process.env.DEMO_MUSIC_VOLUME || '0.10'
-    ff(['-i', joined, '-stream_loop', '-1', '-i', music, '-filter_complex',
-      `[1:a]volume=${vol},afade=t=in:d=2[m];[0:a][m]amix=inputs=2:normalize=0:duration=first,loudnorm=I=-16:TP=-1.5[a]`,
-      '-map', '0:v', '-map', '[a]', '-c:v', 'copy', ...A, '-movflags', '+faststart', final])
-  } else {
-    ff(['-i', joined, '-af', 'loudnorm=I=-16:TP=-1.5', '-c:v', 'copy', ...A, '-movflags', '+faststart', final])
-  }
+  ff(['-i', joined, ...(hasMusic ? ['-stream_loop', '-1', '-i', music!] : []),
+    '-filter_complex', `${videoGraph};${audioGraph}`, '-map', '[v]', '-map', '[a]', ...V, ...A, '-movflags', '+faststart', final])
 
-  // Captions: recorded scenes use their timeline start; cards follow the screen part.
-  const timeline = readJson<Array<{ id: SceneId; start: number; end: number }>>(path.join(OUT, 'timeline.json'), [])
-  let t = offset + duration(screenPart)
-  const segments = [
-    ...timeline.map((s) => ({ id: s.id, start: s.start + offset })),
-    ...cards.map((c) => { const seg = { id: c.id, start: t }; t += duration(c.file); return seg }),
-  ]
   const srt = writeCaptions(segments)
-  // Lower-third captions (part + scene caption) on every recorded scene: readable when muted.
-  if (process.env.DEMO_LOWER_THIRDS !== 'false' && timeline.length) {
-    const font = esc(findFont())
-    const filters = timeline.flatMap((seg, i) => {
-      const scene = SCENES.find((x) => x.id === seg.id)
-      if (!scene) return []
-      const a = seg.start + offset + 0.6
-      const b = Math.min(seg.end + offset - 0.4, a + 6)
-      const fade = `alpha='min(1,min((t-${a.toFixed(2)})/0.35,(${b.toFixed(2)}-t)/0.35))'`
-      const on = `enable='between(t,${a.toFixed(2)},${b.toFixed(2)})'`
-      const partFile = path.join(WORK, `lt-${i}-part.txt`)
-      const capFile = path.join(WORK, `lt-${i}-cap.txt`)
-      fs.writeFileSync(partFile, scene.part.toUpperCase())
-      fs.writeFileSync(capFile, scene.caption)
-      return [
-        `drawtext=fontfile='${font}':textfile='${esc(partFile)}':fontsize=24:fontcolor=0x7FE3D4:box=1:boxcolor=0x0B1F3A@0.92:boxborderw=14:x=64:y=h-196:${on}:${fade}`,
-        `drawtext=fontfile='${font}':textfile='${esc(capFile)}':fontsize=44:fontcolor=white:box=1:boxcolor=0x0B1F3A@0.92:boxborderw=20:x=64:y=h-136:${on}:${fade}`,
-      ]
-    })
-    ff(['-i', final, '-vf', filters.join(','), ...V, '-c:a', 'copy', '-movflags', '+faststart', path.join(OUT, 'final-demo-captioned.mp4')])
-    console.info(`[demo:build] ${path.relative(process.cwd(), path.join(OUT, 'final-demo-captioned.mp4'))} (with on-screen captions)`)
-  }
-  if (process.env.DEMO_BURN_CAPTIONS === 'true') {
-    ff(['-i', final, '-vf', `subtitles='${esc(srt)}':force_style='FontName=Inter,FontSize=20,PrimaryColour=&H00FFFFFF,BackColour=&H99000000,BorderStyle=4,Outline=0,MarginV=40'`,
-      ...V, '-c:a', 'copy', path.join(OUT, 'final-demo-captioned.mp4')])
-  }
-
   console.info(`[demo:build] ${path.relative(process.cwd(), final)} (${duration(final).toFixed(1)}s) + ${path.relative(process.cwd(), srt)}`)
 }
 

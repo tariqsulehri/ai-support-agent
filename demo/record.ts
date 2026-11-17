@@ -19,7 +19,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { chromium, type Browser, type BrowserContext, type FrameLocator, type Locator, type Page } from 'playwright'
 import { RECORDED_SCENES, type SceneId } from './scenes'
-import { HERO, HERO_RECORD_ID, HERO_SUMMARY, HERO_TURNS, LIVE_TENANT, PLATFORM_ADMIN, TENANT_OWNER } from './fixtures/demo-data'
+import { HERO, HERO_RECORD_ID, HERO_SUMMARY, HERO_TURNS, PLATFORM_ADMIN, TENANT_OWNER } from './fixtures/demo-data'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const BASE_URL = (process.env.DEMO_BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
@@ -111,6 +111,19 @@ async function typeInto(page: Page, locator: Locator, text: string, delay = 32):
 /** Navigate, then re-show the cursor where it was. */
 async function go(page: Page, url: string): Promise<void> {
   await page.goto(url.startsWith('http') ? url : `${BASE_URL}${url}`, { waitUntil: 'networkidle' })
+  await page.mouse.move(mouse.x, mouse.y)
+}
+
+/**
+ * Click a sidebar link and wait for its page. Client-side transitions in the dashboard can
+ * hang (see README), so if the URL has not changed within 3.5 s, load the link's href directly.
+ */
+async function navTo(page: Page, link: Locator, expect: RegExp): Promise<void> {
+  const href = await link.getAttribute('href')
+  await click(page, link)
+  const arrived = await page.waitForURL(expect, { timeout: 3_500 }).then(() => true).catch(() => false)
+  if (!arrived && href) await go(page, href)
+  await page.waitForLoadState('networkidle').catch(() => {})
   await page.mouse.move(mouse.x, mouse.y)
 }
 
@@ -231,86 +244,26 @@ const sceneActions: Record<SceneId, (ctx: Ctx) => Promise<void>> = {
     await hover(page, summary, 900)
   },
 
-  // Part 2: platform admin
-  async 'admin-login'({ page }) {
+  // Multi-tenant admin (brief): Tenant Management only
+  async 'admin-tenants'({ page }) {
     await login(page, '/admin/login', PLATFORM_ADMIN.email, PLATFORM_ADMIN.password, /\/admin\/tenants/)
     await page.addStyleTag({ content: BLUR_CODE })
-    await assertNoSecretsOnScreen(page, 'admin-login')
-  },
-  async 'admin-overview'({ page }) {
-    await hoverLabels(page, ['Active', 'Disabled', 'Archived', 'OpenAI ready'], 700)
-    await scrollIntoView(page.getByText('Tenant Status', { exact: true }).first(), 'center')
-    await hoverLabels(page, ['Tenant Status', 'Platform Usage'], 1200)
-  },
-  async 'admin-tenants'({ page }) {
-    await scrollPage(page, 0, 700)
-    await clickAndSettle(page, adminTab(page, 'Tenants'))
     await assertNoSecretsOnScreen(page, 'admin-tenants')
-    await beat(900)
-    const search = page.locator('#tenant-search')
-    await typeInto(page, search, 'plumb', 90)
-    await beat(1300)
-    await search.fill('')
-    await beat(500)
+    await hoverLabels(page, ['Active', 'Disabled', 'OpenAI ready'], 500)
+    await navTo(page, adminTab(page, 'Tenants'), /tab=tenants/)
+    await page.addStyleTag({ content: BLUR_CODE })
+    await beat(700)
     const filters = page.locator('[aria-label="Filter by status"]')
     await click(page, filters.getByRole('button', { name: /^Disabled/ }))
-    await beat(1300)
-    await click(page, filters.getByRole('button', { name: /^All/ }))
-    await hover(page, page.getByText(HERO.companyName).first(), 900)
-  },
-  async 'admin-tenant-detail'({ page }) {
-    await clickAndSettle(page, page.locator(`a[href="/admin/tenants/${HERO.tenantId}"]`).first())
-    await page.addStyleTag({ content: BLUR_CODE })
-    await assertNoSecretsOnScreen(page, 'admin-tenant-detail')
-    await beat(1500)
-    for (const tab of [/Embed/, /Agent Persona/, /Team Access/]) {
-      await click(page, page.getByRole('tab', { name: tab }))
-      await assertNoSecretsOnScreen(page, `admin-tenant-detail ${tab}`)
-      await beat(1300)
-      await scrollPage(page, 380, 1000)
-      await beat(700)
-      await scrollPage(page, 0, 700)
-    }
-  },
-  async 'admin-subscriptions'({ page }) {
-    await go(page, '/admin/tenants?tab=subscriptions')
-    await page.addStyleTag({ content: BLUR_CODE })
-    await beat(800)
-    await hover(page, adminTab(page, 'Subscriptions'), 400)
-    await scrollPage(page, 420, 1500)
-    await beat(1500)
-  },
-  async 'admin-create'({ page }) {
-    await scrollPage(page, 0, 600)
-    await clickAndSettle(page, adminTab(page, 'Create Tenant'))
-    const form = page.locator('form').filter({ has: page.locator('input[name="companyName"]') })
-    await typeInto(page, form.locator('input[name="tenantId"]'), LIVE_TENANT.tenantId, 26)
-    await typeInto(page, form.locator('input[name="companyName"]'), LIVE_TENANT.companyName, 30)
-    await typeInto(page, form.locator('input[name="agentName"]'), LIVE_TENANT.agentName, 40)
-    await typeInto(page, form.locator('textarea[name="services"]'), LIVE_TENANT.services, 14)
-    await typeInto(page, form.locator('textarea[name="domains"]'), LIVE_TENANT.domain, 14)
-    await click(page, page.getByRole('button', { name: 'Create Tenant' }).last())
-    await page.waitForURL(new RegExp(`/admin/tenants/${LIVE_TENANT.tenantId}`), { timeout: 30_000 }).catch(() => {})
-    await page.waitForLoadState('networkidle')
-    await page.addStyleTag({ content: BLUR_CODE })
-    await page.mouse.move(mouse.x, mouse.y)
-    await assertNoSecretsOnScreen(page, 'admin-create')
-    await beat(1500)
-  },
-  async 'admin-dashboard'({ page }) {
-    await go(page, '/dashboard?range=all')
-    await assertNoSecretsOnScreen(page, 'admin-dashboard')
     await beat(900)
-    await hoverLabels(page, ['Conversations', 'Lead capture', 'Hot leads'], 700)
-    await clickAndSettle(page, page.getByRole('link', { name: 'Tenants' }).first())
-    await beat(1000)
-    await scrollPage(page, 420, 1400)
-    await beat(1000)
+    await click(page, filters.getByRole('button', { name: /^All/ }))
+    await hover(page, page.getByText(HERO.companyName).first(), 700)
+    await scrollPage(page, 300, 1200)
   },
 
-  // Part 3: tenant dashboard
+  // Tenant portal in detail
   async 'tenant-login'({ page }) {
-    await scrollPage(page, 0, 500)
+    await scrollPage(page, 0, 400)
     const signOut = page.getByRole('button', { name: 'Sign out' }).first()
     if (await signOut.isVisible().catch(() => false)) {
       await click(page, signOut)
@@ -321,79 +274,108 @@ const sceneActions: Record<SceneId, (ctx: Ctx) => Promise<void>> = {
     await assertNoSecretsOnScreen(page, 'tenant-login')
   },
   async 'tenant-overview'({ page }) {
-    await beat(800)
-    await hoverLabels(page, ['Conversations', 'Lead capture', 'Hot leads', 'Pipeline'], 700)
-    await scrollPage(page, 620, 1700)
-    await beat(1500)
+    await beat(600)
+    await hoverLabels(page, ['Conversations', 'Lead capture', 'Hot leads', 'Pipeline', 'Overdue follow-ups'], 650)
+    await scrollPage(page, 620, 1600)
+    await beat(1400)
     await scrollPage(page, 1250, 1500)
-    await beat(1200)
-    await scrollPage(page, 0, 1000)
+    await beat(1000)
+    await scrollPage(page, 0, 900)
   },
-  async 'tenant-transcripts'({ page }) {
-    await clickAndSettle(page, page.getByRole('link', { name: 'Call transcripts' }).first())
+  async 'tenant-conversations'({ page }) {
+    await navTo(page, page.getByRole('link', { name: 'Call transcripts' }).first(), /tab=communications/)
+    await beat(700)
+    // Walk through one record: summary, key points, intent/sentiment, then the full transcript.
+    const firstSummary = page.locator('details').first()
+    await scrollIntoView(firstSummary, 'center')
+    await hoverLabels(page, ['Intent', 'Sentiment'], 600)
+    await click(page, firstSummary.locator('summary'))
+    await beat(1600)
+    await scrollPage(page, 700, 1400)
     await beat(800)
     const search = page.locator('#global-search')
     if (await search.isVisible().catch(() => false)) {
-      await typeInto(page, search, 'water heater', 60)
+      await scrollPage(page, 0, 700)
+      await typeInto(page, search, 'water heater', 55)
       await page.keyboard.press('Enter')
       await page.waitForLoadState('networkidle')
       await page.mouse.move(mouse.x, mouse.y)
+      await beat(1200)
+      await scrollPage(page, 420, 1300)
     }
-    await beat(1200)
-    await scrollPage(page, 450, 1500)
-    await beat(1500)
-    await scrollPage(page, 0, 800)
   },
-  async 'tenant-pipeline'({ page }) {
-    await clickAndSettle(page, page.getByRole('link', { name: 'Lead pipeline' }).first())
+  async 'tenant-leads'({ page }) {
+    await scrollPage(page, 0, 500)
+    await navTo(page, page.getByRole('link', { name: 'Lead pipeline' }).first(), /tab=leads/)
     await go(page, `/dashboard?tab=leads&range=all&selectedId=${HERO_RECORD_ID}`)
-    await assertNoSecretsOnScreen(page, 'tenant-pipeline')
+    await assertNoSecretsOnScreen(page, 'tenant-leads')
+    await hoverLabels(page, ['Captured leads', 'Hot leads'], 500)
     const status = page.locator(`#status-${HERO_RECORD_ID}`).first()
     await scrollIntoView(status, 'center')
-    await hover(page, page.getByText('Mike Johnson').first(), 800)
-    await hover(page, status, 500)
+    await hover(page, page.getByText('Mike Johnson').first(), 600)
+    await hover(page, status, 400)
     await status.selectOption('qualified') // native <select> popups are not captured in video
     if (!(await waitForSaves(page, 'status', 2_000))) {
-      // The status is saved server-side; refresh so the page shows it instead of a spinner.
+      // Saved server-side; refresh so the page shows it instead of a spinner (app bug, see README).
       await go(page, `/dashboard?tab=leads&range=all&selectedId=${HERO_RECORD_ID}`)
       await scrollIntoView(page.locator(`#status-${HERO_RECORD_ID}`).first(), 'center')
     }
     const owner = page.locator('input[name="owner"]').first()
     if (await owner.isVisible().catch(() => false)) {
-      await typeInto(page, owner, 'Jake (Dispatch)', 40)
+      await typeInto(page, owner, 'Jake (Dispatch)', 36)
       const notes = page.locator('textarea[name="notes"]').first()
-      if (await notes.isVisible().catch(() => false)) await typeInto(page, notes, 'Tech Carlos assigned, 2-4 PM. Offer Comfort Club.', 24)
+      if (await notes.isVisible().catch(() => false)) await typeInto(page, notes, 'Tech Carlos assigned, 2-4 PM.', 24)
       await click(page, page.getByRole('button', { name: 'Save lead plan' }).first())
       if (!(await waitForSaves(page, 'lead plan', 2_500))) {
-        // Saved server-side; refresh so the page shows the result instead of a spinner.
         await go(page, `/dashboard?tab=leads&range=all&selectedId=${HERO_RECORD_ID}`)
         await scrollIntoView(page.locator('input[name="owner"]').first(), 'center')
-        await beat(1200)
       }
     }
+    const funnel = page.getByText('Lead Pipeline Funnel', { exact: true }).first()
+    if (await funnel.isVisible().catch(() => false)) await scrollIntoView(funnel, 'center')
+    await beat(800)
   },
   async 'tenant-insights'({ page }) {
-    await scrollPage(page, 0, 700)
-    await clickAndSettle(page, page.getByRole('link', { name: 'AI insights' }).first())
-    await beat(900)
+    await scrollPage(page, 0, 600)
+    await navTo(page, page.getByRole('link', { name: 'AI insights' }).first(), /tab=ai/)
+    await beat(700)
     await hoverLabels(page, ['Recommendations', 'Risk signals'], 900)
     await scrollPage(page, 550, 1500)
     await beat(900)
-    await scrollPage(page, 0, 700)
-    const exportBtn = page.getByRole('link', { name: /Export/ }).first()
-    if (await exportBtn.isVisible().catch(() => false)) await hover(page, exportBtn, 1000)
+  },
+  async 'tenant-filters'({ page }) {
+    await scrollPage(page, 0, 600)
+    const quality = page.locator('select:has(option[value="hot"])').first()
+    await hover(page, quality, 400)
+    await quality.selectOption('hot')
+    const applied = await page.waitForURL(/quality=hot/, { timeout: 3_000 }).then(() => true).catch(() => false)
+    if (!applied) {
+      // Client-side filter transitions can hang (see README): load the filtered view directly.
+      const url = new URL(page.url())
+      url.searchParams.set('quality', 'hot')
+      await go(page, url.pathname + url.search)
+    }
+    await page.waitForLoadState('networkidle')
+    await page.mouse.move(mouse.x, mouse.y)
+    await beat(900)
+    const exportBtn = page.getByRole('link', { name: /Export CSV/ }).first()
+    if (await exportBtn.isVisible().catch(() => false)) await hover(page, exportBtn, 1200)
   },
   async 'tenant-setup'({ page }) {
     await go(page, `/admin/tenants/${HERO.tenantId}?tab=agent`)
     await page.addStyleTag({ content: BLUR_CODE })
     await assertNoSecretsOnScreen(page, 'tenant-setup')
-    await beat(1200)
-    await scrollPage(page, 450, 1700)
-    await beat(1200)
-    await scrollPage(page, 900, 1600)
-    await beat(900)
+    await beat(1000)
+    await scrollPage(page, 450, 1600)
+    await beat(1100)
+    await scrollPage(page, 900, 1500)
+    await beat(800)
   },
 
+  // Rendered as Remotion cards, not recorded.
+  async intro() {},
+  async problem() {},
+  async solution() {},
   async cta() {},
 }
 

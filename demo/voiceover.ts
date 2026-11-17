@@ -6,8 +6,8 @@
  *   npm run demo:voiceover
  *
  * Providers (DEMO_TTS_PROVIDER):
- *   openai      (default)  needs OPENAI_API_KEY.  Voice: DEMO_TTS_VOICE (default "nova"),
- *                          model: DEMO_TTS_MODEL (default "tts-1-hd").
+ *   openai      (default)  needs OPENAI_API_KEY. Voice: DEMO_TTS_VOICE (default "coral"),
+ *                          model: DEMO_TTS_MODEL (default "gpt-4o-mini-tts", styled by DEMO_TTS_STYLE).
  *   elevenlabs             needs ELEVENLABS_API_KEY. Voice: DEMO_TTS_VOICE or ELEVENLABS_VOICE_ID.
  *
  * Output: demo/output/audio/<scene>.mp3 and demo/output/audio/durations.json
@@ -19,7 +19,6 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { Readable } from 'node:stream'
-import OpenAI from 'openai'
 import { SCENES } from './scenes'
 
 const OUT = path.join(__dirname, 'output', 'audio')
@@ -27,17 +26,30 @@ const PROVIDER = (process.env.DEMO_TTS_PROVIDER || 'openai').toLowerCase()
 const ONLY = process.env.DEMO_SCENES?.split(',').map((s) => s.trim())
 const DURATIONS_ONLY = process.argv.includes('--durations-only')
 
+/** Narrator style for gpt-4o-mini-tts (ignored by tts-1 models). Override with DEMO_TTS_STYLE. */
+const STYLE =
+  process.env.DEMO_TTS_STYLE ||
+  'Warm, confident and upbeat female narrator for a premium product demo video. Friendly, polished and smiling, ' +
+    'with natural energy and clear diction. Medium pace, short natural pauses between sentences. ' +
+    'Sound empathetic when describing problems and genuinely excited when describing the solution.'
+
 async function openaiSpeech(text: string): Promise<Buffer> {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not set (put it in .env.local, never in the repo).')
-  const client = new OpenAI({ apiKey })
-  const res = await client.audio.speech.create({
-    model: process.env.DEMO_TTS_MODEL || 'tts-1-hd',
-    voice: (process.env.DEMO_TTS_VOICE || 'nova') as 'nova',
-    input: text,
-    speed: Number(process.env.DEMO_TTS_SPEED || 1.0),
-    response_format: 'mp3',
+  // Plain fetch (Node 22) so a proxy-injected key also works: run with NODE_USE_ENV_PROXY=1
+  // behind an HTTPS proxy. OPENAI_API_KEY comes from .env.local, never the repo.
+  const apiKey = process.env.OPENAI_API_KEY || 'proxy-injected'
+  const model = process.env.DEMO_TTS_MODEL || 'gpt-4o-mini-tts'
+  const res = await fetch('https://api.openai.com/v1/audio/speech', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      voice: process.env.DEMO_TTS_VOICE || 'coral',
+      input: text,
+      response_format: 'mp3',
+      ...(model.startsWith('gpt-') ? { instructions: STYLE } : { speed: Number(process.env.DEMO_TTS_SPEED || 1.0) }),
+    }),
   })
+  if (!res.ok) throw new Error(`OpenAI TTS failed (${res.status}): ${(await res.text()).slice(0, 200)}`)
   return Buffer.from(await res.arrayBuffer())
 }
 
