@@ -9,5 +9,5 @@
     "esModuleInterop": true,
     "noEmit": true
   },
-  "include": ["src", "../scenes.ts"]
+  "include": ["src", "../scenes.ts", "../social/script.ts"]
 }

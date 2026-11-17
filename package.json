@@ -20,7 +20,8 @@
     "demo:voiceover": "tsx --tsconfig demo/tsconfig.json demo/voiceover.ts",
     "demo:record": "tsx --tsconfig demo/tsconfig.json demo/record.ts",
     "demo:build": "tsx --tsconfig demo/tsconfig.json demo/build-video.ts",
-    "demo:typecheck": "tsc -p demo/tsconfig.json"
+    "demo:typecheck": "tsc -p demo/tsconfig.json",
+    "demo:social": "tsx --tsconfig demo/tsconfig.json demo/social/build-social.ts"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.0.0",

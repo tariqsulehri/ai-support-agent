@@ -29,6 +29,13 @@ demo/
   build-video.ts          ffmpeg assembly → output/final-demo.mp4 + captions.srt
 ```
 
+## Social media cut (~70 s)
+
+`demo/social/` builds a short, energetic version in **9:16, 4:5 and 16:9** from the same recording,
+with punchier narration, an original 124 BPM track (`make-music-energetic.sh`) and burned-in captions.
+See [`social/POSTING-GUIDE.md`](social/POSTING-GUIDE.md) for which file goes on which platform,
+captions, hashtags and the rebuild commands (`npm run demo:social`).
+
 ## 1. One-time setup
 
 Node 22+, ffmpeg, a local MongoDB 7, Playwright's Chromium:

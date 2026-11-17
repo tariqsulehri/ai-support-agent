@@ -20,8 +20,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { Readable } from 'node:stream'
 import { SCENES } from './scenes'
+import { SOCIAL_SCENES, SOCIAL_TTS_STYLE } from './social/script'
 
-const OUT = path.join(__dirname, 'output', 'audio')
+/** `--social` narrates the short social cut (demo/social/script.ts) into output/social/audio. */
+const SOCIAL = process.argv.includes('--social')
+const SCRIPT: Array<{ id: string; voiceover: string }> = SOCIAL ? SOCIAL_SCENES : SCENES
+const OUT = SOCIAL ? path.join(__dirname, 'output', 'social', 'audio') : path.join(__dirname, 'output', 'audio')
 const PROVIDER = (process.env.DEMO_TTS_PROVIDER || 'openai').toLowerCase()
 const ONLY = process.env.DEMO_SCENES?.split(',').map((s) => s.trim())
 const DURATIONS_ONLY = process.argv.includes('--durations-only')
@@ -29,6 +33,7 @@ const DURATIONS_ONLY = process.argv.includes('--durations-only')
 /** Narrator style for gpt-4o-mini-tts (ignored by tts-1 models). Override with DEMO_TTS_STYLE. */
 const STYLE =
   process.env.DEMO_TTS_STYLE ||
+  (SOCIAL ? SOCIAL_TTS_STYLE : '') ||
   'Warm, confident and upbeat female narrator for a premium product demo video. Friendly, polished and smiling, ' +
     'with natural energy and clear diction. Medium pace, short natural pauses between sentences. ' +
     'Sound empathetic when describing problems and genuinely excited when describing the solution.'
@@ -82,7 +87,7 @@ async function main(): Promise<void> {
     ? JSON.parse(fs.readFileSync(durationsFile, 'utf8'))
     : {}
 
-  for (const scene of SCENES) {
+  for (const scene of SCRIPT) {
     if (ONLY && !ONLY.includes(scene.id)) continue
     const file = path.join(OUT, `${scene.id}.mp3`)
     if (!DURATIONS_ONLY) {

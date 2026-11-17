@@ -3,6 +3,25 @@ import { getVideoMetadata } from '@remotion/media-utils'
 import { SCENES, type SceneId } from '../../scenes'
 import { CtaCard, IntroCard, ProblemCard, SolutionCard } from './Cards'
 import { Captioned } from './Captioned'
+import { SocialCta, SocialHook, SocialProblem, SocialSolution } from './SocialCards'
+import { FORMATS, SOCIAL_SCENES, segmentSeconds, type SocialFormat } from '../../social/script'
+
+const SOCIAL_CARDS = { hook: SocialHook, problem: SocialProblem, solution: SocialSolution, cta: SocialCta } as const
+
+/** Social card length from output/social/audio/durations.json (same rule as build-social.ts). */
+function socialLength(card: keyof typeof SOCIAL_CARDS): CalculateMetadataFunction<Record<string, unknown>> {
+  return async () => {
+    const scene = SOCIAL_SCENES.find((s) => 'card' in s.source && s.source.card === card)!
+    let spoken: number | undefined
+    try {
+      const durations = (await fetch(staticFile('social/audio/durations.json')).then((r) => r.json())) as Record<string, number>
+      spoken = durations[scene.id]
+    } catch {
+      // No narration yet: use the minimum.
+    }
+    return { durationInFrames: Math.ceil(segmentSeconds(scene, spoken) * FPS) }
+  }
+}
 
 const FPS = 30
 
@@ -37,6 +56,13 @@ export function Root() {
       <Composition id="problem" component={ProblemCard} {...card} calculateMetadata={cardLength('problem')} />
       <Composition id="solution" component={SolutionCard} {...card} calculateMetadata={cardLength('solution')} />
       <Composition id="cta" component={CtaCard} {...card} calculateMetadata={cardLength('cta')} />
+      {(Object.keys(FORMATS) as SocialFormat[]).flatMap((fmt) =>
+        (Object.keys(SOCIAL_CARDS) as Array<keyof typeof SOCIAL_CARDS>).map((card) => (
+          <Composition key={`s-${card}-${fmt}`} id={`s-${card}-${fmt}`} component={SOCIAL_CARDS[card]} fps={FPS}
+            width={FORMATS[fmt].width} height={FORMATS[fmt].height} durationInFrames={5 * FPS} defaultProps={{}}
+            calculateMetadata={socialLength(card)} />
+        ))
+      )}
       <Composition id="captioned" component={Captioned} durationInFrames={60 * FPS} fps={FPS} width={1920} height={1080}
         defaultProps={{ src: 'final-demo.mp4', timelineFile: 'timeline.json', offsetSeconds: 0 }}
         calculateMetadata={async ({ props }) => {
