@@ -21,7 +21,9 @@ const OUT = path.join(DEMO, 'output', 'social')
 const WORK = path.join(OUT, 'build')
 const SCREEN = path.join(DEMO, 'output', 'screen-1080p.mp4')
 const CARDS = path.join(DEMO, 'remotion', 'out', 'social')
-const LOGO_BADGE = path.join(DEMO, 'assets', 'aiscripto-logo-on-blue.png')
+/** Transparent logos: white with a soft shadow over blurred backgrounds, full colour over the light app header. */
+const LOGO_WHITE = path.join(DEMO, 'assets', 'aiscripto-logo-white-shadow.png')
+const LOGO_COLOR = path.join(DEMO, 'assets', 'aiscripto-logo-color.png')
 const FONT_CANDIDATES = [process.env.DEMO_FONT, '/usr/share/fonts/opentype/inter/Inter-ExtraBold.otf', '/usr/share/fonts/opentype/inter/Inter-Bold.otf',
   '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf', 'C:/Windows/Fonts/arialbd.ttf']
 const V = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-pix_fmt', 'yuv420p', '-r', '30']
@@ -68,7 +70,8 @@ function headlineFilters(scene: SocialScene, fmt: SocialFormat, y: number): stri
   return lines(scene.headline, fmt === '9x16' ? 18 : 24).map((line, i) => {
     const file = path.join(WORK, `${scene.id}-${fmt}-h${i}.txt`)
     fs.writeFileSync(file, line)
-    return `drawtext=fontfile='${font}':textfile='${esc(file)}':fontsize=${size}:fontcolor=white:box=1:boxcolor=0x1800AD@0.96:boxborderw=22:` +
+    return `drawtext=fontfile='${font}':textfile='${esc(file)}':fontsize=${size}:fontcolor=white:borderw=5:bordercolor=0x1800AD:` +
+      `shadowcolor=0x050320@0.75:shadowx=0:shadowy=6:` +
       `x=(w-text_w)/2:y=${y + i * Math.round(size * 1.55)}:alpha='min(1,t/0.25)'`
   })
 }
@@ -84,7 +87,10 @@ function footageGraph(scene: SocialScene, fmt: SocialFormat, speed: number): str
   const badge = (w: number) => `[2:v]scale=${w}:-1[logo]`
 
   if (fmt === '16x9') {
-    return `${head};[bg0]nullsink;${badge(230)};[fg0][logo]overlay=W-w-36:30[v]`
+    // Bottom corner, clear of the app header and of the chat window (which sits on the right).
+    // On the website scene the logo would sit on the site's own content, so it is left out there.
+    if (src.focus === 'chat') return `${head};[bg0]nullsink;[2:v]nullsink;[fg0]null[v]`
+    return `${head};[bg0]nullsink;${badge(240)};[fg0][logo]overlay=W-w-40:H-h-30[v]`
   }
   if (src.focus === 'chat') {
     // The chat widget sits at x 1330-1910, y 190-1070 of the 1920x1080 recording.
@@ -98,9 +104,9 @@ function footageGraph(scene: SocialScene, fmt: SocialFormat, speed: number): str
   const [cx, cy, cw, ch] = scene.crop ?? [300, 0, 1620, 1080]
   const fg = `[fg0]crop=${cw}:${ch}:${cx}:${cy},scale=1080:-2[fg]`
   if (fmt === '9x16') {
-    return `${head};${blurBg};${fg};${badge(280)};[bg][logo]overlay=(W-w)/2:110[b1];[b1][fg]${chain('overlay=0:600', headlineFilters(scene, fmt, 300))}[v]`
+    return `${head};${blurBg};${fg};${badge(330)};[bg][logo]overlay=(W-w)/2:90[b1];[b1][fg]${chain('overlay=0:600', headlineFilters(scene, fmt, 300))}[v]`
   }
-  return `${head};${blurBg};${fg};${badge(220)};[bg][logo]overlay=(W-w)/2:36[b1];[b1][fg]${chain('overlay=0:350', headlineFilters(scene, fmt, 150))}[v]`
+  return `${head};${blurBg};${fg};${badge(270)};[bg][logo]overlay=(W-w)/2:20[b1];[b1][fg]${chain('overlay=0:350', headlineFilters(scene, fmt, 150))}[v]`
 }
 
 function clip(scene: SocialScene, fmt: SocialFormat, index: number): string {
@@ -120,7 +126,7 @@ function clip(scene: SocialScene, fmt: SocialFormat, index: number): string {
   }
   const { from, to } = scene.source
   const speed = (to - from) / len
-  ff(['-ss', String(from), '-t', String(to - from), '-i', SCREEN, '-i', voice, '-i', LOGO_BADGE,
+  ff(['-ss', String(from), '-t', String(to - from), '-i', SCREEN, '-i', voice, '-i', fmt === '16x9' ? LOGO_COLOR : LOGO_WHITE,
     '-filter_complex', `${footageGraph(scene, fmt, speed)};${audio}`, '-map', '[v]', '-map', '[a]', '-t', len.toFixed(3), ...V, ...A, out])
   return out
 }
@@ -131,7 +137,7 @@ function writeAss(fmt: SocialFormat, starts: Record<string, number>): string {
   const style = {
     '9x16': { size: 64, align: 2, marginV: 470, marginL: 80, maxChars: 26 },
     '4x5': { size: 52, align: 2, marginV: 150, marginL: 70, maxChars: 30 },
-    '16x9': { size: 54, align: 1, marginV: 60, marginL: 70, maxChars: 40 },
+    '16x9': { size: 54, align: 2, marginV: 50, marginL: 340, maxChars: 40 },
   }[fmt]
   const t = (s: number) => {
     const cs = Math.max(0, Math.round(s * 100))
@@ -153,7 +159,9 @@ function writeAss(fmt: SocialFormat, starts: Record<string, number>): string {
     let at = starts[scene.id] + VOICE_DELAY
     for (const c of chunks) {
       const d = (c.length / total) * spoken
-      events.push(`Dialogue: 0,${t(at)},${t(at + d - 0.03)},Cap,,0,0,0,,{\\fad(60,40)}${c.toUpperCase()}`)
+      // 16:9 website scene: captions go in the empty dark area of the hero (left), not over the site's text.
+      const place = fmt === '16x9' && scene.id === 's-chat' ? '\\an1\\pos(60,835)' : ''
+      events.push(`Dialogue: 0,${t(at)},${t(at + d - 0.03)},Cap,,0,0,0,,{${place}\\fad(60,40)}${c.toUpperCase()}`)
       at += d
     }
   }
@@ -161,7 +169,7 @@ function writeAss(fmt: SocialFormat, starts: Record<string, number>): string {
     '[Script Info]', 'ScriptType: v4.00+', `PlayResX: ${W}`, `PlayResY: ${H}`, 'WrapStyle: 0', '',
     '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-    `Style: Cap,Inter,${style.size},&H00FFFFFF,&H00FFFFFF,&H00AD0018,&H64000000,1,0,0,0,100,100,0,0,3,14,0,${style.align},${style.marginL},${style.marginL},${style.marginV},1`,
+    `Style: Cap,Inter,${style.size},&H00FFFFFF,&H00FFFFFF,&H00AD0018,&H50000000,1,0,0,0,100,100,0,0,1,5,3,${style.align},${style.marginL},${style.marginL},${style.marginV},1`,
     '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...events, '',
   ].join('\n')
   const file = path.join(WORK, `captions-${fmt}.ass`)
