@@ -62,7 +62,7 @@ export function VoiceAgent({ tenantId, token, sessionToken, onClose }: VoiceAgen
       {/* ── Chat window ──────────────────────────────────────────────────── */}
       <section
         aria-label={`Chat with ${displayName}`}
-        className="bg-white rounded-2xl shadow-card overflow-hidden flex flex-col
+        className="bg-ms-surface rounded-va shadow-card overflow-hidden flex flex-col
                    min-h-[min(560px,82dvh)] max-h-[82dvh]"
       >
 
@@ -70,30 +70,30 @@ export function VoiceAgent({ tenantId, token, sessionToken, onClose }: VoiceAgen
         <header className="bg-ms-teal px-4 sm:px-5 py-3.5 flex items-center gap-3 shadow-header shrink-0">
           <div
             aria-hidden="true"
-            className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center
-                       text-white font-semibold text-sm shrink-0 ring-2 ring-white/30"
+            className="w-10 h-10 rounded-full bg-ms-on-primary/20 flex items-center justify-center
+                       text-ms-on-primary font-semibold text-sm shrink-0 ring-2 ring-ms-on-primary/30"
           >
             {isConnecting ? '' : initials}
           </div>
           <div className="flex-1 min-w-0">
             {isConnecting ? (
               <>
-                <span className="block h-3.5 w-24 rounded bg-white/30 animate-pulse" />
-                <span className="mt-1.5 block h-3 w-16 rounded bg-white/20 animate-pulse" />
+                <span className="block h-3.5 w-24 rounded bg-ms-on-primary/30 animate-pulse" />
+                <span className="mt-1.5 block h-3 w-16 rounded bg-ms-on-primary/20 animate-pulse" />
               </>
             ) : (
               <>
-                <p className="text-white font-semibold text-sm leading-tight truncate">{displayName}</p>
-                {companyName && <p className="text-white/75 text-xs truncate">{companyName}</p>}
+                <p className="text-ms-on-primary font-semibold text-sm leading-tight truncate">{displayName}</p>
+                {companyName && <p className="text-ms-on-primary/75 text-xs truncate">{companyName}</p>}
               </>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span
               aria-hidden="true"
-              className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : phase === 'error' ? 'bg-amber-300' : 'bg-white/40'}`}
+              className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : phase === 'error' ? 'bg-amber-300' : 'bg-ms-on-primary/40'}`}
             />
-            <span className="text-white/85 text-xs font-medium" role="status">{statusLabel}</span>
+            <span className="text-ms-on-primary/85 text-xs font-medium" role="status">{statusLabel}</span>
             {onClose && (
               <button
                 type="button"
@@ -101,9 +101,9 @@ export function VoiceAgent({ tenantId, token, sessionToken, onClose }: VoiceAgen
                 aria-label="Close chat"
                 className="
                   ml-1 w-8 h-8 rounded-full flex items-center justify-center
-                  text-white/80 hover:text-white hover:bg-white/15 active:bg-white/25
+                  text-ms-on-primary/80 hover:text-ms-on-primary hover:bg-ms-on-primary/15 active:bg-ms-on-primary/25
                   transition-colors focus:outline-none focus-visible:ring-2
-                  focus-visible:ring-white/70
+                  focus-visible:ring-ms-on-primary/70
                 "
               >
                 <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" aria-hidden="true"
@@ -149,13 +149,13 @@ export function VoiceAgent({ tenantId, token, sessionToken, onClose }: VoiceAgen
         />
 
         {/* ── Input bar: [TextInput] [Mic] [Send] ─────────────────────────── */}
-        <div className="border-t border-surface-border bg-white px-3 sm:px-4 py-3 shrink-0">
+        <div className="border-t border-ms-border bg-ms-surface px-3 sm:px-4 py-3 shrink-0">
           <TextInput phase={phase} onSend={sendText} accessory={mic} />
         </div>
 
         {/* ── Settings footer ─────────────────────────────────────────────── */}
         {!isConnecting && (
-          <div className="border-t border-surface-border bg-surface-raised px-3 sm:px-4 py-2 shrink-0">
+          <div className="border-t border-ms-border bg-ms-surface-2 px-3 sm:px-4 py-2 shrink-0">
             <SettingsBar language={language} voice={voice} onVoice={setVoice} />
           </div>
         )}

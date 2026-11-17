@@ -29,8 +29,8 @@ export const LeadPanel = memo(function LeadPanel({ lead, callSummary }: LeadPane
 
       {/* Contact info — only fields the visitor actually provided */}
       {hasLead && (
-        <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-          <div className="px-4 sm:px-5 py-3 border-b border-surface-border flex items-center gap-2">
+        <div className="bg-ms-surface rounded-va shadow-card overflow-hidden">
+          <div className="px-4 sm:px-5 py-3 border-b border-ms-border flex items-center gap-2">
             <div className="w-1.5 h-4 rounded-full bg-ms-teal" aria-hidden="true" />
             <h3 className="text-xs font-semibold text-ms-text uppercase tracking-wider">
               Contact Details
@@ -55,8 +55,8 @@ export const LeadPanel = memo(function LeadPanel({ lead, callSummary }: LeadPane
 
       {/* Call summary */}
       {callSummary && (
-        <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-          <div className="px-4 sm:px-5 py-3 border-b border-surface-border flex items-center gap-2">
+        <div className="bg-ms-surface rounded-va shadow-card overflow-hidden">
+          <div className="px-4 sm:px-5 py-3 border-b border-ms-border flex items-center gap-2">
             <div className="w-1.5 h-4 rounded-full bg-ms-teal" aria-hidden="true" />
             <h3 className="text-xs font-semibold text-ms-text uppercase tracking-wider">
               Conversation Summary

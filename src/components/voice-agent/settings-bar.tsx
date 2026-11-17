@@ -23,7 +23,7 @@ export const SettingsBar = memo(function SettingsBar({ language, voice }: Props)
           d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
       </svg>
       <span className="truncate"><span className="sr-only">Language: </span>{language}</span>
-      <span className="text-surface-border" aria-hidden="true">·</span>
+      <span className="text-ms-border" aria-hidden="true">·</span>
       <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" aria-hidden="true"
            stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round"

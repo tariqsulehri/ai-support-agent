@@ -46,6 +46,20 @@ export async function GET(req: NextRequest) {
   const width = script.getAttribute("data-width") || "420px";
   const height = script.getAttribute("data-height") || "680px";
 
+  const GENERIC_FONTS = ["serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui",
+    "ui-sans-serif", "ui-serif", "ui-monospace", "ui-rounded", "-apple-system", "blinkmacsystemfont",
+    "emoji", "math", "inherit", "initial"];
+
+  // Optional theme overrides; anything not set is detected from the page.
+  function attr(name) { const v = script.getAttribute(name); return v ? v.trim() : ""; }
+  const themeAttr = attr("data-theme").toLowerCase();
+  const overrides = {
+    primary: normalizeHex(attr("data-primary-color")),
+    font:    safeFont(attr("data-font")),
+    radius:  safeRadius(attr("data-radius")),
+    mode:    themeAttr === "light" || themeAttr === "dark" ? themeAttr : null
+  };
+
   if (!tenant && !clientKey) {
     console.error("AI Agent: Missing client-api-key or data-tenant attribute on script tag");
     return;
@@ -89,30 +103,121 @@ export async function GET(req: NextRequest) {
     return sessionPromise;
   }
 
-  function rgbToHex(rgb) {
-    const m = rgb.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
+  function normalizeHex(v) {
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) return v.toLowerCase();
+    if (/^#[0-9a-fA-F]{3}$/.test(v)) return ("#" + v[1] + v[1] + v[2] + v[2] + v[3] + v[3]).toLowerCase();
+    return null;
+  }
+
+  function parseRgb(value) {
+    const m = String(value || "").match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*([\\d.]+))?/);
     if (!m) return null;
-    const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
-    if ((r + g + b < 30) || (r + g + b > 720)) return null;
-    return "#" + r.toString(16).padStart(2,"0") + g.toString(16).padStart(2,"0") + b.toString(16).padStart(2,"0");
+    return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : parseFloat(m[4]) };
+  }
+
+  function rgbToHex(rgb) {
+    const c = parseRgb(rgb);
+    if (!c || c.a < 0.5) return null;
+    const sum = c.r + c.g + c.b;
+    if (sum < 30 || sum > 720) return null; // near-black / near-white is not a brand colour
+    return "#" + [c.r, c.g, c.b].map(function (n) { return n.toString(16).padStart(2, "0"); }).join("");
+  }
+
+  function luminance(c) {
+    const ch = [c.r, c.g, c.b].map(function (v) {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+  }
+
+  // White or near-black text, whichever contrasts better with the background.
+  function readableOn(hex) {
+    const L = luminance({ r: parseInt(hex.slice(1, 3), 16), g: parseInt(hex.slice(3, 5), 16), b: parseInt(hex.slice(5, 7), 16) });
+    const dark = luminance({ r: 17, g: 24, b: 39 });
+    return (1.05 / (L + 0.05)) >= ((L + 0.05) / (dark + 0.05)) ? "#ffffff" : "#111827";
+  }
+
+  function safeFont(name) {
+    let n = String(name || "").trim().replace(/^["']|["']$/g, "");
+    const nextFont = n.match(/^__([A-Za-z0-9_]+?)_[0-9a-f]{4,}$/); // next/font hashed names
+    if (nextFont) n = nextFont[1].replace(/_/g, " ");
+    if (!n || / Fallback$/i.test(n)) return null;
+    if (!/^[A-Za-z0-9][A-Za-z0-9 -]{0,47}$/.test(n)) return null;
+    if (GENERIC_FONTS.indexOf(n.toLowerCase()) !== -1) return null;
+    return n;
+  }
+
+  function safeRadius(v) {
+    const n = parseFloat(v);
+    return isFinite(n) && n >= 0 ? Math.round(Math.min(n, 24)) : null;
+  }
+
+  function findPrimaryButton() {
+    const BTNS = ['button[class*="primary"]', 'a[class*="primary"]', '.btn-primary', '.button-primary', '[data-brand]'];
+    for (const sel of BTNS) {
+      const el = document.querySelector(sel);
+      if (el) return el;
+    }
+    return null;
   }
 
   function detectPrimaryColor() {
     const CSS_VARS = ["--primary","--primary-color","--brand-color","--color-primary","--theme-primary","--accent-color","--accent","--brand"];
     const root = getComputedStyle(document.documentElement);
     for (const v of CSS_VARS) {
-      const val = root.getPropertyValue(v).trim();
-      if (/^#[0-9a-fA-F]{6}$/.test(val)) return val;
-      if (/^#[0-9a-fA-F]{3}$/.test(val)) return "#"+val[1]+val[1]+val[2]+val[2]+val[3]+val[3];
+      const hex = normalizeHex(root.getPropertyValue(v).trim());
+      if (hex) return hex;
     }
-    const BTNS = ['button[class*="primary"]','a[class*="primary"]','.btn-primary','.button-primary','[data-brand]'];
-    for (const sel of BTNS) {
-      const el = document.querySelector(sel);
-      if (el) { const c = rgbToHex(getComputedStyle(el).backgroundColor); if (c) return c; }
-    }
+    const btn = findPrimaryButton();
+    if (btn) { const c = rgbToHex(getComputedStyle(btn).backgroundColor); if (c) return c; }
     const header = document.querySelector("header") || document.querySelector("nav");
     if (header) { const c = rgbToHex(getComputedStyle(header).backgroundColor); if (c) return c; }
     return null;
+  }
+
+  function detectFont() {
+    const parts = (getComputedStyle(document.body).fontFamily || "").split(",");
+    for (const part of parts) {
+      const raw = part.trim().replace(/^["']|["']$/g, "").toLowerCase();
+      if (GENERIC_FONTS.indexOf(raw) !== -1) break;
+      const f = safeFont(part);
+      if (f) return f;
+    }
+    return null;
+  }
+
+  function detectRadius() {
+    const btn = findPrimaryButton();
+    return btn ? safeRadius(getComputedStyle(btn).borderTopLeftRadius) : null;
+  }
+
+  function detectMode() {
+    const els = [document.body, document.documentElement];
+    for (const el of els) {
+      const c = el && parseRgb(getComputedStyle(el).backgroundColor);
+      if (c && c.a > 0.5) return luminance(c) < 0.2 ? "dark" : "light";
+    }
+    return "light";
+  }
+
+  // Overrides win; detection never throws into the host page.
+  function resolveTheme() {
+    function safe(fn) { try { return fn(); } catch (e) { return null; } }
+    return {
+      primary: overrides.primary || safe(detectPrimaryColor),
+      font:    overrides.font || safe(detectFont),
+      radius:  overrides.radius !== null ? overrides.radius : safe(detectRadius),
+      mode:    overrides.mode || safe(detectMode) || "light"
+    };
+  }
+
+  function applyLauncherTheme(button, container, theme) {
+    const bg = theme.primary || "#007bff";
+    button.style.background = bg;
+    button.style.color = readableOn(bg);
+    container.style.background = theme.mode === "dark" ? "#1b1b1b" : "#fff";
+    container.style.borderRadius = (theme.radius !== null ? theme.radius : 12) + "px";
   }
 
   function createUI() {
@@ -155,6 +260,7 @@ export async function GET(req: NextRequest) {
 
     document.body.appendChild(container);
     document.body.appendChild(button);
+    applyLauncherTheme(button, container, resolveTheme());
 
     button.onclick = async function () {
       try {
@@ -181,8 +287,12 @@ export async function GET(req: NextRequest) {
         url.searchParams.set("v", String(Date.now()));
         if (token) url.searchParams.set("token", token);
 
-        const primaryColor = detectPrimaryColor();
-        if (primaryColor) url.searchParams.set("primaryColor", primaryColor);
+        const theme = resolveTheme();
+        applyLauncherTheme(button, container, theme);
+        if (theme.primary) url.searchParams.set("primaryColor", theme.primary);
+        if (theme.font) url.searchParams.set("font", theme.font);
+        if (theme.radius !== null) url.searchParams.set("radius", String(theme.radius));
+        url.searchParams.set("mode", theme.mode);
 
         const iframe = document.createElement("iframe");
         iframe.src = url.toString();

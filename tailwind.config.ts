@@ -71,16 +71,20 @@ const config: Config = {
           'blue-dk': 'rgb(var(--va-primary-dk) / <alpha-value>)',
           'blue-lt': 'rgb(var(--va-primary-lt) / <alpha-value>)',
           'blue-md': 'rgb(var(--va-primary-md) / <alpha-value>)',
-          // Secondary — teal
-          teal:      '#4CBAAB',
-          'teal-dk': '#3DA898',
-          'teal-lt': '#EBF8F6',
-          'teal-md': '#C8EDE9',
-          // Neutrals
-          text:      '#323130',
-          sub:       '#605E5C',
-          muted:     '#8A8886',
-          border:    '#EDEBE9',
+          // Secondary — teal by default; follows the embed theme when one is set
+          teal:      'rgb(var(--va-teal)    / <alpha-value>)',
+          'teal-dk': 'rgb(var(--va-teal-dk) / <alpha-value>)',
+          'teal-lt': 'rgb(var(--va-teal-lt) / <alpha-value>)',
+          'teal-md': 'rgb(var(--va-teal-md) / <alpha-value>)',
+          'on-primary': 'rgb(var(--va-on-primary) / <alpha-value>)',
+          // Neutrals: CSS vars so the embed theme can switch to dark mode
+          surface:     'rgb(var(--va-surface)   / <alpha-value>)',
+          'surface-2': 'rgb(var(--va-surface-2) / <alpha-value>)',
+          'surface-3': 'rgb(var(--va-surface-3) / <alpha-value>)',
+          text:      'rgb(var(--va-text)   / <alpha-value>)',
+          sub:       'rgb(var(--va-sub)    / <alpha-value>)',
+          muted:     'rgb(var(--va-muted)  / <alpha-value>)',
+          border:    'rgb(var(--va-border) / <alpha-value>)',
           red:       '#C4314B',
           green:     '#107C10',
           amber:     '#F7630C',
@@ -98,6 +102,9 @@ const config: Config = {
       },
       borderRadius: {
         xs: '0.125rem',
+        // Voice widget corners; follow the embedding site via the embed theme
+        va:      'var(--va-radius)',
+        'va-sm': 'var(--va-radius-sm)',
       },
       dropShadow: {
         xs: '0 1px 1px rgba(0, 0, 0, 0.08)',

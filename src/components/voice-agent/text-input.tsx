@@ -85,10 +85,10 @@ export const TextInput = memo(forwardRef<TextInputHandle, TextInputProps>(
     return (
       <div className="flex flex-col gap-1">
         <div className="flex items-end gap-2">
-          <div className={`flex-1 min-w-0 flex items-end rounded-xl border bg-surface-hover transition-colors
+          <div className={`flex-1 min-w-0 flex items-end rounded-va-sm border bg-ms-surface-3 transition-colors
             ${emailError
               ? 'border-ms-red'
-              : 'border-surface-border focus-within:border-ms-blue focus-within:ring-2 focus-within:ring-ms-blue/15'}`}>
+              : 'border-ms-border focus-within:border-ms-blue focus-within:ring-2 focus-within:ring-ms-blue/15'}`}>
             <textarea
               ref={inputRef}
               rows={1}
@@ -121,9 +121,9 @@ export const TextInput = memo(forwardRef<TextInputHandle, TextInputProps>(
             aria-label={isBusy && hasText ? 'Send message (waiting for the agent)' : 'Send message'}
             title={isBusy && hasText ? 'Waiting for the agent…' : 'Send message'}
             className="
-              shrink-0 w-10 h-10 rounded-xl flex items-center justify-center
-              bg-ms-teal text-white hover:bg-ms-teal-dk active:scale-95
-              disabled:bg-surface disabled:text-ms-muted disabled:cursor-not-allowed disabled:active:scale-100
+              shrink-0 w-10 h-10 rounded-va-sm flex items-center justify-center
+              bg-ms-teal text-ms-on-primary hover:bg-ms-teal-dk active:scale-95
+              disabled:bg-ms-surface disabled:text-ms-muted disabled:cursor-not-allowed disabled:active:scale-100
               transition-[transform,background-color] duration-100
               focus:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue focus-visible:ring-offset-2
             "

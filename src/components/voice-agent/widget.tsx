@@ -73,7 +73,7 @@ export function VoiceAgentWidget({
           className="
             fixed z-50
             h-14 max-w-[calc(100vw-3rem)] rounded-full shadow-lg
-            bg-ms-blue hover:bg-ms-blue-dk text-white
+            bg-ms-blue hover:bg-ms-blue-dk text-ms-on-primary
             flex items-center gap-3 px-4
             transition-all duration-200
             ring-4 ring-ms-blue/20 hover:ring-ms-blue/30
@@ -85,7 +85,7 @@ export function VoiceAgentWidget({
             bottom: margin === 'none' ? 0 : margin === 'sm' ? 8 : 24,
           }}
         >
-          <span className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+          <span className="w-9 h-9 rounded-full bg-ms-on-primary/20 flex items-center justify-center shrink-0">
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" aria-hidden="true"
                  stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />

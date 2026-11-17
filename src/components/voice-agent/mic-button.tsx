@@ -63,7 +63,7 @@ export const MicButton = memo(function MicButton({ phase, isRecording, onPressDo
       onClick={handleClick}
       onContextMenu={(e) => e.preventDefault()}   // long-press on mobile
       className={`
-        relative w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+        relative w-10 h-10 rounded-va-sm flex items-center justify-center shrink-0
         select-none touch-none [-webkit-touch-callout:none]
         transition-[transform,background-color] duration-100 focus:outline-none
         focus-visible:ring-2 focus-visible:ring-ms-blue focus-visible:ring-offset-2
@@ -91,13 +91,13 @@ function getState(phase: Phase, isRecording: boolean) {
   }
   if (phase === 'thinking' || phase === 'transcribing') return {
     active:   false,
-    cls:      'bg-surface',
+    cls:      'bg-ms-surface',
     title:    'Processing…',
     disabled: true,
   }
   if (phase === 'ended' || phase === 'connecting') return {
     active:   false,
-    cls:      'bg-surface',
+    cls:      'bg-ms-surface',
     title:    phase === 'ended' ? 'Call ended' : 'Connecting…',
     disabled: true,
   }

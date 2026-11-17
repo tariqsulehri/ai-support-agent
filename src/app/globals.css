@@ -47,6 +47,26 @@
   --va-primary-dk: 0 71 225;    /* darker #0047e1 */
   --va-primary-lt: 238 244 255; /* soft tint */
   --va-primary-md: 219 234 254; /* medium tint */
+
+  /* Accent (header, avatars, bubbles). Overridden by the embed theme. */
+  --va-teal:       76 186 171;  /* #4CBAAB */
+  --va-teal-dk:    61 168 152;  /* #3DA898 */
+  --va-teal-lt:    235 248 246; /* #EBF8F6 */
+  --va-teal-md:    200 237 233; /* #C8EDE9 */
+
+  /* Voice widget neutrals, radius and font. Defaults match the original fixed
+     values; the embed theme (lib/theme/embed-theme.ts) overrides them. */
+  --va-on-primary: 255 255 255; /* text on accent backgrounds */
+  --va-surface:    255 255 255; /* #FFFFFF cards */
+  --va-surface-2:  243 242 241; /* #F3F2F1 footer */
+  --va-surface-3:  245 245 245; /* #F5F5F5 transcript, input */
+  --va-canvas:     248 250 252; /* #F8FAFC page */
+  --va-text:       50 49 48;    /* #323130 */
+  --va-sub:        96 94 92;    /* #605E5C */
+  --va-muted:      138 136 134; /* #8A8886 */
+  --va-border:     237 235 233; /* #EDEBE9 */
+  --va-radius:     1rem;
+  --va-radius-sm:  0.75rem;
 }
 
 .dark,
@@ -91,10 +111,10 @@
 }
 
 html, body {
-  background-color: #F8FAFC;
+  background-color: rgb(var(--va-canvas));
   color: #0F172A;
   min-height: 100dvh;
-  font-family: var(--font-poppins), 'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont,
+  font-family: var(--va-font, var(--font-poppins)), 'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont,
     'Inter', 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

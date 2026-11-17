@@ -34,9 +34,9 @@ export const CallCompletedPanel = memo(function CallCompletedPanel({
   return (
     <div
       role="status"
-      className="mt-3 bg-white border border-surface-border rounded-2xl shadow-bubble overflow-hidden msg-enter"
+      className="mt-3 bg-ms-surface border border-ms-border rounded-va shadow-bubble overflow-hidden msg-enter"
     >
-      <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-surface-border">
+      <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-ms-border">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-ms-text">Call completed</p>
           <div className="mt-1 flex items-center gap-2">
@@ -49,7 +49,7 @@ export const CallCompletedPanel = memo(function CallCompletedPanel({
             type="button"
             onClick={onStartNewChat}
             className="
-              shrink-0 rounded-lg bg-ms-teal px-3 py-2 text-xs font-semibold text-white
+              shrink-0 rounded-lg bg-ms-teal px-3 py-2 text-xs font-semibold text-ms-on-primary
               hover:bg-ms-teal-dk active:scale-95 transition-[transform,background-color] duration-100
               focus:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue focus-visible:ring-offset-2
             "

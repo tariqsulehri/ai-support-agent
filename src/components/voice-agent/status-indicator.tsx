@@ -10,7 +10,7 @@ const STATUS: Record<Phase, { show: boolean; color: string; label: string; dots?
   transcribing: { show: true,  color: 'bg-ms-teal-lt text-ms-teal border-ms-teal-md',   label: 'Transcribing…', dots: true },
   thinking:     { show: true,  color: 'bg-ms-teal-lt text-ms-teal border-ms-teal-md',   label: 'Thinking…',     dots: true },
   speaking:     { show: true,  color: 'bg-purple-50 text-purple-700 border-purple-100', label: 'Speaking… tap the mic to interrupt' },
-  ended:        { show: true,  color: 'bg-gray-50 text-ms-sub border-surface-border',   label: 'Conversation ended' },
+  ended:        { show: true,  color: 'bg-ms-surface-2 text-ms-sub border-ms-border',   label: 'Conversation ended' },
   error:        { show: false, color: '', label: '' },
 }
 

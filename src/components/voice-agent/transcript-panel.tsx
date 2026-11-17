@@ -81,7 +81,7 @@ export const TranscriptPanel = memo(function TranscriptPanel({
       aria-relevant="additions"
       aria-label="Conversation"
       className="flex-1 overflow-y-auto overscroll-contain scrollbar-thin px-3 sm:px-4 py-4
-                 flex flex-col gap-1 min-h-0 bg-surface-hover"
+                 flex flex-col gap-1 min-h-0 bg-ms-surface-3"
     >
       {/* Empty / connecting state */}
       {isEmpty && phase === 'connecting' && (
@@ -131,7 +131,7 @@ export const TranscriptPanel = memo(function TranscriptPanel({
       {phase === 'thinking' && !partialReply && (
         <div className="flex items-end gap-2 mt-3">
           <Avatar initials={agentInitials} />
-          <div className="bg-white border border-surface-border rounded-2xl rounded-bl-sm
+          <div className="bg-ms-surface border border-ms-border rounded-va rounded-bl-sm
                           px-4 py-3 shadow-bubble flex items-center gap-1">
             <TypingDots />
           </div>
