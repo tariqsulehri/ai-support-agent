@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { resolveRedirectUrl } from '@/lib/auth/redirect'
 import { iterateDashboardExport } from '@/lib/dashboard/analytics'
 import type { DashboardCall, DashboardFilters } from '@/lib/dashboard/types'
 import { dashboardScopeForSession, getVerifiedSession } from '@/lib/auth/session'
@@ -46,7 +47,7 @@ const csvRow = (cells: Array<string | number | null | undefined>) => `${cells.ma
 export async function GET(req: NextRequest) {
   const session = await getVerifiedSession()
   if (!session) {
-    return NextResponse.redirect(new URL('/tenant/login?next=/dashboard', req.url))
+    return NextResponse.redirect(resolveRedirectUrl('/tenant/login?next=/dashboard', req))
   }
 
   const sp = req.nextUrl.searchParams

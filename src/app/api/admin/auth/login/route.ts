@@ -3,7 +3,7 @@ import { setSessionCookie } from '@/lib/auth/session'
 import { authenticateUser } from '@/lib/auth/users'
 import type { AuthUserRecord } from '@/lib/auth/types'
 import { checkLoginRateLimit, recordFailedLogin, resetLoginRateLimit } from '@/lib/auth/rate-limiter'
-import { safeRelativePath } from '@/lib/auth/redirect'
+import { safeRelativePath, resolveRedirectUrl } from '@/lib/auth/redirect'
 import { MAX_PASSWORD_LENGTH } from '@/lib/auth/password'
 import { getClientIp } from '@/lib/api/request-guards'
 
@@ -31,7 +31,7 @@ function safeNext(value: FormDataEntryValue | null, scope: LoginScope): string {
 const MAX_EMAIL_LENGTH = 320
 
 function redirectWithError(req: NextRequest, scope: LoginScope, error: string, next: string): NextResponse {
-  const url = new URL(loginPath(scope), req.url)
+  const url = resolveRedirectUrl(loginPath(scope), req)
   url.searchParams.set('error', error)
   url.searchParams.set('next', next)
   return NextResponse.redirect(url, { status: 303 })
@@ -83,13 +83,19 @@ export async function POST(req: NextRequest) {
 
   resetLoginRateLimit(clientIp, email)
 
-  await setSessionCookie({
-    userId: user.userId,
-    tenantId: user.tenantId,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-  })
+  const proto = req.headers.get('x-forwarded-proto') ?? (req.url.startsWith('https') ? 'https' : 'http')
+  const isSecure = proto === 'https'
 
-  return NextResponse.redirect(new URL(next, req.url), { status: 303 })
+  await setSessionCookie(
+    {
+      userId: user.userId,
+      tenantId: user.tenantId,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    },
+    { isSecure }
+  )
+
+  return NextResponse.redirect(resolveRedirectUrl(next, req), { status: 303 })
 }

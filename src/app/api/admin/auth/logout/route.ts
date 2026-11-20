@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { clearSessionCookie } from '@/lib/auth/session'
-import { safeRelativePath } from '@/lib/auth/redirect'
+import { safeRelativePath, resolveRedirectUrl } from '@/lib/auth/redirect'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +11,7 @@ function safeNext(value: FormDataEntryValue | string | null): string {
 }
 
 function redirectTo(next: string, req: NextRequest): NextResponse {
-  const res = NextResponse.redirect(new URL(next, req.url), { status: 303 })
+  const res = NextResponse.redirect(resolveRedirectUrl(next, req), { status: 303 })
   res.headers.set('Cache-Control', 'no-store')
   return res
 }

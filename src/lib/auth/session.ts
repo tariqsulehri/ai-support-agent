@@ -27,29 +27,44 @@ export async function getVerifiedSession(): Promise<AuthSession | null> {
   }
 }
 
-const COOKIE_BASE = {
-  httpOnly: true,
-  sameSite: 'lax' as const,
-  secure: process.env.NODE_ENV === 'production',
-  path: '/',
+interface SetSessionOptions {
+  isSecure?: boolean
 }
 
-export async function setSessionCookie(session: Omit<AuthSession, 'exp'>): Promise<void> {
+export async function setSessionCookie(
+  session: Omit<AuthSession, 'exp'>,
+  options?: SetSessionOptions
+): Promise<void> {
   const cookieStore = await cookies()
   const token = await createSessionToken(session)
-  cookieStore.set(SESSION_COOKIE_NAME, token, { ...COOKIE_BASE, maxAge: SESSION_TTL_SECONDS })
-  // Migrate: drop the legacy cookie once the hardened one is issued.
-  if (LEGACY_SESSION_COOKIE_NAME !== SESSION_COOKIE_NAME && cookieStore.get(LEGACY_SESSION_COOKIE_NAME)) {
-    cookieStore.set(LEGACY_SESSION_COOKIE_NAME, '', { ...COOKIE_BASE, maxAge: 0 })
+
+  // Use HTTPS-only __Host- prefix only when running on HTTPS.
+  // Over plain HTTP (e.g. direct IP access like http://161.97.110.121:3060), browsers reject
+  // any cookie with Secure or __Host- prefix per RFC 6265bis.
+  const isSecure = options?.isSecure ?? (process.env.COOKIE_SECURE === 'true' || (process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false'))
+
+  const cookieName = isSecure ? SESSION_COOKIE_NAME : LEGACY_SESSION_COOKIE_NAME
+  const cookieOptions = {
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    secure: isSecure,
+    path: '/',
+    maxAge: SESSION_TTL_SECONDS,
+  }
+
+  cookieStore.set(cookieName, token, cookieOptions)
+
+  // Clean up opposite cookie to prevent confusion
+  const otherName = isSecure ? LEGACY_SESSION_COOKIE_NAME : SESSION_COOKIE_NAME
+  if (cookieStore.get(otherName)) {
+    cookieStore.set(otherName, '', { ...cookieOptions, maxAge: 0 })
   }
 }
 
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies()
-  cookieStore.set(SESSION_COOKIE_NAME, '', { ...COOKIE_BASE, maxAge: 0 })
-  if (LEGACY_SESSION_COOKIE_NAME !== SESSION_COOKIE_NAME) {
-    cookieStore.set(LEGACY_SESSION_COOKIE_NAME, '', { ...COOKIE_BASE, maxAge: 0 })
-  }
+  cookieStore.set(SESSION_COOKIE_NAME, '', { httpOnly: true, sameSite: 'lax', secure: true, path: '/', maxAge: 0 })
+  cookieStore.set(LEGACY_SESSION_COOKIE_NAME, '', { httpOnly: true, sameSite: 'lax', secure: false, path: '/', maxAge: 0 })
 }
 
 export function dashboardScopeForSession(session: AuthSession): DashboardAccessScope {
